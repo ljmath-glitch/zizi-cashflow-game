@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { socket } from '../socket.js';
+import { socket, ROOM } from '../socket.js';
 import { useConnection } from '../hooks/useConnection.js';
 import { useGameState } from '../hooks/useGameState.js';
 import { useTeams } from '../hooks/useTeams.js';
@@ -72,9 +72,10 @@ export default function Screen() {
   //  - 雲端網域（如 onrender.com，https）→ 直接用目前網址，不加 IP/埠
   const host = window.location.hostname;
   const isLocalHost = host === 'localhost' || host === '127.0.0.1' || /^\d+\.\d+\.\d+\.\d+$/.test(host);
+  const roomQ = ROOM ? `?room=${ROOM}` : '';
   const studentUrl = isLocalHost && serverInfo?.lanIp
-    ? `http://${serverInfo.lanIp}:${window.location.port || serverInfo.port || '3000'}/student`
-    : `${window.location.origin}/student`;
+    ? `http://${serverInfo.lanIp}:${window.location.port || serverInfo.port || '3000'}/student${roomQ}`
+    : `${window.location.origin}/student${roomQ}`;
 
   const phase = game?.phase ?? 'lobby';
   const round = game?.round ?? 0;
@@ -94,6 +95,7 @@ export default function Screen() {
       <header className="flex items-center justify-between px-8 py-3 border-b border-white/20 shrink-0">
         <h1 className="text-2xl font-bold">
           茲茲一百萬挑戰賽
+          {ROOM && <span className="ml-2 text-white/50 text-base">房號 {ROOM}</span>}
           <span className="ml-3 text-zizi-gold text-lg">
             {phase === 'lobby' ? '等待開始' : phase === 'ended' ? '遊戲結束' : `第 ${round} / ${maxRounds} 回合`}
           </span>

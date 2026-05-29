@@ -1,8 +1,12 @@
 import { io } from 'socket.io-client';
 
-// 單一 Socket.IO 連線實例（同源連線）
-// 開發時前端在 5173，由 Vite proxy 轉發 /socket.io 到後端 3000；正式環境則同為 3000
+// 從網址讀房號（?room=ABC12）；連線時帶給伺服器，決定加入哪一場遊戲
+const params = new URLSearchParams(window.location.search);
+export const ROOM = (params.get('room') || '').toUpperCase();
+
+// 單一 Socket.IO 連線實例（同源；房號放在 query）
 export const socket = io({
   autoConnect: true,
   transports: ['websocket', 'polling'],
+  query: { room: ROOM },
 });

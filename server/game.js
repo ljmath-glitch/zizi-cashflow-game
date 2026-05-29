@@ -9,7 +9,41 @@ import { drawCard } from './data/cards.js';
 import { pickEvent, randomRumor } from './data/events.js';
 import { saveToFile } from './storage.js';
 
+// 多房間：每個房間是一個獨立的遊戲（用房號隔開），同一伺服器可同時開很多場
 let io = null;
+const rooms = new Map(); // code -> room
+
+export function initGame(ioInstance) {
+  io = ioInstance;
+}
+
+function genCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 去掉易混淆字
+  let c;
+  do {
+    c = '';
+    for (let i = 0; i < 5; i++) c += chars[Math.floor(Math.random() * chars.length)];
+  } while (rooms.has(c));
+  return c;
+}
+
+export function createRoom() {
+  const code = genCode();
+  rooms.set(code, makeRoom(code));
+  return code;
+}
+
+export function getRoom(code) {
+  return code ? rooms.get(String(code).toUpperCase()) || null : null;
+}
+
+export function roomExists(code) {
+  return !!getRoom(code);
+}
+
+// ── 單一房間的完整遊戲邏輯 ──
+function makeRoom(code) {
+
 let tickInterval = null;
 let teamSeq = 0; // 組別流水號
 let uidSeq = 0; // 資產 / 負債的唯一序號
@@ -103,13 +137,13 @@ function publicState() {
 }
 
 // 老師開關大螢幕新手教學
-export function toggleTutorial(on) {
+function toggleTutorial(on) {
   state.showTutorial = typeof on === 'boolean' ? on : !state.showTutorial;
   broadcast();
 }
 
 // 老師把某組財務投到大螢幕（再點同一組或傳 null 取消）
-export function setSpotlight(teamId) {
+function setSpotlight(teamId) {
   state.spotlightTeamId = teamId && getTeam(teamId) && state.spotlightTeamId !== teamId ? teamId : null;
   broadcast();
 }
@@ -120,17 +154,13 @@ function advanceTurn() {
   broadcast();
 }
 
-export function initGame(ioInstance) {
-  io = ioInstance;
-}
-
-export function getPublicState() {
+function getPublicState() {
   return publicState();
 }
 
 // 廣播最新狀態給所有連線（大螢幕、學生、老師）
 function broadcast() {
-  if (io) io.emit('game:state', publicState());
+  if (io) io.to(code).emit('game:state', publicState());
 }
 
 // 每秒倒數計時器
@@ -283,8 +313,8 @@ function applyMonthlyEvent() {
   }
 
   if (io) {
-    io.emit('market:monthly', { event: state.monthlyEvent, market: publicMarket(), before, reBefore });
-    io.emit('month:report', {
+    io.to(code).emit('market:monthly', { event: state.monthlyEvent, market: publicMarket(), before, reBefore });
+    io.to(code).emit('month:report', {
       round: state.round,
       prevEvent: prevEvent ? { emoji: prevEvent.emoji, title: prevEvent.title } : null,
       thisEvent: { emoji: evt.emoji, title: evt.title, desc: evt.desc || '' },
@@ -312,7 +342,7 @@ function publicMarket() {
 }
 
 // 開始遊戲，或從暫停/結束狀態繼續/重開
-export function startGame() {
+function startGame() {
   if (state.phase === 'lobby' || state.phase === 'ended') {
     // 開新局：進入第 1 回合並結算第一次發薪
     state.phase = 'running';
@@ -326,7 +356,7 @@ export function startGame() {
   scheduleAutosave();
 }
 
-export function pauseGame() {
+function pauseGame() {
   if (state.phase === 'running') {
     state.phase = 'paused';
     broadcast();
@@ -335,7 +365,7 @@ export function pauseGame() {
 }
 
 // 老師跳過目前這組的擲骰回合（該組離線/拖太久時用）
-export function skipTurn() {
+function skipTurn() {
   if (state.phase !== 'running') return;
   const team = getTeam(currentTurnId());
   if (team) {
@@ -348,7 +378,7 @@ export function skipTurn() {
 }
 
 // 進入下一回合；超過總回合數則結束遊戲
-export function nextRound() {
+function nextRound() {
   if (state.phase === 'lobby') return;
   if (state.round >= state.maxRounds) {
     state.phase = 'ended';
@@ -364,7 +394,7 @@ export function nextRound() {
   broadcast();
 }
 
-export function resetGame() {
+function resetGame() {
   stopTick();
   state.phase = 'lobby';
   state.round = 0;
@@ -377,13 +407,13 @@ export function resetGame() {
     emitTeam(team);
   }
   feed.length = 0;
-  if (io) io.emit('feed:list', feed);
+  if (io) io.to(code).emit('feed:list', feed);
   broadcast();
   broadcastTeams();
 }
 
 // 全新遊戲：清空所有組別與動態，回到最初的空白狀態（換班 / 重新測驗用）
-export function clearGame() {
+function clearGame() {
   stopTick();
   state.phase = 'lobby';
   state.round = 0;
@@ -398,7 +428,7 @@ export function clearGame() {
   feed.length = 0;
   broadcast();
   broadcastTeams(); // 連帶觸發自動存檔，讓 autosave.json 也變空白
-  if (io) io.emit('feed:list', feed);
+  if (io) io.to(code).emit('feed:list', feed);
 }
 
 // ── 組別 / 財務 ──
@@ -436,7 +466,7 @@ function profLiabTotal(prof) {
   const l = prof.liabilities;
   return l.homeMortgage + l.carLoan + l.schoolLoan + l.creditCard;
 }
-export function professionPublic(prof) {
+function professionPublic(prof) {
   return {
     id: prof.id,
     name: prof.name,
@@ -455,7 +485,7 @@ export function professionPublic(prof) {
 }
 
 // 隨機抽兩張不同職業卡，給玩家二選一
-export function professionPair() {
+function professionPair() {
   const pool = [...PROFESSIONS];
   const a = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
   const b = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
@@ -463,7 +493,7 @@ export function professionPair() {
 }
 
 // 學生加入：建立組別。professionId 有給且有效就用，否則隨機
-export function createTeam(name, professionId) {
+function createTeam(name, professionId) {
   const prof = (professionId && getProfession(professionId)) || randomProfession();
   teamSeq += 1;
   // teamId 同時作為「重連代號」（如 T3-4829），學生斷線後可用它還原
@@ -486,12 +516,12 @@ export function createTeam(name, professionId) {
   return team;
 }
 
-export function getTeam(teamId) {
+function getTeam(teamId) {
   return state.teams[teamId] || null;
 }
 
 // 給學生端的完整資料（含衍生欄位）；用於 join / resume 回傳
-export function getTeamPayload(teamId) {
+function getTeamPayload(teamId) {
   const team = getTeam(teamId);
   return team ? { ...team, derived: computeDerived(team) } : null;
 }
@@ -553,12 +583,12 @@ function computeDerived(team) {
   };
 }
 
-export function netWorth(team) {
+function netWorth(team) {
   return computeDerived(team).netWorth;
 }
 
 // 對外公開的組別摘要（大螢幕排行榜 / 老師端用）
-export function publicTeam(team) {
+function publicTeam(team) {
   const d = computeDerived(team);
   return {
     id: team.id,
@@ -577,17 +607,17 @@ export function publicTeam(team) {
   };
 }
 
-export function listPublicTeams() {
+function listPublicTeams() {
   return Object.values(state.teams).map(publicTeam);
 }
 
-export function broadcastTeams() {
-  if (io) io.emit('teams:list', listPublicTeams());
+function broadcastTeams() {
+  if (io) io.to(code).emit('teams:list', listPublicTeams());
   scheduleAutosave();
 }
 
 // 調整遊戲參數（總回合數、每回合秒數）；建議在 lobby 階段調整
-export function setConfig({ maxRounds, roundSeconds } = {}) {
+function setConfig({ maxRounds, roundSeconds } = {}) {
   if (Number.isFinite(maxRounds) && maxRounds > 0) {
     state.maxRounds = Math.floor(maxRounds);
   }
@@ -601,7 +631,7 @@ export function setConfig({ maxRounds, roundSeconds } = {}) {
 // ── 存檔 / 還原 ──
 
 // 把整場遊戲狀態打包成可序列化的快照
-export function getSnapshot() {
+function getSnapshot() {
   return {
     version: 1,
     savedAt: Date.now(),
@@ -622,7 +652,7 @@ export function getSnapshot() {
 }
 
 // 從快照還原整場遊戲（載入存檔 / 伺服器重啟自動還原）
-export function loadSnapshot(data) {
+function loadSnapshot(data) {
   if (!data || typeof data !== 'object') return false;
   stopTick();
   state.phase = data.phase ?? 'lobby';
@@ -645,8 +675,8 @@ export function loadSnapshot(data) {
   // 重新把全部狀態推給所有連線
   broadcast();
   if (io) {
-    io.emit('teams:list', listPublicTeams());
-    io.emit('feed:list', feed);
+    io.to(code).emit('teams:list', listPublicTeams());
+    io.to(code).emit('feed:list', feed);
   }
   for (const team of Object.values(state.teams)) emitTeam(team);
 
@@ -661,7 +691,7 @@ function scheduleAutosave() {
   autosaveTimer = setTimeout(() => {
     autosaveTimer = null;
     try {
-      saveToFile('autosave.json', getSnapshot());
+      saveToFile('room_' + code + '.json', getSnapshot());
     } catch (e) {
       console.error('⚠️ 自動存檔失敗：', e.message);
     }
@@ -673,10 +703,10 @@ function scheduleAutosave() {
 function addFeed(text) {
   feed.unshift({ text, ts: Date.now() });
   if (feed.length > 30) feed.length = 30;
-  if (io) io.emit('feed:list', feed);
+  if (io) io.to(code).emit('feed:list', feed);
 }
 
-export function getFeed() {
+function getFeed() {
   return feed;
 }
 
@@ -684,7 +714,7 @@ export function getFeed() {
 
 // 把單一組別的最新狀態（含衍生欄位）推給該組（同 team 房間）
 function emitTeam(team) {
-  if (io) io.to('team:' + team.id).emit('student:team', { ...team, derived: computeDerived(team) });
+  if (io) io.to(code + '|team:' + team.id).emit('student:team', { ...team, derived: computeDerived(team) });
 }
 
 // 新增一筆歷史紀錄（最新在前，最多 50 筆）
@@ -700,7 +730,7 @@ function checkFreedom(team) {
     team.free = true;
     team.freedRound = state.round;
     addFeed(`🎉🏆 ${team.name} 達成財富自由！`);
-    if (io) io.emit('game:freed', { teamId: team.id, name: team.name });
+    if (io) io.to(code).emit('game:freed', { teamId: team.id, name: team.name });
   }
 }
 
@@ -759,14 +789,14 @@ function bankruptTeam(team) {
     state.currentTurnIndex = state.turnOrder.length; // 維持「已輪完」狀態
   }
   addFeed(`💀 ${team.name} 破產被淘汰！`);
-  if (io) io.emit('game:bankrupt', { teamId: team.id, name: team.name, professionEmoji: team.professionEmoji });
+  if (io) io.to(code).emit('game:bankrupt', { teamId: team.id, name: team.name, professionEmoji: team.professionEmoji });
   emitTeam(team);
 }
 
 // ── 擲骰 / 移動 ──
 
 // 某組擲骰並沿老鼠賽跑圈移動；經過/停在「發薪」格會收月現金流
-export function rollDice(teamId) {
+function rollDice(teamId) {
   if (state.phase !== 'running') return { ok: false, reason: '現在不是操作時間' };
   const team = getTeam(teamId);
   if (!team) return { ok: false, reason: '找不到組別' };
@@ -814,7 +844,7 @@ export function rollDice(teamId) {
   }
 
   addFeed(`🎲 ${team.name} 擲出 ${rolls.join('+')}＝${steps}，停在 ${square.emoji}${square.label}${paydays ? `（領了 ${paydays} 次薪水）` : ''}`);
-  if (io) io.emit('board:move', { teamId, from, to, steps, rolls, square: square.type });
+  if (io) io.to(code).emit('board:move', { teamId, from, to, steps, rolls, square: square.type });
 
   // 破產則結束此回合（已被移出輪流）
   if (team.bankrupt) {
@@ -840,13 +870,13 @@ export function rollDice(teamId) {
 
 // 推一則「事件通知」給某組（學生端跳出提示）
 function emitEvent(team, payload) {
-  if (io) io.to('team:' + team.id).emit('student:event', payload);
+  if (io) io.to(code + '|team:' + team.id).emit('student:event', payload);
 }
 
 // 廣播抽到的卡（大螢幕翻牌動畫用），帶上是哪一組、什麼職業骰到的
 function announceCard(deck, card, team) {
   if (io)
-    io.emit('card:drawn', {
+    io.to(code).emit('card:drawn', {
       deck,
       card,
       teamName: team.name,
@@ -922,7 +952,7 @@ function applyMarketCard(lander, card) {
       checkFreedom(team);
       emitTeam(team);
     }
-    if (io) io.emit('market:monthly', { event: state.monthlyEvent, market: publicMarket() });
+    if (io) io.to(code).emit('market:monthly', { event: state.monthlyEvent, market: publicMarket() });
     addFeed(`${card.emoji} 市場風雲：${card.name}（${card.desc}）`);
   } else if (card.kind === 'windfall') {
     for (const team of Object.values(state.teams)) {
@@ -983,7 +1013,7 @@ function maybeAcquisitionOffer(team) {
 }
 
 // 玩家決定是否賣出被收購的房產
-export function acquireDecision(teamId, accept) {
+function acquireDecision(teamId, accept) {
   const team = getTeam(teamId);
   if (!team || team.pendingAction?.type !== 'acquire') return { ok: false, reason: '目前沒有收購要約' };
   const { assetUid, offerPrice } = team.pendingAction;
@@ -1084,7 +1114,7 @@ function formatNT(n) {
 // ── 機會卡互動：選牌庫 → 抽卡 → 買或放棄 ──
 
 // 玩家選擇小生意 / 大買賣 → 抽一張機會卡
-export function chooseDeck(teamId, deck) {
+function chooseDeck(teamId, deck) {
   const team = getTeam(teamId);
   if (!team || team.pendingAction?.type !== 'opportunity') return { ok: false, reason: '目前沒有機會可抽' };
   if (deck !== 'small' && deck !== 'big') return { ok: false, reason: '請選擇小生意或大買賣' };
@@ -1096,7 +1126,7 @@ export function chooseDeck(teamId, deck) {
 }
 
 // 玩家決定買或放棄機會卡。withLoan=true 時，現金不足會自動貸款補足再購買
-export function dealDecision(teamId, accept, withLoan = false) {
+function dealDecision(teamId, accept, withLoan = false) {
   const team = getTeam(teamId);
   if (!team || team.pendingAction?.type !== 'deal') return { ok: false, reason: '目前沒有可決定的機會卡' };
   const card = team.pendingAction.card;
@@ -1177,7 +1207,7 @@ export function dealDecision(teamId, accept, withLoan = false) {
 }
 
 // 慈善決定：捐 10% 總收入 → 接下來 3 回合可擲兩顆骰
-export function charityDecision(teamId, donate) {
+function charityDecision(teamId, donate) {
   const team = getTeam(teamId);
   if (!team || team.pendingAction?.type !== 'charity') return { ok: false, reason: '目前沒有慈善可選' };
   const cost = team.pendingAction.cost;
@@ -1206,7 +1236,7 @@ export function charityDecision(teamId, donate) {
 // ── 買賣資產 ──
 
 // 買入資產；options 依商品類型帶 qty（股數）或 amount（基金金額）
-export function buyAsset(teamId, { marketId, qty, amount } = {}) {
+function buyAsset(teamId, { marketId, qty, amount } = {}) {
   if (state.phase !== 'running') {
     return { ok: false, reason: '目前不是操作時間' };
   }
@@ -1313,7 +1343,7 @@ export function buyAsset(teamId, { marketId, qty, amount } = {}) {
 // ── 銀行貸款 / 還款 ──
 
 // 借錢：以萬元為單位，每月利息為貸款餘額的 10%（計入總支出）
-export function loanMoney(teamId, amount) {
+function loanMoney(teamId, amount) {
   if (state.phase !== 'running') return { ok: false, reason: '目前不是操作時間' };
   const team = getTeam(teamId);
   if (!team) return { ok: false, reason: '找不到組別' };
@@ -1331,7 +1361,7 @@ export function loanMoney(teamId, amount) {
 }
 
 // 還款：先還利率高的高利貸，再還銀行貸款（不能超過現金或餘額）
-export function repayLoan(teamId, amount) {
+function repayLoan(teamId, amount) {
   if (state.phase !== 'running') return { ok: false, reason: '目前不是操作時間' };
   const team = getTeam(teamId);
   if (!team) return { ok: false, reason: '找不到組別' };
@@ -1356,7 +1386,7 @@ export function repayLoan(teamId, amount) {
 
 // 償還起始職業負債（自住房貸/車貸/學貸/卡債）：可分批，月付按比例同步降低
 const DEBT_LABELS = { homeMortgage: '自住房貸', carLoan: '車貸', schoolLoan: '學貸', creditCard: '卡債' };
-export function repayDebt(teamId, key, amount) {
+function repayDebt(teamId, key, amount) {
   if (state.phase !== 'running') return { ok: false, reason: '目前不是操作時間' };
   const team = getTeam(teamId);
   if (!team) return { ok: false, reason: '找不到組別' };
@@ -1387,7 +1417,7 @@ export function repayDebt(teamId, key, amount) {
 //   { uid }            整筆賣出（房地產/企業等不可分割）
 //   { uid, sellQty }   賣出指定股數（股票/ETF）
 //   { uid, sellAmount } 賣出指定金額（加密貨幣，依現價換算單位）
-export function sellAsset(teamId, payload = {}) {
+function sellAsset(teamId, payload = {}) {
   if (state.phase !== 'running') {
     return { ok: false, reason: '目前不是操作時間' };
   }
@@ -1446,4 +1476,8 @@ export function sellAsset(teamId, payload = {}) {
   emitTeam(team);
   broadcastTeams();
   return { ok: true, proceeds };
+}
+
+
+  return { getPublicState, startGame, pauseGame, skipTurn, nextRound, resetGame, clearGame, toggleTutorial, setSpotlight, professionPair, createTeam, getTeam, getTeamPayload, listPublicTeams, broadcastTeams, setConfig, getSnapshot, loadSnapshot, getFeed, rollDice, acquireDecision, chooseDeck, dealDecision, charityDecision, buyAsset, loanMoney, repayLoan, repayDebt, sellAsset, netWorth, publicTeam };
 }
