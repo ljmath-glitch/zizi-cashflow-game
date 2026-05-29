@@ -273,7 +273,7 @@ function Tutorial() {
 
 // 月初彈窗：回顧上個月 + 公布本月突發事件
 function MonthReport({ report }) {
-  const { round, prevEvent, thisEvent, moves } = report;
+  const { round, prevEvent, thisEvent, moves, scale, rumor } = report;
   const moveRow = (label, emoji, pct) => (
     <div className="flex items-center justify-between px-4 py-1.5">
       <span className="text-white/70">{emoji} {label}</span>
@@ -285,15 +285,16 @@ function MonthReport({ report }) {
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60">
       <div className="card-pop bg-zizi-blue border-2 border-zizi-gold rounded-3xl shadow-2xl w-[34rem] max-w-[92vw] p-7 text-white">
-        <p className="text-center text-white/60">— 第 {round} 個月 —</p>
+        <p className="text-center text-white/60">— 第 {round} 回合 —</p>
 
         {prevEvent ? (
           <div className="mt-3 bg-white/5 rounded-2xl p-4">
-            <p className="text-sm text-white/50 mb-1">上個月回顧</p>
+            <p className="text-sm text-white/50 mb-1">上回合行情回顧</p>
             <p className="text-lg font-bold">{prevEvent.emoji} {prevEvent.title}</p>
             <div className="mt-2 divide-y divide-white/10 text-sm">
               {moveRow('股票 / ETF', '📈', moves.stock)}
               {moveRow('加密貨幣', '🪙', moves.crypto)}
+              {moves.commodity != null && moveRow('原物料', '🥇', moves.commodity)}
               {moveRow('房地產', '🏠', moves.realestate)}
             </div>
           </div>
@@ -301,12 +302,18 @@ function MonthReport({ report }) {
           <p className="mt-3 text-center text-white/60">遊戲開始！祝大家投資順利 🍀</p>
         )}
 
-        <div className="mt-4 bg-zizi-gold/15 rounded-2xl p-4 text-center">
-          <p className="text-sm text-zizi-gold mb-1">📢 本月突發事件</p>
+        <div className={'mt-4 rounded-2xl p-4 text-center ' + (scale === 'big' ? 'bg-zizi-gold/20 ring-2 ring-zizi-gold' : 'bg-white/5')}>
+          <p className="text-sm text-zizi-gold mb-1">{scale === 'big' ? '🔥 本回合大事件' : '📢 本回合市場'}</p>
           <p className="text-3xl mb-1">{thisEvent.emoji}</p>
           <p className="text-2xl font-black text-zizi-gold">{thisEvent.title}</p>
           <p className="text-white/70 mt-1">{thisEvent.desc}</p>
         </div>
+
+        {rumor && (
+          <div className="mt-3 bg-white/5 rounded-xl px-4 py-2 text-sm text-amber-200">
+            🔍 小道消息：{rumor.text}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -196,6 +196,8 @@ function applyMonthlyEvent() {
     const cat = inst.category; // dividend / crypto / commodity
     const sectorKey = cat === 'dividend' ? 'stock' : cat; // 事件 effects 的鍵
     const m = INSTRUMENT_VOL[cat] || INSTRUMENT_VOL.dividend;
+    const isEtf = (inst.tags || []).includes('etf'); // ETF＝一籃子，波動約個股一半
+    const damp = isEtf ? 0.5 : 1; // ETF 減半係數
 
     let factor;
     if (cat === 'crypto') {
@@ -203,22 +205,37 @@ function applyMonthlyEvent() {
       const extreme = Math.random() < 0.03;
       const mag = extreme ? 0.5 + Math.random() * 1.0 : 0.05 + Math.random() * 0.45;
       factor = 1 + (Math.random() < 0.5 ? -1 : 1) * mag;
+    } else if (cat === 'dividend') {
+      // 股票：平常小幅；個股小機率(8%)出現較大震盪（最多約±18%），ETF 機率與幅度減半
+      factor = 1 + m.drift + (Math.random() * 2 - 1) * m.vol * damp;
+      const shockChance = isEtf ? 0.04 : 0.08;
+      if (Math.random() < shockChance) {
+        const shock = (0.06 + Math.random() * 0.1) * (Math.random() < 0.5 ? -1 : 1) * damp;
+        factor += shock;
+      }
     } else {
-      // 股票/原物料：趨勢偏移 + 小幅隨機
+      // 原物料：趨勢偏移 + 中幅隨機
       factor = 1 + m.drift + (Math.random() * 2 - 1) * m.vol;
     }
 
-    // 事件乘數（AI/生技題材對對應事件更敏感）
+    // 事件乘數（AI/生技題材對對應事件更敏感；ETF 對整體股市事件的反應減半）
     let eff = evt.effects?.[sectorKey] ?? 1;
     if (eff !== 1) {
       if (evt.aiBoost && (inst.tags || []).includes('ai')) eff = 1 + (eff - 1) * evt.aiBoost;
       if (evt.bioBoost && (inst.tags || []).includes('biotech')) eff = 1 + (eff - 1) * evt.bioBoost;
+      if (cat === 'dividend' && isEtf) eff = 1 + (eff - 1) * 0.5;
     }
     factor *= eff;
-    if (rumorBias && sectorKey === rumorBias.sector) factor *= rumorBias.factor;
+    if (rumorBias && sectorKey === rumorBias.sector) {
+      let rb = rumorBias.factor;
+      if (cat === 'dividend' && isEtf) rb = 1 + (rb - 1) * 0.5;
+      factor *= rb;
+    }
 
-    // 單回合漲跌上限（股票最多 ±10%、原物料 ±25%、加密放寬到 ±150%）
-    factor = Math.max(1 - m.cap, Math.min(1 + m.cap, factor));
+    // 單回合漲跌上限：ETF 約股票一半（±5%），個股 ±18%，原物料 ±25%，加密 ±150%
+    let cap = m.cap;
+    if (cat === 'dividend') cap = isEtf ? 0.05 : 0.18;
+    factor = Math.max(1 - cap, Math.min(1 + cap, factor));
     inst.price = Math.max(1, Math.round(inst.price * factor));
     inst.history.push(inst.price);
     if (inst.history.length > 40) inst.history.shift();
@@ -888,12 +905,13 @@ function applyMarketCard(lander, card) {
     } else {
       for (const id in state.market.instruments) {
         const inst = state.market.instruments[id];
-        const matchCat =
-          (card.targetCategory === 'dividend' && inst.category === 'dividend') ||
-          (card.targetCategory === 'crypto' && inst.category === 'crypto');
+        const matchCat = card.targetCategory && inst.category === card.targetCategory;
         const matchTag = card.targetTag && inst.tags.includes(card.targetTag);
         if (matchCat || matchTag) {
-          inst.price = Math.max(1, Math.round(inst.price * card.factor));
+          // ETF 對整體股市風雲卡的反應約個股一半
+          let f = card.factor;
+          if (inst.category === 'dividend' && (inst.tags || []).includes('etf')) f = 1 + (f - 1) * 0.5;
+          inst.price = Math.max(1, Math.round(inst.price * f));
           inst.history.push(inst.price);
           if (inst.history.length > 40) inst.history.shift();
         }
@@ -1336,25 +1354,33 @@ export function repayLoan(teamId, amount) {
   return { ok: true };
 }
 
-// 付清起始職業負債（自住房貸/車貸/學貸/卡債）：付全額餘額 → 該筆每月支出歸零
+// 償還起始職業負債（自住房貸/車貸/學貸/卡債）：可分批，月付按比例同步降低
 const DEBT_LABELS = { homeMortgage: '自住房貸', carLoan: '車貸', schoolLoan: '學貸', creditCard: '卡債' };
-export function repayDebt(teamId, key) {
+export function repayDebt(teamId, key, amount) {
   if (state.phase !== 'running') return { ok: false, reason: '目前不是操作時間' };
   const team = getTeam(teamId);
   if (!team) return { ok: false, reason: '找不到組別' };
   if (!DEBT_LABELS[key]) return { ok: false, reason: '無法償還此項' };
   const bal = team.personalLiabilities[key] || 0;
   if (bal <= 0) return { ok: false, reason: '這筆已經沒有欠款' };
-  if (team.cash < bal) return { ok: false, reason: `現金不足，付清需 ${formatNT(bal)}` };
-  const saved = team.expenses[key] || 0;
-  team.cash -= bal;
-  team.personalLiabilities[key] = 0;
-  team.expenses[key] = 0; // 付清後免除該筆月付
-  addHistory(team, { round: state.round, type: 'repay', text: `付清${DEBT_LABELS[key]}（每月省 ${formatNT(saved)}）`, delta: -bal });
-  addFeed(`✅ ${team.name} 付清了${DEBT_LABELS[key]}，每月省下 ${formatNT(saved)}`);
+  // amount 未給或超過餘額 → 視為全部付清
+  let pay = Math.floor(Number(amount) || 0);
+  if (pay <= 0 || pay > bal) pay = bal;
+  if (team.cash < pay) return { ok: false, reason: `現金不足（需 ${formatNT(pay)}）` };
+
+  const payment = team.expenses[key] || 0;
+  const newBal = bal - pay;
+  // 月付按剩餘比例縮減（付清則歸零）
+  const newPayment = newBal > 0 ? Math.round(payment * (newBal / bal)) : 0;
+  const saved = payment - newPayment;
+  team.cash -= pay;
+  team.personalLiabilities[key] = newBal;
+  team.expenses[key] = newPayment;
+  addHistory(team, { round: state.round, type: 'repay', text: `還${DEBT_LABELS[key]} -${formatNT(pay)}（每月省 ${formatNT(saved)}）`, delta: -pay });
+  addFeed(`✅ ${team.name} 還了${DEBT_LABELS[key]} ${formatNT(pay)}${newBal === 0 ? '（已付清）' : ''}，每月省 ${formatNT(saved)}`);
   emitTeam(team);
   broadcastTeams();
-  return { ok: true, saved };
+  return { ok: true, saved, cleared: newBal === 0 };
 }
 
 // 賣出持有資產。payload：

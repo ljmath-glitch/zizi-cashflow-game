@@ -185,8 +185,8 @@ io.on('connection', (socket) => {
     const res = repayLoan(teamId, amount);
     if (typeof ack === 'function') ack(res);
   });
-  socket.on('student:repayDebt', ({ teamId, key } = {}, ack) => {
-    const res = repayDebt(teamId, key);
+  socket.on('student:repayDebt', ({ teamId, key, amount } = {}, ack) => {
+    const res = repayDebt(teamId, key, amount);
     if (typeof ack === 'function') ack(res);
   });
 

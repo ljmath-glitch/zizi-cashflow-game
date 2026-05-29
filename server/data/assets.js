@@ -10,6 +10,7 @@ export const MARKET = [
     name: '市值型 ETF（0050 型）',
     emoji: '📊',
     category: 'dividend',
+    tags: ['etf'],
     kind: 'shares',
     price: 200,
     dividendPerYear: 6, // 年配息/股（約 3%）
@@ -21,6 +22,7 @@ export const MARKET = [
     name: '高股息 ETF（0056 型）',
     emoji: '💵',
     category: 'dividend',
+    tags: ['etf'],
     kind: 'shares',
     price: 35,
     dividendPerYear: 2, // 約 5.7%
@@ -32,7 +34,7 @@ export const MARKET = [
     name: 'AI 主題 ETF',
     emoji: '🤖',
     category: 'dividend',
-    tags: ['ai'],
+    tags: ['ai', 'etf'],
     kind: 'shares',
     price: 60,
     dividendPerYear: 1,

@@ -768,6 +768,60 @@ function AssetRow({ a, teamId, canSell }) {
   );
 }
 
+// 單筆起始負債：顯示月息%，可分批還款（月付按比例同步降低）
+function DebtRow({ debt, teamId, cash, canAct }) {
+  const [open, setOpen] = useState(false);
+  const [amt, setAmt] = useState(10000);
+  // 月息% = 每月還款 ÷ 欠款餘額（越高越該優先還）
+  const rate = debt.value > 0 ? (debt.monthly / debt.value) * 100 : 0;
+
+  function repay(amount) {
+    socket.emit('student:repayDebt', { teamId, key: debt.key, amount });
+    setOpen(false);
+  }
+
+  return (
+    <div className="bg-red-50 rounded-2xl px-4 py-2.5">
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <p className="text-sm text-slate-700">
+            {debt.label}
+            <span className="ml-2 text-xs bg-red-200 text-red-700 rounded px-1.5 py-0.5">月息 {rate.toFixed(1)}%</span>
+          </p>
+          <p className="text-xs text-slate-500">
+            欠 <span className="text-red-600 font-medium">{formatMoney(debt.value)}</span>
+            　每月還 {formatMoney(debt.monthly)}
+          </p>
+        </div>
+        <button
+          disabled={!canAct}
+          onClick={() => setOpen((v) => !v)}
+          className="rounded-lg border border-emerald-400 text-emerald-700 px-3 py-1.5 text-xs font-medium disabled:opacity-40"
+        >
+          還款
+        </button>
+      </div>
+      {open && (
+        <div className="mt-2 flex items-center gap-2 border-t border-red-100 pt-2">
+          <input
+            type="number" min="1000" step="1000" value={amt}
+            onChange={(e) => setAmt(e.target.value)}
+            className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+          />
+          <button onClick={() => repay(Number(amt))} disabled={cash < Number(amt)}
+            className="rounded-lg bg-emerald-600 text-white font-semibold px-3 py-1.5 text-sm disabled:opacity-40">
+            還這些
+          </button>
+          <button onClick={() => repay(debt.value)} disabled={cash < debt.value}
+            className="rounded-lg border border-emerald-400 text-emerald-700 px-3 py-1.5 text-sm disabled:opacity-40">
+            全部付清
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // 資產負債表：資產（依分類）+ 負債（個人 + 投資連動）
 function BalanceSheet({ team, phase }) {
   const d = team.derived || {};
@@ -831,30 +885,9 @@ function BalanceSheet({ team, phase }) {
                 <span className="text-sm font-bold text-red-700 tabular-nums">-{formatMoney(pl.loanShark)}</span>
               </div>
             )}
-            {startDebts.map((r) => {
-              const afford = team.cash >= r.value;
-              return (
-                <div key={r.key} className="bg-red-50 rounded-2xl px-4 py-2.5 flex items-center gap-3">
-                  <div className="flex-1">
-                    <p className="text-sm text-slate-700">{r.label}</p>
-                    <p className="text-xs text-slate-500">
-                      欠 <span className="text-red-600 font-medium">{formatMoney(r.value)}</span>
-                      　每月還 {formatMoney(r.monthly)}
-                    </p>
-                  </div>
-                  <button
-                    disabled={!canSell || !afford}
-                    onClick={() => {
-                      if (window.confirm(`付清${r.label}需 ${formatMoney(r.value)}，付清後每月省 ${formatMoney(r.monthly)}。確定？`))
-                        socket.emit('student:repayDebt', { teamId: team.id, key: r.key });
-                    }}
-                    className="rounded-lg border border-emerald-400 text-emerald-700 px-3 py-1.5 text-xs font-medium disabled:opacity-40"
-                  >
-                    付清
-                  </button>
-                </div>
-              );
-            })}
+            {startDebts.map((r) => (
+              <DebtRow key={r.key} debt={r} teamId={team.id} cash={team.cash} canAct={canSell} />
+            ))}
             {(pl.bankLoan || 0) > 0 && (
               <div className="bg-red-50 rounded-2xl px-4 py-2.5 flex items-center justify-between">
                 <span className="text-sm text-slate-600">

@@ -3,19 +3,31 @@
 // 類別：stock（股票/ETF）、crypto（加密）、commodity（原物料）、realestate（房地產）
 // scale='small'｜'big'；catastrophe=true 的大事件不會連續出現
 
-// 小事件：每回合最常見，小幅波動、貼近日常財經新聞
+// 小事件：每回合最常見，像「本週新聞快訊」。
+// 大多是生活／趣味／職業風味（不影響市場 effects:{}），只有少數會小幅動到行情。
 export const SMALL_EVENTS = [
-  { id: 's_calm', emoji: '🌤️', title: '市場平靜', desc: '小幅震盪，沒什麼大事', effects: {} },
-  { id: 's_stock_up', emoji: '📈', title: '法人小買超', desc: '股市小漲', effects: { stock: 1.03 } },
-  { id: 's_stock_dn', emoji: '📉', title: '獲利了結賣壓', desc: '股市小跌', effects: { stock: 0.97 } },
+  // —— 會小幅影響市場（少數）——
+  { id: 's_stock_up', emoji: '📈', title: '法人小買超', desc: '股市小漲一點', effects: { stock: 1.03 } },
+  { id: 's_stock_dn', emoji: '📉', title: '獲利了結賣壓', desc: '股市小跌一點', effects: { stock: 0.97 } },
   { id: 's_export', emoji: '🚢', title: '出口數據亮眼', desc: '傳產、權值股受惠', effects: { stock: 1.04 } },
-  { id: 's_rate_hold', emoji: '🏦', title: '央行利率不變', desc: '市場無波動', effects: {} },
   { id: 's_gold_up', emoji: '🥇', title: '避險買盤進場', desc: '黃金等原物料小漲', effects: { commodity: 1.05 } },
-  { id: 's_gold_dn', emoji: '🥇', title: '避險需求降溫', desc: '原物料小跌', effects: { commodity: 0.96 } },
-  { id: 's_crypto_chop', emoji: '🪙', title: '幣圈震盪', desc: '加密貨幣上下洗盤', effects: {} },
-  { id: 's_dividend', emoji: '💰', title: '除息旺季', desc: '高息股小漲', effects: { stock: 1.02 } },
   { id: 's_oil_up', emoji: '🛢️', title: '油價小漲', desc: '原物料走高', effects: { commodity: 1.04 } },
   { id: 's_consume', emoji: '🛍️', title: '消費信心回升', desc: '內需股小漲', effects: { stock: 1.03 } },
+  // —— 純風味，不影響市場 ——
+  { id: 's_calm', emoji: '🌤️', title: '風平浪靜的一週', desc: '什麼大事都沒發生，喝杯珍奶放鬆一下', effects: {} },
+  { id: 's_weather', emoji: '🌧️', title: '連日大雨', desc: '出門記得帶傘，市場沒什麼變化', effects: {} },
+  { id: 's_viral', emoji: '😂', title: '迷因瘋傳', desc: '全班都在看同一支搞笑影片，笑到肚子痛', effects: {} },
+  { id: 's_sport', emoji: '⚽', title: '世界盃開踢', desc: '大家熬夜看球，隔天上班昏昏沉沉', effects: {} },
+  { id: 's_festival', emoji: '🎏', title: '連假來了', desc: '出遊人潮爆滿，你選擇在家耍廢', effects: {} },
+  { id: 's_newphone', emoji: '📱', title: '新手機發表會', desc: '網路一片討論，但你忍住沒衝動下單', effects: {} },
+  { id: 's_lucky', emoji: '🍀', title: '今天運氣不錯', desc: '路上撿到 10 元，心情很好', effects: {} },
+  { id: 's_health', emoji: '🏃', title: '全民運動風', desc: '大家開始跑步健身，健康最重要', effects: {} },
+  { id: 's_news_quiet', emoji: '📰', title: '本週財經無大事', desc: '新聞都在報美食和旅遊', effects: {} },
+  // —— 職業風味（只是情境，無強制效果）——
+  { id: 's_prof_doctor', emoji: '🩺', title: '流感季到了', desc: '醫護人員特別忙；其他人記得多洗手', effects: {} },
+  { id: 's_prof_youtuber', emoji: '🎬', title: '某網紅影片爆紅', desc: '自媒體工作者最有感，流量就是錢', effects: {} },
+  { id: 's_prof_teacher', emoji: '🧑‍🏫', title: '期中考週', desc: '老師忙著改考卷，學生忙著抱佛腳', effects: {} },
+  { id: 's_prof_chef', emoji: '👨‍🍳', title: '美食節登場', desc: '餐飲業生意興隆，大家排隊吃美食', effects: {} },
 ];
 
 // 大事件：偶爾出現、影響大、有戲劇性（catastrophe 標記者不會連續出現）
@@ -55,7 +67,8 @@ export function randomRumor() {
 // 挑一個本回合事件：~70% 小事件、~30% 大事件；
 // lastBigCatastropheId 用來避免連續出現災難型大事件
 export function pickEvent(lastCatId) {
-  if (Math.random() < 0.7) {
+  // 大多是小事件（像每週新聞，常常不動市場）；大事件只偶爾出現（約 18%）
+  if (Math.random() < 0.82) {
     const e = SMALL_EVENTS[Math.floor(Math.random() * SMALL_EVENTS.length)];
     return { ...e, scale: 'small' };
   }
