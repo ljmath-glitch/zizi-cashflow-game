@@ -1,0 +1,13 @@
+# Render 一鍵部署設定（Blueprint）
+# 到 https://render.com → New → Blueprint → 連到這個 GitHub repo 即可自動套用
+services:
+  - type: web
+    name: zizi-cashflow-game
+    runtime: node
+    plan: free
+    # 安裝（含開發用的 vite）→ 打包前端 → 由 Express 提供
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
