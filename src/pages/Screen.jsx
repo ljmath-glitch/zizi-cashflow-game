@@ -131,6 +131,7 @@ export default function Screen() {
         )}
       </main>
 
+      {game?.spotlight && <Spotlight team={game.spotlight} />}
       {game?.showTutorial && <Tutorial />}
       {report && !game?.showTutorial && <MonthReport report={report} />}
       {drawn && <CardOverlay payload={drawn} />}
@@ -141,6 +142,71 @@ export default function Screen() {
 }
 
 // 新手教學說明書（老師可開關）
+// 老師投影：把某組完整財務投到大螢幕做教學分析
+function Spotlight({ team }) {
+  const d = team.derived || {};
+  const p = d.passive || {};
+  const e = team.expenses || {};
+  const pl = team.personalLiabilities || {};
+  const PASSIVE = { interest: '利息', dividend: '股利', realestate: '房地產', business: '企業' };
+  const incomeRows = [
+    ['工資（主動）', team.salary],
+    ...['interest', 'dividend', 'realestate', 'business'].filter((k) => (p[k] || 0) > 0).map((k) => [`${PASSIVE[k]}（被動）`, p[k]]),
+  ];
+  const expenseRows = [
+    ['稅金', e.tax], ['自住房貸', e.homeMortgage], ['車貸', e.carLoan], ['學貸', e.schoolLoan],
+    ['卡債', e.creditCard], ['額外支出', e.other],
+    [`小孩 ×${team.children || 0}`, (team.perChild || 0) * (team.children || 0)],
+    ['貸款利息', d.bankLoanPayment],
+  ].filter((r) => (r[1] || 0) > 0);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-zizi-blue/95 flex flex-col items-center justify-center p-8 overflow-auto">
+      <div className="flex items-center gap-3 mb-4">
+        <span className="text-5xl">{team.professionEmoji}</span>
+        <div>
+          <p className="text-3xl font-black text-zizi-gold">{team.name}{team.bankrupt && ' 💀'}</p>
+          <p className="text-white/70">{team.professionName} ‧ 現金 {formatMoney(team.cash)}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-5 max-w-6xl w-full">
+        {/* 收入 */}
+        <div className="bg-white/10 rounded-2xl p-4">
+          <h3 className="text-lg font-bold text-green-300 mb-2">收入　總 {formatMoney(d.totalIncome)}</h3>
+          {incomeRows.map(([l, v]) => (
+            <div key={l} className="flex justify-between text-white/85 py-0.5"><span>{l}</span><span className="tabular-nums">+{formatMoney(v)}</span></div>
+          ))}
+        </div>
+        {/* 支出 */}
+        <div className="bg-white/10 rounded-2xl p-4">
+          <h3 className="text-lg font-bold text-red-300 mb-2">支出　總 {formatMoney(d.totalExpense)}</h3>
+          {expenseRows.map(([l, v]) => (
+            <div key={l} className="flex justify-between text-white/85 py-0.5"><span>{l}</span><span className="tabular-nums">-{formatMoney(v)}</span></div>
+          ))}
+        </div>
+        {/* 資產負債 */}
+        <div className="bg-white/10 rounded-2xl p-4">
+          <h3 className="text-lg font-bold text-zizi-gold mb-2">資產負債</h3>
+          <div className="flex justify-between text-white/85 py-0.5"><span>資產總值</span><span className="tabular-nums">{formatMoney(d.assetsValue)}</span></div>
+          <div className="flex justify-between text-white/85 py-0.5"><span>負債總額</span><span className="tabular-nums text-red-300">-{formatMoney(d.liabilitiesTotal)}</span></div>
+          <div className="flex justify-between text-white font-bold py-1 border-t border-white/15 mt-1"><span>淨資產</span><span className="tabular-nums">{formatMoney(d.netWorth)}</span></div>
+          <p className="text-xs text-white/50 mt-2">持有投資 {(team.assets || []).length} 筆</p>
+        </div>
+      </div>
+
+      <div className="mt-5 bg-zizi-gold/15 rounded-2xl px-6 py-3 text-center">
+        <span className="text-white/70">月現金流 </span>
+        <span className={'text-2xl font-black tabular-nums ' + ((d.cashflow ?? 0) >= 0 ? 'text-green-300' : 'text-red-300')}>
+          {(d.cashflow ?? 0) >= 0 ? '+' : '-'}{formatMoney(Math.abs(d.cashflow ?? 0))}
+        </span>
+        <span className="text-white/70 ml-4">距財富自由：被動 {formatMoney(d.passiveTotal)} / 支出 {formatMoney(d.totalExpense)}</span>
+      </div>
+      <p className="mt-4 text-white/40 text-sm">（老師再點一次「投影中」即可關閉）</p>
+    </div>
+  );
+}
+
 function Tutorial() {
   const squares = [
     { e: '💰', t: '發薪', d: '每個月初自動領「薪水＋被動收入−支出」' },
@@ -154,7 +220,7 @@ function Tutorial() {
   return (
     <div className="fixed inset-0 z-50 bg-zizi-blue/95 flex flex-col items-center justify-center p-10 overflow-auto">
       <h2 className="text-4xl font-black text-zizi-gold mb-2">📖 新手教學</h2>
-      <p className="text-white/70 mb-6">目標：讓「被動收入 ＞ 總支出」，跳出老鼠賽跑圈、財務自由！</p>
+      <p className="text-white/70 mb-6">目標：讓「被動收入 ＞ 總支出」，跳出老鼠賽跑圈、財富自由！</p>
 
       <div className="grid grid-cols-2 gap-6 max-w-5xl w-full">
         <div className="bg-white/10 rounded-2xl p-5">
@@ -270,7 +336,7 @@ function Celebration({ name }) {
         <p className="text-3xl text-white/90">恭喜</p>
         <p className="text-6xl font-black text-zizi-gold my-3 drop-shadow-lg">{name}</p>
         <p className="text-4xl font-bold text-white">跳出老鼠賽跑圈！</p>
-        <p className="text-2xl text-white/80 mt-3">達成財務自由 🎉</p>
+        <p className="text-2xl text-white/80 mt-3">達成財富自由 🎉</p>
       </div>
     </div>
   );
@@ -338,7 +404,7 @@ function LobbyView({ studentUrl, teams }) {
         </p>
         <p className="text-2xl font-bold text-white mt-3">
           🎯 目標：讓你的<span className="text-zizi-gold">被動收入</span>（房租、股利、企業現金流）
-          <span className="text-zizi-gold">超過總支出</span>，就能<span className="text-zizi-gold">跳出老鼠圈、財務自由！</span>
+          <span className="text-zizi-gold">超過總支出</span>，就能<span className="text-zizi-gold">跳出老鼠圈、財富自由！</span>
         </p>
       </div>
 

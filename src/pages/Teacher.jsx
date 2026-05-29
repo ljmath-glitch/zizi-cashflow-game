@@ -99,20 +99,27 @@ export default function Teacher() {
           </div>
         )}
 
-        {/* 已加入組別 */}
+        {/* 已加入組別（點「投影」把該組財務投到大螢幕教學） */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <p className="text-sm text-slate-500 mb-2">
             已加入 <span className="font-bold text-zizi-blue">{teams.length}</span> 組
+            <span className="text-xs text-slate-400 ml-1">（點「投影」可在大螢幕分析該組）</span>
           </p>
-          <div className="flex flex-wrap gap-2">
-            {teams.map((t) => (
-              <span
-                key={t.id}
-                className="text-sm bg-slate-100 rounded-full px-3 py-1"
-              >
-                {t.professionEmoji} {t.name}
-              </span>
-            ))}
+          <div className="space-y-1.5">
+            {teams.map((t) => {
+              const on = game?.spotlight?.id === t.id;
+              return (
+                <div key={t.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-1.5">
+                  <span className="text-sm">{t.professionEmoji} {t.name}{t.bankrupt ? ' 💀' : ''}</span>
+                  <button
+                    onClick={() => socket.emit('teacher:spotlight', { teamId: t.id })}
+                    className={'text-xs font-medium rounded-lg px-3 py-1 ' + (on ? 'bg-zizi-gold text-white' : 'bg-white text-zizi-blue border border-zizi-blue/30')}
+                  >
+                    {on ? '投影中 ✕' : '📽️ 投影'}
+                  </button>
+                </div>
+              );
+            })}
             {teams.length === 0 && (
               <span className="text-sm text-slate-400">尚無組別加入</span>
             )}

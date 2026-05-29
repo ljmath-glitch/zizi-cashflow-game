@@ -16,6 +16,7 @@ import {
   setConfig,
   skipTurn,
   toggleTutorial,
+  setSpotlight,
   createTeam,
   getTeam,
   getTeamPayload,
@@ -25,6 +26,7 @@ import {
   sellAsset,
   loanMoney,
   repayLoan,
+  repayDebt,
   rollDice,
   chooseDeck,
   dealDecision,
@@ -104,6 +106,7 @@ io.on('connection', (socket) => {
   socket.on('teacher:nextRound', () => nextRound());
   socket.on('teacher:skipTurn', () => skipTurn());
   socket.on('teacher:tutorial', ({ show } = {}) => toggleTutorial(show));
+  socket.on('teacher:spotlight', ({ teamId } = {}) => setSpotlight(teamId));
   socket.on('teacher:reset', () => resetGame());
   socket.on('teacher:clear', () => clearGame());
   socket.on('teacher:setConfig', (cfg) => setConfig(cfg || {}));
@@ -180,6 +183,10 @@ io.on('connection', (socket) => {
   });
   socket.on('student:repay', ({ teamId, amount } = {}, ack) => {
     const res = repayLoan(teamId, amount);
+    if (typeof ack === 'function') ack(res);
+  });
+  socket.on('student:repayDebt', ({ teamId, key } = {}, ack) => {
+    const res = repayDebt(teamId, key);
     if (typeof ack === 'function') ack(res);
   });
 

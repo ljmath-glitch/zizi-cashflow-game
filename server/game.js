@@ -3,10 +3,10 @@
 // 模組 3：各組登入 + 抽職業卡 + 財務資料
 // 模組 4：買賣資產 + 每回合發薪/被動收入結算 + 即時動態
 import { PROFESSIONS, randomProfession, getProfession } from './data/professions.js';
-import { MARKET, getMarketItem } from './data/assets.js';
+import { MARKET, getMarketItem, INSTRUMENT_VOL } from './data/assets.js';
 import { BOARD } from './data/board.js';
 import { drawCard } from './data/cards.js';
-import { randomMonthlyEvent, SECTOR_VOLATILITY } from './data/events.js';
+import { pickEvent, randomRumor } from './data/events.js';
 import { saveToFile } from './storage.js';
 
 let io = null;
@@ -31,16 +31,19 @@ const state = {
   turnOrder: [], // 擲骰輪流順序（依加入順序的 teamId）
   currentTurnIndex: 0, // 目前輪到第幾位（指向 turnOrder）
   market: freshMarket(), // 三大類市場指數（會浮動）
-  monthlyEvent: null, // 本月大事件
+  monthlyEvent: null, // 本回合市場事件
+  lastCatId: null, // 上一個災難型大事件 id（避免連續災難）
+  pendingRumor: null, // 待兌現的股市情報
   showTutorial: false, // 大螢幕是否顯示新手教學
+  spotlightTeamId: null, // 老師投影到大螢幕教學的組別（平常不公開）
 };
 
 // 市場初始化：每支股票/ETF/加密貨幣各自一條價格序列；房地產用分類指數
 function freshMarket() {
   const instruments = {};
   for (const item of MARKET) {
-    if (item.category === 'dividend' || item.category === 'crypto') {
-      // 加密以 100 為名目價（當作指數）；股票/ETF 以牌價為起點
+    if (item.category === 'dividend' || item.category === 'crypto' || item.category === 'commodity') {
+      // 加密以 100 為名目價（當作指數）；股票/ETF/原物料以牌價為起點
       const base = item.category === 'crypto' ? 100 : item.price;
       instruments[item.id] = {
         id: item.id,
@@ -95,12 +98,19 @@ function publicState() {
     market: state.market, // 三大類市場指數＋歷史（畫走勢圖）
     monthlyEvent: state.monthlyEvent, // 本月大事件
     showTutorial: state.showTutorial, // 大螢幕教學開關
+    spotlight: state.spotlightTeamId ? getTeamPayload(state.spotlightTeamId) : null, // 老師投影的組別完整財務
   };
 }
 
 // 老師開關大螢幕新手教學
 export function toggleTutorial(on) {
   state.showTutorial = typeof on === 'boolean' ? on : !state.showTutorial;
+  broadcast();
+}
+
+// 老師把某組財務投到大螢幕（再點同一組或傳 null 取消）
+export function setSpotlight(teamId) {
+  state.spotlightTeamId = teamId && getTeam(teamId) && state.spotlightTeamId !== teamId ? teamId : null;
   broadcast();
 }
 
@@ -143,17 +153,17 @@ function stopTick() {
   }
 }
 
-// 進入新回合：本月大事件 → 指數浮動 → 各組自動發薪
+// 進入新回合：跑市場事件、清旗標（發薪改由骰子經過「發薪日」格才結算）
 function enterNewRound(roundNumber) {
   state.round = roundNumber;
   state.timeLeft = state.roundSeconds;
   state.currentTurnIndex = 0; // 從第一組重新開始輪
-  applyMonthlyEvent(); // 先跑本月大事件，更新市場指數與資產價值
+  applyMonthlyEvent(); // 跑市場事件，更新市場指數與資產價值
   for (const team of Object.values(state.teams)) {
     if (team.bankrupt) continue; // 已淘汰跳過
     team.hasRolledThisRound = false;
     team.pendingAction = null; // 上一回合沒處理的機會/慈善視為放棄
-    settleTeam(team); // 每回合自動發薪（薪水＋被動−支出），可能觸發破產
+    emitTeam(team);
   }
   // 重建輪流順序，排除已破產的組（保留加入順序）
   state.turnOrder = state.turnOrder.filter((id) => state.teams[id] && !state.teams[id].bankrupt);
@@ -161,47 +171,73 @@ function enterNewRound(roundNumber) {
   broadcastTeams();
 }
 
-// 每回合開場：抽本月大事件，更新每支商品價格 + 房地產指數，再重算所有資產
+// 每回合開場：抽事件（多為小事件、偶爾大事件），更新每支商品價格與房地產指數
 function applyMonthlyEvent() {
-  const evt = randomMonthlyEvent();
-  const prevEvent = state.monthlyEvent; // 上個月的事件（供回顧）
-  // 記錄變動前的價格，供計算本月漲跌
+  const evt = pickEvent(state.lastCatId);
+  state.lastCatId = evt.catastrophe ? evt.id : null; // 記錄災難，避免連續
+  const prevEvent = state.monthlyEvent;
   const before = {};
   for (const id in state.market.instruments) before[id] = state.market.instruments[id].price;
   const reBefore = state.market.realestate.index;
 
   state.monthlyEvent = { ...evt, round: state.round };
 
-  // 逐支商品浮動：基礎波動 × 事件乘數（AI 股對 AI 事件更敏感）
+  // 情報兌現：上回合釋出的情報有 55% 機率成真，化為額外偏移
+  let rumorBias = null;
+  if (state.pendingRumor) {
+    const r = state.pendingRumor;
+    state.pendingRumor = null;
+    if (Math.random() < 0.55) rumorBias = { sector: r.sector, factor: r.dir === 'up' ? 1.08 : 0.92 };
+  }
+
+  // 逐支商品浮動
   for (const id in state.market.instruments) {
     const inst = state.market.instruments[id];
-    const sector = volSectorOf(inst.category); // stock / crypto
-    const vol = SECTOR_VOLATILITY[sector] || 0.05;
-    const drift = 1 + (Math.random() * 2 - 1) * vol;
-    let eventMult = evt.effects?.[sector] ?? 1;
-    // AI 主題商品對「股市類」事件的反應放大 1.8 倍
-    if (sector === 'stock' && inst.tags.includes('ai') && eventMult !== 1) {
-      eventMult = 1 + (eventMult - 1) * 1.8;
+    const cat = inst.category; // dividend / crypto / commodity
+    const sectorKey = cat === 'dividend' ? 'stock' : cat; // 事件 effects 的鍵
+    const m = INSTRUMENT_VOL[cat] || INSTRUMENT_VOL.dividend;
+
+    let factor;
+    if (cat === 'crypto') {
+      // 加密：每回合 ±5~50%，約 3% 機率極端 ±50~150%
+      const extreme = Math.random() < 0.03;
+      const mag = extreme ? 0.5 + Math.random() * 1.0 : 0.05 + Math.random() * 0.45;
+      factor = 1 + (Math.random() < 0.5 ? -1 : 1) * mag;
+    } else {
+      // 股票/原物料：趨勢偏移 + 小幅隨機
+      factor = 1 + m.drift + (Math.random() * 2 - 1) * m.vol;
     }
-    inst.price = Math.max(1, Math.round(inst.price * drift * eventMult));
+
+    // 事件乘數（AI/生技題材對對應事件更敏感）
+    let eff = evt.effects?.[sectorKey] ?? 1;
+    if (eff !== 1) {
+      if (evt.aiBoost && (inst.tags || []).includes('ai')) eff = 1 + (eff - 1) * evt.aiBoost;
+      if (evt.bioBoost && (inst.tags || []).includes('biotech')) eff = 1 + (eff - 1) * evt.bioBoost;
+    }
+    factor *= eff;
+    if (rumorBias && sectorKey === rumorBias.sector) factor *= rumorBias.factor;
+
+    // 單回合漲跌上限（股票最多 ±10%、原物料 ±25%、加密放寬到 ±150%）
+    factor = Math.max(1 - m.cap, Math.min(1 + m.cap, factor));
+    inst.price = Math.max(1, Math.round(inst.price * factor));
     inst.history.push(inst.price);
     if (inst.history.length > 40) inst.history.shift();
   }
 
-  // 房地產分類指數
+  // 房地產指數（小幅、長期略偏多，最多單回合 ±20%）
   {
-    const vol = SECTOR_VOLATILITY.realestate || 0.03;
-    const drift = 1 + (Math.random() * 2 - 1) * vol;
-    const eventMult = evt.effects?.realestate ?? 1;
+    let factor = 1 + 0.004 + (Math.random() * 2 - 1) * 0.03;
+    factor *= evt.effects?.realestate ?? 1;
+    if (rumorBias && rumorBias.sector === 'realestate') factor *= rumorBias.factor;
+    factor = Math.max(0.85, Math.min(1.2, factor));
     const re = state.market.realestate;
-    re.index = Math.max(5, Math.round(re.index * drift * eventMult));
+    re.index = Math.max(5, Math.round(re.index * factor));
     re.history.push(re.index);
     if (re.history.length > 40) re.history.shift();
   }
 
   for (const team of Object.values(state.teams)) recomputeAssetValues(team);
 
-  // 計算三大類平均漲跌%（給大螢幕月報）
   function avgMove(filter) {
     let sum = 0, n = 0;
     for (const id in state.market.instruments) {
@@ -215,18 +251,29 @@ function applyMonthlyEvent() {
   const moves = {
     stock: avgMove((i) => i.category === 'dividend'),
     crypto: avgMove((i) => i.category === 'crypto'),
+    commodity: avgMove((i) => i.category === 'commodity'),
     realestate: reBefore ? Math.round(((state.market.realestate.index - reBefore) / reBefore) * 100) : 0,
   };
 
-  addFeed(`${evt.emoji} 本月大事件：${evt.title}（${evt.desc || ''}）`);
+  addFeed(`${evt.emoji} ${evt.scale === 'big' ? '【大事件】' : ''}${evt.title}（${evt.desc || ''}）`);
+
+  // 釋出新情報（約 25% 機率），暗示下回合可能行情
+  let rumor = null;
+  if (Math.random() < 0.25) {
+    rumor = randomRumor();
+    state.pendingRumor = rumor;
+    addFeed(`🔍 股市情報：${rumor.text}`);
+  }
+
   if (io) {
     io.emit('market:monthly', { event: state.monthlyEvent, market: publicMarket(), before, reBefore });
-    // 月報彈窗：上月回顧（事件＋漲跌結果）＋ 本月突發事件
     io.emit('month:report', {
       round: state.round,
       prevEvent: prevEvent ? { emoji: prevEvent.emoji, title: prevEvent.title } : null,
       thisEvent: { emoji: evt.emoji, title: evt.title, desc: evt.desc || '' },
       moves,
+      scale: evt.scale,
+      rumor,
     });
   }
 }
@@ -348,7 +395,7 @@ function resetTeamFinances(team) {
   team.expenses = { ...prof.expenses }; // 各項月支出（稅金/房貸/車貸/學貸/卡債/額外）
   team.perChild = prof.perChild;
   team.children = 0;
-  team.personalLiabilities = { ...prof.liabilities, bankLoan: 0 }; // 各項負債餘額
+  team.personalLiabilities = { ...prof.liabilities, bankLoan: 0, loanShark: 0 }; // 各項負債餘額（含高利貸）
   team.assets = []; // 投資資產（每筆含 category）
   team.assetLiabilities = []; // 投資連動負債（房貸/企業貸款）
   team.charityTurns = 0; // 慈善剩餘可用次數（擲兩顆骰）
@@ -385,7 +432,7 @@ export function professionPublic(prof) {
     liabilitiesTotal: profLiabTotal(prof), // 起始負債總額
     netWorthStart: prof.savings - profLiabTotal(prof),
     hasHouse: (prof.liabilities.homeMortgage || 0) > 0, // 是否有自住房（有房貸＝有房）
-    freedomThreshold: profExpenseTotal(prof), // 被動收入需達此值才財務自由
+    freedomThreshold: profExpenseTotal(prof), // 被動收入需達此值才財富自由
     perk: prof.perk,
   };
 }
@@ -442,12 +489,15 @@ function passiveBreakdown(team) {
   return b;
 }
 
-// 每月銀行貸款月付＝貸款餘額的 10%
+// 每月貸款月付：銀行貸款 10% + 高利貸 20%
+const BANK_RATE = 0.1; // 一般銀行貸款月息
+const SHARK_RATE = 0.2; // 高利貸（緊急貸款購買）月息
 function bankLoanPayment(team) {
-  return Math.round((team.personalLiabilities?.bankLoan || 0) * 0.1);
+  const l = team.personalLiabilities || {};
+  return Math.round((l.bankLoan || 0) * BANK_RATE + (l.loanShark || 0) * SHARK_RATE);
 }
 
-// 總支出 = 各項月支出 + 小孩支出×人數 + 銀行貸款月付
+// 總支出 = 各項月支出 + 小孩支出×人數 + 貸款月付（含高利貸）
 function computeTotalExpense(team) {
   const e = team.expenses || {};
   const base = (e.tax || 0) + (e.homeMortgage || 0) + (e.carLoan || 0) +
@@ -459,7 +509,7 @@ function computeTotalExpense(team) {
 function computeLiabilitiesTotal(team) {
   const l = team.personalLiabilities || {};
   const personal = (l.homeMortgage || 0) + (l.carLoan || 0) + (l.schoolLoan || 0) +
-    (l.creditCard || 0) + (l.bankLoan || 0);
+    (l.creditCard || 0) + (l.bankLoan || 0) + (l.loanShark || 0);
   const linked = (team.assetLiabilities || []).reduce((s, x) => s + (x.balance || 0), 0);
   return personal + linked;
 }
@@ -482,7 +532,7 @@ function computeDerived(team) {
     assetsValue,
     liabilitiesTotal,
     netWorth: team.cash + assetsValue - liabilitiesTotal,
-    free: passive.total >= totalExpense, // 非工資收入 ≥ 總支出 → 財務自由
+    free: passive.total >= totalExpense, // 非工資收入 ≥ 總支出 → 財富自由
   };
 }
 
@@ -626,13 +676,13 @@ function addHistory(team, entry) {
   if (team.history.length > 50) team.history.length = 50;
 }
 
-// 檢查是否達成財務自由（非工資收入 ≥ 總支出），首次達成時推播動態
+// 檢查是否達成財富自由（非工資收入 ≥ 總支出），首次達成時推播動態
 function checkFreedom(team) {
   const d = computeDerived(team);
   if (d.free && !team.free) {
     team.free = true;
     team.freedRound = state.round;
-    addFeed(`🎉🏆 ${team.name} 達成財務自由！`);
+    addFeed(`🎉🏆 ${team.name} 達成財富自由！`);
     if (io) io.emit('game:freed', { teamId: team.id, name: team.name });
   }
 }
@@ -735,11 +785,29 @@ export function rollDice(teamId) {
   team.position = to;
   const square = BOARD[to];
 
-  addFeed(`🎲 ${team.name} 擲出 ${rolls.join('+')}＝${steps}，停在 ${square.emoji}${square.label}`);
+  // 沿途「經過或停在」發薪日格 → 每經過一次就結算一個月現金流（過了一個月）
+  let paydays = 0;
+  for (let s = 1; s <= steps; s++) {
+    const idx = (from + s) % BOARD.length;
+    if (BOARD[idx].type === 'payday') {
+      settleTeam(team); // 收當月現金流（薪水＋被動−支出），可能觸發破產
+      paydays += 1;
+      if (team.bankrupt) break;
+    }
+  }
+
+  addFeed(`🎲 ${team.name} 擲出 ${rolls.join('+')}＝${steps}，停在 ${square.emoji}${square.label}${paydays ? `（領了 ${paydays} 次薪水）` : ''}`);
   if (io) io.emit('board:move', { teamId, from, to, steps, rolls, square: square.type });
 
-  // 觸發停留格子的事件
-  resolveSquare(team, square.type);
+  // 破產則結束此回合（已被移出輪流）
+  if (team.bankrupt) {
+    emitTeam(team);
+    broadcastTeams();
+    return { ok: true, rolls, steps, from, to, square: square.type, paydays, bankrupt: true };
+  }
+
+  // 觸發停留格子的事件（停在發薪格本身不重複結算，移動時已算過）
+  if (square.type !== 'payday') resolveSquare(team, square.type);
 
   checkFreedom(team);
   emitTeam(team);
@@ -748,7 +816,7 @@ export function rollDice(teamId) {
   // 若沒有待處理的互動（機會抽卡 / 慈善），這組的回合就結束，換下一組
   if (!team.pendingAction) advanceTurn();
 
-  return { ok: true, rolls, steps, from, to, square: square.type };
+  return { ok: true, rolls, steps, from, to, square: square.type, paydays };
 }
 
 // ── 格子事件處理 ──
@@ -862,24 +930,36 @@ function maybeAcquisitionOffer(team) {
   if (Math.random() > 0.35) return null;
 
   const asset = houses[Math.floor(Math.random() * houses.length)];
-  // 通常溢價 +10~30%；約 12% 機率出現超高溢價 +50~80%
-  const premium =
-    Math.random() < 0.12
-      ? 0.5 + Math.random() * 0.3
-      : 0.1 + Math.random() * 0.2;
-  const offerPrice = Math.round(asset.value * (1 + premium));
+  // 開價依該房的售價範圍（priceLow~priceHigh）抽出，低機率偏向高端（重劃/搶手）
+  let offerPrice;
+  if (asset.priceLow && asset.priceHigh) {
+    const lo = asset.priceLow, hi = asset.priceHigh;
+    // 12% 機率偏高端（後 1/3），其餘落在全區間
+    const r = Math.random() < 0.12 ? 0.67 + Math.random() * 0.33 : Math.random();
+    offerPrice = Math.round(lo + (hi - lo) * r);
+  } else {
+    // 無範圍資料（舊資料）退回用現值加溢價
+    const premium = Math.random() < 0.12 ? 0.5 + Math.random() * 0.3 : 0.1 + Math.random() * 0.2;
+    offerPrice = Math.round(asset.value * (1 + premium));
+  }
+  // 賣出淨額 = 開價 − 該房貸款
+  const mortgage = asset.mortgageAmt || 0;
+  const net = offerPrice - mortgage;
   const buyer = BUYERS[Math.floor(Math.random() * BUYERS.length)];
   const where = [asset.location, asset.roomType].filter(Boolean).join(' ');
+  // 相對「投入頭期」的報酬率
+  const gainPct = asset.totalCost ? Math.round(((net - asset.totalCost) / asset.totalCost) * 100) : 0;
   return {
     type: 'acquire',
     assetUid: asset.uid,
     offerPrice,
-    premium: Math.round(premium * 100),
+    net,
+    gainPct,
     buyer,
     card: {
       emoji: '🤝',
       name: `${buyer}想收購你的${asset.roomType || '房產'}`,
-      desc: `${where}　開價 ${formatNT(offerPrice)}（溢價 +${Math.round(premium * 100)}%）`,
+      desc: `${where}　開價 ${formatNT(offerPrice)}（清貸款後淨入 ${formatNT(net)}）`,
     },
   };
 }
@@ -925,6 +1005,17 @@ export function acquireDecision(teamId, accept) {
 // 額外支出卡：強制消費（套用在停留的那一組）
 function applyDoodad(team, card) {
   if (!card) return;
+  // 連動條件：沒出租房 / 沒小孩 就不會發生這筆支出
+  if (card.requires === 'realestate' && !(team.assets || []).some((a) => a.category === 'realestate')) {
+    addFeed(`😅 ${team.name} 抽到「${card.name}」，但沒有出租房，免了`);
+    emitEvent(team, { emoji: '😅', title: '虛驚一場', text: `${card.name}：你沒有出租房，這筆支出免了！` });
+    return;
+  }
+  if (card.requires === 'child' && (team.children || 0) === 0) {
+    addFeed(`😅 ${team.name} 抽到「${card.name}」，但還沒有小孩，免了`);
+    emitEvent(team, { emoji: '😅', title: '虛驚一場', text: `${card.name}：你還沒有小孩，這筆支出免了！` });
+    return;
+  }
   announceCard('doodad', card, team);
   if (card.recurring) {
     team.expenses.other += card.amount;
@@ -1003,12 +1094,12 @@ export function dealDecision(teamId, accept, withLoan = false) {
 
   if (team.cash < card.cost) {
     if (withLoan) {
-      // 直接貸款購買：借差額（湊整到萬元）→ 增加銀行貸款
+      // 直接貸款購買＝高利貸（月息 20%，比一般銀行貸款貴）：借差額（湊整到萬元）
       const need = Math.ceil((card.cost - team.cash) / 10000) * 10000;
-      team.personalLiabilities.bankLoan += need;
+      team.personalLiabilities.loanShark = (team.personalLiabilities.loanShark || 0) + need;
       team.cash += need;
-      addHistory(team, { round: state.round, type: 'loan', text: `貸款購買 ${card.name}`, delta: need });
-      addFeed(`💳 ${team.name} 貸款 ${formatNT(need)} 買下 ${card.emoji} ${card.name}`);
+      addHistory(team, { round: state.round, type: 'loan', text: `高利貸購買 ${card.name}`, delta: need });
+      addFeed(`💳 ${team.name} 借高利貸 ${formatNT(need)}（月息20%）買下 ${card.emoji} ${card.name}`);
     } else {
       // 買不起 → 退回機會卡讓玩家重新決定（回合尚未結束）
       team.pendingAction = { type: 'deal', deck: card.deck, card };
@@ -1039,6 +1130,9 @@ export function dealDecision(teamId, accept, withLoan = false) {
     units: dealUnits,
     location: card.location || null,
     roomType: card.roomType || null,
+    priceLow: card.priceLow || null, // 房地產售價範圍（收購/賣出用）
+    priceHigh: card.priceHigh || null,
+    mortgageAmt: card.mortgage || 0, // 記錄原始貸款（賣出計算淨額）
     qty: 1,
     value: dealValue,
     costBasis: dealBasis,
@@ -1218,24 +1312,49 @@ export function loanMoney(teamId, amount) {
   return { ok: true };
 }
 
-// 還款：減少銀行貸款餘額（不能超過現金或餘額）
+// 還款：先還利率高的高利貸，再還銀行貸款（不能超過現金或餘額）
 export function repayLoan(teamId, amount) {
   if (state.phase !== 'running') return { ok: false, reason: '目前不是操作時間' };
   const team = getTeam(teamId);
   if (!team) return { ok: false, reason: '找不到組別' };
   amount = Math.floor(Number(amount) || 0);
-  const bal = team.personalLiabilities.bankLoan || 0;
-  if (bal <= 0) return { ok: false, reason: '目前沒有銀行貸款' };
+  const l = team.personalLiabilities;
+  const bal = (l.loanShark || 0) + (l.bankLoan || 0);
+  if (bal <= 0) return { ok: false, reason: '目前沒有貸款' };
   if (amount <= 0) return { ok: false, reason: '金額需大於 0' };
   amount = Math.min(amount, bal);
   if (team.cash < amount) return { ok: false, reason: '現金不足以還這麼多' };
   team.cash -= amount;
-  team.personalLiabilities.bankLoan -= amount;
-  addHistory(team, { round: state.round, type: 'repay', text: `還銀行貸款 -${formatNT(amount)}`, delta: -amount });
-  addFeed(`✅ ${team.name} 還了銀行貸款 ${formatNT(amount)}`);
+  let left = amount;
+  const payShark = Math.min(left, l.loanShark || 0); // 先還高利貸
+  l.loanShark = (l.loanShark || 0) - payShark; left -= payShark;
+  l.bankLoan = (l.bankLoan || 0) - left;
+  addHistory(team, { round: state.round, type: 'repay', text: `還貸款 -${formatNT(amount)}`, delta: -amount });
+  addFeed(`✅ ${team.name} 還了貸款 ${formatNT(amount)}`);
   emitTeam(team);
   broadcastTeams();
   return { ok: true };
+}
+
+// 付清起始職業負債（自住房貸/車貸/學貸/卡債）：付全額餘額 → 該筆每月支出歸零
+const DEBT_LABELS = { homeMortgage: '自住房貸', carLoan: '車貸', schoolLoan: '學貸', creditCard: '卡債' };
+export function repayDebt(teamId, key) {
+  if (state.phase !== 'running') return { ok: false, reason: '目前不是操作時間' };
+  const team = getTeam(teamId);
+  if (!team) return { ok: false, reason: '找不到組別' };
+  if (!DEBT_LABELS[key]) return { ok: false, reason: '無法償還此項' };
+  const bal = team.personalLiabilities[key] || 0;
+  if (bal <= 0) return { ok: false, reason: '這筆已經沒有欠款' };
+  if (team.cash < bal) return { ok: false, reason: `現金不足，付清需 ${formatNT(bal)}` };
+  const saved = team.expenses[key] || 0;
+  team.cash -= bal;
+  team.personalLiabilities[key] = 0;
+  team.expenses[key] = 0; // 付清後免除該筆月付
+  addHistory(team, { round: state.round, type: 'repay', text: `付清${DEBT_LABELS[key]}（每月省 ${formatNT(saved)}）`, delta: -bal });
+  addFeed(`✅ ${team.name} 付清了${DEBT_LABELS[key]}，每月省下 ${formatNT(saved)}`);
+  emitTeam(team);
+  broadcastTeams();
+  return { ok: true, saved };
 }
 
 // 賣出持有資產。payload：

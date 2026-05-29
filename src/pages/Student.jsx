@@ -110,7 +110,7 @@ function JoinForm({ connected, join, resume, offerProfessions }) {
       <div className="text-5xl">📱</div>
       <h2 className="text-xl font-bold text-zizi-blue">加入遊戲</h2>
       <p className="text-center text-xs text-slate-500 max-w-xs -mt-2">
-        🎯 目標：讓<b className="text-zizi-blue">被動收入超過總支出</b>，跳出老鼠賽跑圈、達成財務自由！
+        🎯 目標：讓<b className="text-zizi-blue">被動收入超過總支出</b>，跳出老鼠賽跑圈、達成財富自由！
       </p>
       <div className="w-full max-w-xs space-y-3">
         <label className="block">
@@ -196,7 +196,7 @@ function ProfessionChoice({ prof, disabled, onPick }) {
         />
       </div>
       <div className="mt-2 bg-zizi-blue/5 rounded-lg px-3 py-2 text-xs text-zizi-blue">
-        🎯 被動收入達 <b>{formatMoney(prof.freedomThreshold)}/月</b> 就財務自由！
+        🎯 被動收入達 <b>{formatMoney(prof.freedomThreshold)}/月</b> 就財富自由！
       </div>
     </button>
   );
@@ -256,13 +256,18 @@ function FinancePanel({ team, phase }) {
 
       {free && !team.bankrupt && (
         <div className="bg-green-500 text-white text-center py-2 font-bold">
-          🏆 已達成財務自由！
+          🏆 已達成財富自由！
         </div>
       )}
 
+      {!team.bankrupt && (team.personalLiabilities?.loanShark || 0) > 0 && (
+        <div className="bg-red-700 text-white text-center py-1.5 text-sm font-medium">
+          🔴 高利貸 {formatMoney(team.personalLiabilities.loanShark)}，每月利息 {formatMoney(Math.round(team.personalLiabilities.loanShark * 0.2))}（月息20%，快還！）
+        </div>
+      )}
       {!team.bankrupt && (team.personalLiabilities?.bankLoan || 0) > 0 && (
         <div className="bg-red-500 text-white text-center py-1.5 text-sm font-medium">
-          ⚠️ 銀行貸款 {formatMoney(team.personalLiabilities.bankLoan)}，每月還利息 {formatMoney(Math.round(team.personalLiabilities.bankLoan * 0.1))}
+          ⚠️ 銀行貸款 {formatMoney(team.personalLiabilities.bankLoan)}，每月利息 {formatMoney(Math.round(team.personalLiabilities.bankLoan * 0.1))}
         </div>
       )}
 
@@ -293,7 +298,7 @@ function FinancePanel({ team, phase }) {
   );
 }
 
-// 損益表：收入（工資 + 被動四類）− 支出各項 = 月現金流，含財務自由進度
+// 損益表：收入（工資 + 被動四類）− 支出各項 = 月現金流，含財富自由進度
 // 格子互動彈窗：機會（選牌庫→買/放棄）、慈善（捐/不捐）
 function PendingModal({ team }) {
   const pa = team.pendingAction;
@@ -334,23 +339,37 @@ function PendingModal({ team }) {
   if (pa.type === 'deal') {
     const c = pa.card;
     const afford = team.cash >= c.cost;
+    // 年化投資報酬率 = 月現金流×12 ÷ 投入頭期
+    const roi = c.cost ? Math.round((c.monthlyIncome * 12 / c.cost) * 100) : 0;
+    const mi = c.monthlyIncome || 0;
     return (
       <Overlay>
         <div className="text-center">
           <div className="text-5xl mb-1">{c.emoji}</div>
-          <p className="text-xs text-zizi-gold font-medium">{pa.deck === 'big' ? '大買賣' : '小生意'}</p>
+          <p className="text-xs text-zizi-gold font-medium">{pa.deck === 'big' ? '大額機會' : '小額機會'}</p>
           <h3 className="text-lg font-bold text-zizi-blue">{c.name}</h3>
-          <p className="text-sm text-slate-500 mt-1 mb-3">{c.desc}</p>
-          <div className="bg-slate-50 rounded-xl p-3 text-sm grid grid-cols-2 gap-y-1 mb-4">
-            <span className="text-slate-400">需要現金</span>
+          {c.story && <p className="text-xs text-slate-500 mt-1 mb-2 leading-relaxed">{c.story}</p>}
+          <div className="bg-slate-50 rounded-xl p-3 text-sm grid grid-cols-2 gap-y-1 mb-3">
+            <span className="text-slate-400">需要現金（頭期）</span>
             <span className="text-right font-semibold">{formatMoney(c.cost)}</span>
             {c.mortgage > 0 && (<>
               <span className="text-slate-400">連帶貸款</span>
               <span className="text-right font-semibold text-red-500">{formatMoney(c.mortgage)}</span>
             </>)}
-            <span className="text-slate-400">月被動收入</span>
-            <span className="text-right font-semibold text-green-600">+{formatMoney(c.monthlyIncome)}</span>
+            <span className="text-slate-400">每月現金流</span>
+            <span className={'text-right font-semibold ' + (mi >= 0 ? 'text-green-600' : 'text-red-500')}>
+              {mi >= 0 ? '+' : '-'}{formatMoney(Math.abs(mi))}
+            </span>
+            <span className="text-slate-400">投資報酬率（年）</span>
+            <span className={'text-right font-bold ' + (roi >= 0 ? 'text-green-600' : 'text-red-500')}>{roi}%</span>
+            {c.priceLow && c.priceHigh && (<>
+              <span className="text-slate-400">售價範圍</span>
+              <span className="text-right font-semibold text-slate-700">{formatMoney(c.priceLow)}~{formatMoney(c.priceHigh)}</span>
+            </>)}
           </div>
+          {mi < 0 && (
+            <p className="text-xs text-amber-600 mb-2">⚠️ 這筆每月會小虧，但售價範圍高、有增值翻盤機會</p>
+          )}
           {!afford && (
             <p className="text-xs text-red-500 mb-2">
               現金不足（差 {formatMoney(c.cost - team.cash)}），可改用「貸款購買」
@@ -373,9 +392,9 @@ function PendingModal({ team }) {
             ) : (
               <button
                 onClick={() => socket.emit('student:dealDecision', { teamId: team.id, accept: true, withLoan: true })}
-                className="rounded-xl bg-slate-700 text-white font-bold py-3"
+                className="rounded-xl bg-slate-700 text-white font-bold py-2.5 text-sm leading-tight"
               >
-                💳 貸款購買
+                💳 高利貸購買<span className="block text-[0.65rem] font-normal">月息 20%，較貴！</span>
               </button>
             )}
           </div>
@@ -392,10 +411,15 @@ function PendingModal({ team }) {
           <h3 className="text-lg font-bold text-zizi-blue">有人想收購你的房產！</h3>
           <p className="text-sm text-slate-500 mt-1">{pa.buyer} 開出收購價</p>
           <div className="bg-emerald-50 rounded-xl p-4 my-4">
-            <p className="text-3xl font-black text-emerald-600">{formatMoney(pa.offerPrice)}</p>
-            <p className="text-sm text-emerald-700 mt-1">溢價 +{pa.premium}%</p>
+            <p className="text-sm text-slate-500">開價 {formatMoney(pa.offerPrice)}</p>
+            <p className="text-3xl font-black text-emerald-600 mt-1">清貸款後淨入 {formatMoney(pa.net)}</p>
+            {typeof pa.gainPct === 'number' && (
+              <p className={'text-sm mt-1 font-bold ' + (pa.gainPct >= 0 ? 'text-emerald-700' : 'text-red-500')}>
+                相對投入頭期 {pa.gainPct >= 0 ? '賺' : '賠'} {Math.abs(pa.gainPct)}%
+              </p>
+            )}
           </div>
-          <p className="text-xs text-slate-400 mb-4">賣出後會清償該房貸，淨額入帳；之後就少了這筆租金被動收入。</p>
+          <p className="text-xs text-slate-400 mb-4">賣出後會清償該房貸、淨額入帳；之後就少了這筆租金現金流。</p>
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => socket.emit('student:acquireDecision', { teamId: team.id, accept: false })}
@@ -578,7 +602,7 @@ function IncomeStatement({ team }) {
       {/* 非工資收入重點卡 */}
       <div className="bg-white rounded-2xl shadow-sm p-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-slate-600">財務自由進度</span>
+          <span className="text-sm font-medium text-slate-600">財富自由進度</span>
           <span className="text-sm font-bold text-zizi-gold">{pct}%</span>
         </div>
         <div className="h-3 w-full rounded-full bg-slate-100 overflow-hidden">
@@ -587,8 +611,8 @@ function IncomeStatement({ team }) {
         <p className="mt-2 text-xs text-slate-500">
           非工資收入 {formatMoney(d.passiveTotal || 0)} / 總支出 {formatMoney(d.totalExpense || 0)}
           {gap > 0
-            ? `　還差 ${formatMoney(gap)} 就財務自由`
-            : '　已覆蓋支出，財務自由！🎉'}
+            ? `　還差 ${formatMoney(gap)} 就財富自由`
+            : '　已覆蓋支出，財富自由！🎉'}
         </p>
       </div>
 
@@ -751,12 +775,13 @@ function BalanceSheet({ team, phase }) {
   const assets = team.assets || [];
   const pl = team.personalLiabilities || {};
 
-  const personalLiabRows = [
-    { label: '自住房貸', value: pl.homeMortgage },
-    { label: '車貸', value: pl.carLoan },
-    { label: '學貸', value: pl.schoolLoan },
-    { label: '卡債', value: pl.creditCard },
-    { label: '銀行貸款', value: pl.bankLoan },
+  const e = team.expenses || {};
+  // 起始負債：可付清，付清後免除每月支出（key 對應 expenses 的月付）
+  const startDebts = [
+    { key: 'homeMortgage', label: '自住房貸', value: pl.homeMortgage, monthly: e.homeMortgage },
+    { key: 'carLoan', label: '車貸', value: pl.carLoan, monthly: e.carLoan },
+    { key: 'schoolLoan', label: '學貸', value: pl.schoolLoan, monthly: e.schoolLoan },
+    { key: 'creditCard', label: '卡債', value: pl.creditCard, monthly: e.creditCard },
   ].filter((r) => (r.value || 0) > 0);
 
   return (
@@ -794,24 +819,54 @@ function BalanceSheet({ team, phase }) {
       </div>
 
       {/* 負債 */}
-      {(personalLiabRows.length > 0 || (team.assetLiabilities || []).length > 0) && (
+      {(startDebts.length > 0 || (pl.bankLoan || 0) > 0 || (pl.loanShark || 0) > 0 || (team.assetLiabilities || []).length > 0) && (
         <div>
-          <p className="text-sm font-medium text-slate-500 mb-2">負債</p>
-          <div className="bg-red-50 rounded-2xl divide-y divide-red-100">
-            {personalLiabRows.map((r) => (
-              <div key={r.label} className="flex items-center justify-between px-4 py-2.5">
-                <span className="text-sm text-slate-600">{r.label}</span>
-                <span className="text-sm font-medium text-red-600 tabular-nums">
-                  -{formatMoney(r.value)}
+          <p className="text-sm font-medium text-slate-500 mb-2">負債（付清可免除每月還款）</p>
+          <div className="space-y-2">
+            {(pl.loanShark || 0) > 0 && (
+              <div className="bg-red-100 rounded-2xl px-4 py-2.5 flex items-center justify-between ring-1 ring-red-300">
+                <span className="text-sm text-red-700 font-medium">
+                  🔴 高利貸 <span className="text-xs font-normal">（月息 20%！於上方優先還款）</span>
                 </span>
+                <span className="text-sm font-bold text-red-700 tabular-nums">-{formatMoney(pl.loanShark)}</span>
               </div>
-            ))}
-            {(team.assetLiabilities || []).map((l) => (
-              <div key={l.uid} className="flex items-center justify-between px-4 py-2.5">
-                <span className="text-sm text-slate-600">{l.emoji} {l.name}</span>
-                <span className="text-sm font-medium text-red-600 tabular-nums">
-                  -{formatMoney(l.balance)}
+            )}
+            {startDebts.map((r) => {
+              const afford = team.cash >= r.value;
+              return (
+                <div key={r.key} className="bg-red-50 rounded-2xl px-4 py-2.5 flex items-center gap-3">
+                  <div className="flex-1">
+                    <p className="text-sm text-slate-700">{r.label}</p>
+                    <p className="text-xs text-slate-500">
+                      欠 <span className="text-red-600 font-medium">{formatMoney(r.value)}</span>
+                      　每月還 {formatMoney(r.monthly)}
+                    </p>
+                  </div>
+                  <button
+                    disabled={!canSell || !afford}
+                    onClick={() => {
+                      if (window.confirm(`付清${r.label}需 ${formatMoney(r.value)}，付清後每月省 ${formatMoney(r.monthly)}。確定？`))
+                        socket.emit('student:repayDebt', { teamId: team.id, key: r.key });
+                    }}
+                    className="rounded-lg border border-emerald-400 text-emerald-700 px-3 py-1.5 text-xs font-medium disabled:opacity-40"
+                  >
+                    付清
+                  </button>
+                </div>
+              );
+            })}
+            {(pl.bankLoan || 0) > 0 && (
+              <div className="bg-red-50 rounded-2xl px-4 py-2.5 flex items-center justify-between">
+                <span className="text-sm text-slate-600">
+                  銀行貸款 <span className="text-xs text-slate-400">（月息 10%，於上方還款）</span>
                 </span>
+                <span className="text-sm font-medium text-red-600 tabular-nums">-{formatMoney(pl.bankLoan)}</span>
+              </div>
+            )}
+            {(team.assetLiabilities || []).map((l) => (
+              <div key={l.uid} className="bg-red-50 rounded-2xl px-4 py-2.5 flex items-center justify-between">
+                <span className="text-sm text-slate-600">{l.emoji} {l.name}<span className="text-xs text-slate-400">（賣出資產時自動清償）</span></span>
+                <span className="text-sm font-medium text-red-600 tabular-nums">-{formatMoney(l.balance)}</span>
               </div>
             ))}
           </div>
@@ -827,7 +882,8 @@ function LoanPanel({ team, phase }) {
   const [repayAmt, setRepayAmt] = useState(10000);
   const [msg, setMsg] = useState(null);
   const canAct = phase === 'running';
-  const bal = team.personalLiabilities?.bankLoan || 0;
+  const pl = team.personalLiabilities || {};
+  const bal = (pl.bankLoan || 0) + (pl.loanShark || 0); // 還款總額（高利貸優先還）
 
   function emit(ev, amount) {
     socket.emit(ev, { teamId: team.id, amount: Number(amount) }, (res) => {
@@ -905,10 +961,11 @@ function MarketTab({ team, phase }) {
   const canBuy = phase === 'running';
   const CAT_LABEL = {
     dividend: '📈 股票 / ETF',
+    commodity: '🥇 原物料（黃金/白銀/石油）',
     crypto: '🪙 加密貨幣',
     interest: '🏦 定存 / 債券',
   };
-  const order = ['dividend', 'crypto', 'interest'];
+  const order = ['dividend', 'commodity', 'crypto', 'interest'];
   const instruments = game?.market?.instruments || {};
   const grouped = order
     .map((cat) => ({ cat, items: market.filter((m) => m.category === cat) }))

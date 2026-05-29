@@ -74,6 +74,86 @@ export const MARKET = [
     risk: '高',
     desc: '不配息，純賭未來成長（價差），波動極大',
   },
+  {
+    id: 'stock_biotech',
+    name: '生技新藥股',
+    emoji: '🧬',
+    category: 'dividend',
+    tags: ['biotech'],
+    kind: 'shares',
+    price: 400,
+    dividendPerYear: 0,
+    risk: '高',
+    desc: '新藥題材，過關大漲、解盲失敗大跌，波動大',
+  },
+  {
+    id: 'stock_traditional',
+    name: '傳產龍頭股（鋼鐵/塑化型）',
+    emoji: '🏗️',
+    category: 'dividend',
+    tags: ['traditional'],
+    kind: 'shares',
+    price: 80,
+    dividendPerYear: 5, // 約 6%
+    risk: '低',
+    desc: '景氣循環股，配息高、波動小',
+  },
+  {
+    id: 'stock_food',
+    name: '食品股（統一型）',
+    emoji: '🍜',
+    category: 'dividend',
+    tags: ['traditional'],
+    kind: 'shares',
+    price: 70,
+    dividendPerYear: 3,
+    risk: '低',
+    desc: '民生必需、抗跌穩定',
+  },
+  {
+    id: 'stock_telecom',
+    name: '電信股（中華電型）',
+    emoji: '📶',
+    category: 'dividend',
+    tags: ['traditional'],
+    kind: 'shares',
+    price: 120,
+    dividendPerYear: 5, // 約 4%
+    risk: '極低',
+    desc: '超穩定、像定存的股票，配息約 4%',
+  },
+
+  // ── 原物料（黃金/白銀/石油，價差為主、不配息） ──
+  {
+    id: 'gold',
+    name: '黃金存摺',
+    emoji: '🥇',
+    category: 'commodity',
+    kind: 'shares',
+    price: 8000, // 每單位（克）名目價
+    risk: '中',
+    desc: '避險首選，亂世漲、平時穩；不配息賺價差',
+  },
+  {
+    id: 'silver',
+    name: '白銀',
+    emoji: '🥈',
+    category: 'commodity',
+    kind: 'shares',
+    price: 1200,
+    risk: '中高',
+    desc: '工業+避險需求，波動比黃金大',
+  },
+  {
+    id: 'oil',
+    name: '石油期貨',
+    emoji: '🛢️',
+    category: 'commodity',
+    kind: 'shares',
+    price: 2500,
+    risk: '高',
+    desc: '受國際情勢影響大，戰爭/減產會飆漲',
+  },
 
   // ── 加密貨幣（無現金流，只靠價差） ──
   {
@@ -210,4 +290,16 @@ export const PASSIVE_LABEL = {
   dividend: '股利',
   realestate: '房地產',
   business: '企業',
+};
+
+// 各「可浮動商品」的每回合波動模型（給市場引擎用）
+// drift＝每回合趨勢偏移；vol＝隨機波動幅度；cap＝單回合漲跌上限
+// crypto/原物料另有極端行情機率（在 game.js 處理）
+export const INSTRUMENT_VOL = {
+  // 股票/ETF：長期偏多、單回合小波動，最多 ±10%
+  dividend: { drift: 0.006, vol: 0.04, cap: 0.1 },
+  // 原物料：中等波動
+  commodity: { drift: 0.002, vol: 0.08, cap: 0.25 },
+  // 加密貨幣：狂；每回合 ±5~50%，極低機率破百（在引擎特別處理）
+  crypto: { drift: 0, vol: 0.25, cap: 1.5 },
 };

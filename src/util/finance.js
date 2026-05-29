@@ -14,14 +14,14 @@ export function netWorthOf(team) {
   return team?.derived?.netWorth ?? 0;
 }
 
-// 財務自由進度（非工資收入 ÷ 總支出），上限 100%
+// 財富自由進度（非工資收入 ÷ 總支出），上限 100%
 export function freedomPercent(team) {
   const d = team?.derived;
   if (!d || !d.totalExpense) return 0;
   return Math.min(100, Math.round((d.passiveTotal / d.totalExpense) * 100));
 }
 
-// 距離財務自由還差多少被動收入（每月）
+// 距離財富自由還差多少被動收入（每月）
 export function freedomGap(team) {
   const d = team?.derived;
   if (!d) return 0;

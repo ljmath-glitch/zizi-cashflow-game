@@ -11,15 +11,15 @@ export const SQUARE_TYPES = {
   downsized: { label: '失業', emoji: '💼' },
 };
 
-// 24 格排列（發薪改為每回合自動發放，盤面不再有發薪格）
-// 機會最多、市場 6 格（事件多），其餘人生事件穿插
+// 24 格排列：發薪日均勻分布 3 格（骰子經過/停在才領當月現金流＝過了一個月）
+// 機會最多、市場格次之，其餘人生事件穿插
 const LAYOUT = [
   'opportunity', 'doodad', 'opportunity', 'charity',
-  'opportunity', 'market', 'opportunity', 'market',
+  'opportunity', 'payday', 'opportunity', 'market',
   'opportunity', 'doodad', 'opportunity', 'baby',
-  'opportunity', 'market', 'opportunity', 'market',
+  'opportunity', 'payday', 'opportunity', 'market',
   'opportunity', 'doodad', 'opportunity', 'downsized',
-  'opportunity', 'market', 'opportunity', 'market',
+  'opportunity', 'payday', 'opportunity', 'market',
 ];
 
 export const BOARD = LAYOUT.map((type, i) => ({
