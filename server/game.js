@@ -150,10 +150,14 @@ function enterNewRound(roundNumber) {
   state.currentTurnIndex = 0; // 從第一組重新開始輪
   applyMonthlyEvent(); // 先跑本月大事件，更新市場指數與資產價值
   for (const team of Object.values(state.teams)) {
+    if (team.bankrupt) continue; // 已淘汰跳過
     team.hasRolledThisRound = false;
     team.pendingAction = null; // 上一回合沒處理的機會/慈善視為放棄
-    settleTeam(team); // 每回合自動發薪（薪水＋被動−支出）
+    settleTeam(team); // 每回合自動發薪（薪水＋被動−支出），可能觸發破產
   }
+  // 重建輪流順序，排除已破產的組（保留加入順序）
+  state.turnOrder = state.turnOrder.filter((id) => state.teams[id] && !state.teams[id].bankrupt);
+  state.currentTurnIndex = 0;
   broadcastTeams();
 }
 
@@ -355,6 +359,8 @@ function resetTeamFinances(team) {
   team.history = [];
   team.free = false;
   team.freedRound = null;
+  team.bankrupt = false; // 是否已破產淘汰
+  team.bankruptRound = null;
 }
 
 // 職業卡的公開摘要（給開局二選一畫面顯示）
@@ -498,6 +504,7 @@ export function publicTeam(team) {
     expense: d.totalExpense,
     cashflow: d.cashflow,
     free: team.free, // 以鎖定的旗標為準（達成後即使數字變動仍維持）
+    bankrupt: !!team.bankrupt, // 是否破產淘汰
     position: team.position || 0, // 老鼠賽跑圈上的格子
     hasRolled: !!team.hasRolledThisRound, // 本回合是否已擲骰
   };
@@ -633,6 +640,7 @@ function checkFreedom(team) {
 // ── 發薪結算（擲骰經過「發薪」格時觸發） ──
 
 function settleTeam(team) {
+  if (team.bankrupt) return; // 已淘汰不再結算
   // 浮動收入職業（YouTuber）每月於範圍內重抽（取整到千）
   if (team.variableIncome) {
     const [lo, hi] = team.variableIncome;
@@ -648,25 +656,44 @@ function settleTeam(team) {
     expense: d.totalExpense,
     delta: d.cashflow,
   });
-  coverIfNegative(team); // 現金為負 → 自動貸款補足（破產螺旋）
+  checkBankruptOrCover(team); // 判定破產淘汰 / 暫時周轉
   checkFreedom(team);
   emitTeam(team);
 }
 
-// 現金為負時自動向銀行貸款補足（湊整到萬元），並發出破產警告
-// 仁慈版：不直接淘汰，而是讓負債滾大，體會「越借越窮」的陷阱
-function coverIfNegative(team) {
-  if (team.cash >= 0) return 0;
-  const need = Math.ceil(-team.cash / 10000) * 10000;
-  team.personalLiabilities.bankLoan += need;
-  team.cash += need;
-  addFeed(`⚠️ ${team.name} 現金見底，自動貸款 ${formatNT(need)}（破產警告！）`);
-  emitEvent(team, {
-    emoji: '⚠️',
-    title: '破產警告',
-    text: `現金不足，自動向銀行借 ${formatNT(need)}，每月利息增加！快增加被動收入或賣資產還債。`,
-  });
-  return need;
+// 現金 ≤ 0 時的處理：
+//  - 月現金流（薪資＋被動−支出）為負 → 結構性虧損，直接破產淘汰
+//  - 月現金流 ≥ 0（只是被一次性支出壓到負）→ 自動小額周轉貸款撐住，仍有機會翻身
+function checkBankruptOrCover(team) {
+  if (team.bankrupt || team.cash > 0) return;
+  const cashflow = computeDerived(team).cashflow;
+  if (cashflow < 0) {
+    bankruptTeam(team);
+  } else {
+    const need = Math.ceil(-team.cash / 10000) * 10000 || 10000;
+    team.personalLiabilities.bankLoan += need;
+    team.cash += need;
+    addFeed(`⚠️ ${team.name} 現金見底，自動周轉貸款 ${formatNT(need)}`);
+    emitEvent(team, {
+      emoji: '⚠️',
+      title: '現金周轉',
+      text: `現金不足，自動向銀行借 ${formatNT(need)} 周轉。注意別讓月現金流變負，否則會破產！`,
+    });
+  }
+}
+
+// 破產淘汰：標記、移出擲骰輪流、廣播動畫
+function bankruptTeam(team) {
+  if (team.bankrupt) return;
+  team.bankrupt = true;
+  team.bankruptRound = state.round;
+  state.turnOrder = state.turnOrder.filter((id) => id !== team.id);
+  if (state.currentTurnIndex >= state.turnOrder.length) {
+    state.currentTurnIndex = state.turnOrder.length; // 維持「已輪完」狀態
+  }
+  addFeed(`💀 ${team.name} 破產被淘汰！`);
+  if (io) io.emit('game:bankrupt', { teamId: team.id, name: team.name, professionEmoji: team.professionEmoji });
+  emitTeam(team);
 }
 
 // ── 擲骰 / 移動 ──
@@ -676,6 +703,7 @@ export function rollDice(teamId) {
   if (state.phase !== 'running') return { ok: false, reason: '現在不是操作時間' };
   const team = getTeam(teamId);
   if (!team) return { ok: false, reason: '找不到組別' };
+  if (team.bankrupt) return { ok: false, reason: '已破產淘汰' };
   if (currentTurnId() !== teamId) return { ok: false, reason: '還沒輪到你擲骰' };
   if (team.hasRolledThisRound) return { ok: false, reason: '這回合已經擲過了' };
 
@@ -814,7 +842,7 @@ function applyMarketCard(lander, card) {
     for (const team of Object.values(state.teams)) {
       team.cash += card.amount;
       addHistory(team, { round: state.round, type: card.amount >= 0 ? 'income' : 'expense', text: card.name, delta: card.amount });
-      if (card.amount < 0) coverIfNegative(team);
+      if (card.amount < 0) checkBankruptOrCover(team);
       emitTeam(team);
     }
     addFeed(`${card.emoji} 市場風雲：${card.name}（${card.desc}）`);
@@ -907,7 +935,7 @@ function applyDoodad(team, card) {
     addHistory(team, { round: state.round, type: 'expense', text: card.name, delta: -card.amount });
     addFeed(`${card.emoji} ${team.name}：${card.name}（-${card.amount}）`);
     emitEvent(team, { emoji: card.emoji, title: '額外支出', text: `${card.name}，花掉 ${formatNT(card.amount)}` });
-    coverIfNegative(team);
+    checkBankruptOrCover(team);
   }
   emitTeam(team);
   broadcastTeams();
@@ -935,7 +963,7 @@ function downsize(team) {
   addHistory(team, { round: state.round, type: 'expense', text: '失業（付一個月支出）', delta: -d.totalExpense });
   addFeed(`💼 ${team.name} 失業了！付一個月支出 ${formatNT(d.totalExpense)}，下回合輪空`);
   emitEvent(team, { emoji: '💼', title: '失業', text: `付一個月總支出 ${formatNT(d.totalExpense)}，下回合輪空一次` });
-  coverIfNegative(team);
+  checkBankruptOrCover(team);
   emitTeam(team);
   broadcastTeams();
 }
@@ -958,8 +986,8 @@ export function chooseDeck(teamId, deck) {
   return { ok: true, card };
 }
 
-// 玩家決定買或放棄機會卡
-export function dealDecision(teamId, accept) {
+// 玩家決定買或放棄機會卡。withLoan=true 時，現金不足會自動貸款補足再購買
+export function dealDecision(teamId, accept, withLoan = false) {
   const team = getTeam(teamId);
   if (!team || team.pendingAction?.type !== 'deal') return { ok: false, reason: '目前沒有可決定的機會卡' };
   const card = team.pendingAction.card;
@@ -974,10 +1002,19 @@ export function dealDecision(teamId, accept) {
   }
 
   if (team.cash < card.cost) {
-    // 買不起 → 退回機會卡讓玩家重新決定（回合尚未結束）
-    team.pendingAction = { type: 'deal', deck: card.deck, card };
-    emitTeam(team);
-    return { ok: false, reason: '存款不足，買不起這筆' };
+    if (withLoan) {
+      // 直接貸款購買：借差額（湊整到萬元）→ 增加銀行貸款
+      const need = Math.ceil((card.cost - team.cash) / 10000) * 10000;
+      team.personalLiabilities.bankLoan += need;
+      team.cash += need;
+      addHistory(team, { round: state.round, type: 'loan', text: `貸款購買 ${card.name}`, delta: need });
+      addFeed(`💳 ${team.name} 貸款 ${formatNT(need)} 買下 ${card.emoji} ${card.name}`);
+    } else {
+      // 買不起 → 退回機會卡讓玩家重新決定（回合尚未結束）
+      team.pendingAction = { type: 'deal', deck: card.deck, card };
+      emitTeam(team);
+      return { ok: false, reason: '存款不足，買不起這筆' };
+    }
   }
 
   team.cash -= card.cost;

@@ -248,19 +248,25 @@ function FinancePanel({ team, phase }) {
         </div>
       </div>
 
-      {free && (
+      {team.bankrupt && (
+        <div className="bg-red-600 text-white text-center py-2 font-bold">
+          💀 你已破產被淘汰（現金歸零、入不敷出）
+        </div>
+      )}
+
+      {free && !team.bankrupt && (
         <div className="bg-green-500 text-white text-center py-2 font-bold">
           🏆 已達成財務自由！
         </div>
       )}
 
-      {(team.personalLiabilities?.bankLoan || 0) > 0 && (
+      {!team.bankrupt && (team.personalLiabilities?.bankLoan || 0) > 0 && (
         <div className="bg-red-500 text-white text-center py-1.5 text-sm font-medium">
           ⚠️ 銀行貸款 {formatMoney(team.personalLiabilities.bankLoan)}，每月還利息 {formatMoney(Math.round(team.personalLiabilities.bankLoan * 0.1))}
         </div>
       )}
 
-      <RollBar team={team} phase={phase} />
+      {!team.bankrupt && <RollBar team={team} phase={phase} />}
 
       <nav className="flex bg-white border-b text-sm">
         {TABS.map((t) => (
@@ -345,7 +351,11 @@ function PendingModal({ team }) {
             <span className="text-slate-400">月被動收入</span>
             <span className="text-right font-semibold text-green-600">+{formatMoney(c.monthlyIncome)}</span>
           </div>
-          {!afford && <p className="text-xs text-red-500 mb-2">存款不足，買不起這筆</p>}
+          {!afford && (
+            <p className="text-xs text-red-500 mb-2">
+              現金不足（差 {formatMoney(c.cost - team.cash)}），可改用「貸款購買」
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => socket.emit('student:dealDecision', { teamId: team.id, accept: false })}
@@ -353,13 +363,21 @@ function PendingModal({ team }) {
             >
               放棄
             </button>
-            <button
-              disabled={!afford}
-              onClick={() => socket.emit('student:dealDecision', { teamId: team.id, accept: true })}
-              className="rounded-xl bg-zizi-gold text-white font-bold py-3 disabled:opacity-40"
-            >
-              買下來
-            </button>
+            {afford ? (
+              <button
+                onClick={() => socket.emit('student:dealDecision', { teamId: team.id, accept: true })}
+                className="rounded-xl bg-zizi-gold text-white font-bold py-3"
+              >
+                買下來
+              </button>
+            ) : (
+              <button
+                onClick={() => socket.emit('student:dealDecision', { teamId: team.id, accept: true, withLoan: true })}
+                className="rounded-xl bg-slate-700 text-white font-bold py-3"
+              >
+                💳 貸款購買
+              </button>
+            )}
           </div>
         </div>
       </Overlay>

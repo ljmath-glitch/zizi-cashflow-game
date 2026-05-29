@@ -21,6 +21,7 @@ export default function Screen() {
   const [drawn, setDrawn] = useState(null); // 最近抽到的卡（翻牌動畫）
   const [celebrate, setCelebrate] = useState(null); // 跳出老鼠圈大慶祝
   const [report, setReport] = useState(null); // 月初回顧/預告彈窗
+  const [bankrupt, setBankrupt] = useState(null); // 破產淘汰動畫
 
   useEffect(() => {
     fetch('/api/server-info').then((r) => r.json()).then(setServerInfo).catch(() => {});
@@ -39,22 +40,30 @@ export default function Screen() {
       clearTimeout(freedTimer);
       freedTimer = setTimeout(() => setCelebrate(null), 7000);
     }
-    let reportTimer;
+    let reportTimer, bankruptTimer;
     function onReport(r) {
       setReport(r);
       clearTimeout(reportTimer);
       reportTimer = setTimeout(() => setReport(null), 8000);
     }
+    function onBankrupt(payload) {
+      setBankrupt(payload);
+      clearTimeout(bankruptTimer);
+      bankruptTimer = setTimeout(() => setBankrupt(null), 6000);
+    }
     socket.on('card:drawn', onCard);
     socket.on('game:freed', onFreed);
     socket.on('month:report', onReport);
+    socket.on('game:bankrupt', onBankrupt);
     return () => {
       socket.off('card:drawn', onCard);
       socket.off('game:freed', onFreed);
       socket.off('month:report', onReport);
+      socket.off('game:bankrupt', onBankrupt);
       clearTimeout(cardTimer);
       clearTimeout(freedTimer);
       clearTimeout(reportTimer);
+      clearTimeout(bankruptTimer);
     };
   }, []);
 
@@ -74,6 +83,7 @@ export default function Screen() {
   const lowTime = phase === 'running' && timeLeft <= 30;
 
   const ranked = [...teams].sort((a, b) => {
+    if (a.bankrupt !== b.bankrupt) return a.bankrupt ? 1 : -1; // 破產排最後
     if (a.free !== b.free) return a.free ? -1 : 1;
     return b.netWorth - a.netWorth;
   });
@@ -125,6 +135,7 @@ export default function Screen() {
       {report && !game?.showTutorial && <MonthReport report={report} />}
       {drawn && <CardOverlay payload={drawn} />}
       {celebrate && <Celebration name={celebrate.name} />}
+      {bankrupt && <BankruptOverlay payload={bankrupt} />}
     </div>
   );
 }
@@ -260,6 +271,22 @@ function Celebration({ name }) {
         <p className="text-6xl font-black text-zizi-gold my-3 drop-shadow-lg">{name}</p>
         <p className="text-4xl font-bold text-white">跳出老鼠賽跑圈！</p>
         <p className="text-2xl text-white/80 mt-3">達成財務自由 🎉</p>
+      </div>
+    </div>
+  );
+}
+
+// 破產淘汰動畫
+function BankruptOverlay({ payload }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75">
+      <div className="text-center card-pop">
+        <div className="text-8xl mb-4">💀</div>
+        <p className="text-6xl font-black text-red-500 my-3 drop-shadow-lg">
+          {payload.professionEmoji} {payload.name}
+        </p>
+        <p className="text-4xl font-bold text-white">破產被淘汰！</p>
+        <p className="text-xl text-white/60 mt-3">現金歸零、入不敷出 ☠️</p>
       </div>
     </div>
   );
@@ -417,8 +444,8 @@ function Board({ board, teams, round, timeLeft, phase, currentTurnId }) {
             style={{ left: `${c * cs}%`, top: `${r * cs}%`, width: `${cs}%`, height: `${cs}%` }}
           >
             <div className={'w-full h-full rounded-lg flex flex-col items-center justify-center text-white ' + (meta.color || 'bg-slate-500')}>
-              <span className="text-xl leading-none">{meta.emoji}</span>
-              <span className="text-[0.6rem] mt-0.5 leading-none">{meta.label}</span>
+              <span className="text-4xl leading-none">{meta.emoji}</span>
+              <span className="text-sm font-bold mt-1 leading-none">{meta.label}</span>
             </div>
           </div>
         );
@@ -455,15 +482,15 @@ function Board({ board, teams, round, timeLeft, phase, currentTurnId }) {
         return (
           <div
             key={t.id}
-            className="absolute z-10 transition-all duration-700 ease-out"
+            className={'absolute z-10 transition-all duration-700 ease-out ' + (t.bankrupt ? 'opacity-40 grayscale' : '')}
             style={{ left: `${left}%`, top: `${top}%`, transform: 'translate(-50%, -50%)' }}
             title={t.name}
           >
-            {t.id === currentTurnId && (
+            {t.id === currentTurnId && !t.bankrupt && (
               <span className="absolute inset-0 -m-1 rounded-full ring-4 ring-zizi-gold animate-ping" />
             )}
-            <div className={'relative rounded-full w-9 h-9 flex items-center justify-center text-lg shadow-lg ring-2 ' + (t.free ? 'bg-green-400 ring-white' : t.id === currentTurnId ? 'bg-zizi-gold ring-white' : 'bg-white ring-zizi-gold')}>
-              {t.professionEmoji}
+            <div className={'relative rounded-full w-9 h-9 flex items-center justify-center text-lg shadow-lg ring-2 ' + (t.bankrupt ? 'bg-slate-600 ring-slate-400' : t.free ? 'bg-green-400 ring-white' : t.id === currentTurnId ? 'bg-zizi-gold ring-white' : 'bg-white ring-zizi-gold')}>
+              {t.bankrupt ? '💀' : t.professionEmoji}
             </div>
           </div>
         );
@@ -480,6 +507,18 @@ function Leaderboard({ ranked, ended }) {
       <div className="space-y-1.5">
         {ranked.map((t, i) => {
           const pct = t.expense > 0 ? Math.min(100, Math.round((t.passiveIncome / t.expense) * 100)) : 0;
+          if (t.bankrupt) {
+            return (
+              <div key={t.id} className="rounded-xl px-3 py-2 bg-red-900/30 ring-1 ring-red-500/40 opacity-70">
+                <div className="flex items-center gap-2">
+                  <span className="w-6 text-center">💀</span>
+                  <span className="text-xl grayscale">{t.professionEmoji}</span>
+                  <span className="flex-1 font-semibold truncate text-sm line-through text-white/60">{t.name}</span>
+                  <span className="text-sm font-bold text-red-400">已淘汰</span>
+                </div>
+              </div>
+            );
+          }
           return (
             <div key={t.id} className={'rounded-xl px-3 py-2 ' + (t.free ? 'bg-green-500/20 ring-1 ring-green-400' : 'bg-white/10')}>
               <div className="flex items-center gap-2">

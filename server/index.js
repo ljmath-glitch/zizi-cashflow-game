@@ -196,8 +196,8 @@ io.on('connection', (socket) => {
   });
 
   // 機會卡：買或放棄
-  socket.on('student:dealDecision', ({ teamId, accept } = {}, ack) => {
-    const res = dealDecision(teamId, accept);
+  socket.on('student:dealDecision', ({ teamId, accept, withLoan } = {}, ack) => {
+    const res = dealDecision(teamId, accept, withLoan);
     if (typeof ack === 'function') ack(res);
   });
 
