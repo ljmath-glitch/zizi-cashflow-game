@@ -539,6 +539,10 @@ function passiveBreakdown(team) {
 // 每月貸款月付：銀行貸款 10% + 高利貸 20%
 const BANK_RATE = 0.1; // 一般銀行貸款月息
 const SHARK_RATE = 0.2; // 高利貸（緊急貸款購買）月息
+// 直接變現折價：房地產/企業這類「不易脫手」的資產，自己賣只拿回帳面價的 75%（折價 25%）。
+// 想拿好價錢就等「收購卡」🤝（那條走原價/溢價、不折價）。股票/ETF/加密/定存屬流動資產，照市價賣、不折價。
+const LIQUIDATION_KEEP = 0.75;
+const ILLIQUID_CATS = ['realestate', 'business'];
 function bankLoanPayment(team) {
   const l = team.personalLiabilities || {};
   return Math.round((l.bankLoan || 0) * BANK_RATE + (l.loanShark || 0) * SHARK_RATE);
@@ -758,14 +762,62 @@ function settleTeam(team) {
   emitTeam(team);
 }
 
-// 現金 ≤ 0 時的處理：
-//  - 月現金流（薪資＋被動−支出）為負 → 結構性虧損，直接破產淘汰
-//  - 月現金流 ≥ 0（只是被一次性支出壓到負）→ 自動小額周轉貸款撐住，仍有機會翻身
+// 整筆變現一項資產：房地產/企業折價(LIQUIDATION_KEEP)，並清掉連帶貸款，現金入帳。
+// 回傳 { proceeds, illiquid, grossValue }。forced=true 代表破產自動變現（折價更深）。
+function liquidateAsset(team, idx, forced = false) {
+  const asset = team.assets[idx];
+  const illiquid = ILLIQUID_CATS.includes(asset.category);
+  // 房地產/企業折價；破產被迫賤賣再多砍一成
+  let keep = illiquid ? LIQUIDATION_KEEP : 1;
+  if (forced) keep *= 0.9;
+  let saleValue = Math.round(asset.value * keep);
+  const li = team.assetLiabilities.findIndex((l) => l.linkedAssetUid === asset.uid);
+  if (li >= 0) {
+    saleValue -= team.assetLiabilities[li].balance; // 賣出同時清償該資產貸款
+    team.assetLiabilities.splice(li, 1);
+  }
+  team.cash += saleValue;
+  team.assets.splice(idx, 1);
+  return { asset, proceeds: saleValue, illiquid, grossValue: asset.value };
+}
+
+// 破產自動變現：現金見底時，逐一賣資產補現金（先賣流動性高、再賣房地產/企業），直到轉正或賣光。
+function autoLiquidate(team) {
+  // 排序：股票/加密/原物料/定存等流動資產優先賣，房地產/企業留到最後（折價較重）
+  while (team.cash <= 0 && team.assets.length > 0) {
+    const order = team.assets
+      .map((a, i) => ({ i, illiquid: ILLIQUID_CATS.includes(a.category) }))
+      .sort((x, y) => (x.illiquid === y.illiquid ? 0 : x.illiquid ? 1 : -1));
+    const { i } = order[0];
+    const { asset, proceeds } = liquidateAsset(team, i, true);
+    addHistory(team, { round: state.round, type: 'sell', text: `週轉賣出 ${asset.emoji} ${asset.name}`, delta: proceeds });
+    addFeed(`💸 ${team.name} 現金見底，被迫變現 ${asset.emoji} ${asset.name}（折價）`);
+  }
+}
+
+// 現金 ≤ 0 時的處理（先賣資產自救，全賣光才可能淘汰）：
+//  1) 自動變現資產補現金 → 轉正就撐住（鼓勵自己賣資產顧現金流）
+//  2) 資產賣光仍為負：月現金流<0=結構性虧損→淘汰；月現金流≥0(只是一次性支出)→小額周轉貸款撐住
 function checkBankruptOrCover(team) {
   if (team.bankrupt || team.cash > 0) return;
+
+  const hadAssets = (team.assets || []).length > 0;
+  autoLiquidate(team); // 先賣資產抵債
+  if (team.cash > 0) {
+    if (hadAssets) {
+      emitEvent(team, {
+        emoji: '💸',
+        title: '變現資產周轉',
+        text: '現金見底，自動賣掉部分資產補現金（房地產/企業會折價）。注意：被動收入也跟著少了！',
+      });
+    }
+    return;
+  }
+
+  // 資產已賣光仍為負
   const cashflow = computeDerived(team).cashflow;
   if (cashflow < 0) {
-    bankruptTeam(team);
+    bankruptTeam(team); // 無資產可賣、又入不敷出 → 淘汰
   } else {
     const need = Math.ceil(-team.cash / 10000) * 10000 || 10000;
     team.personalLiabilities.bankLoan += need;
@@ -774,7 +826,7 @@ function checkBankruptOrCover(team) {
     emitEvent(team, {
       emoji: '⚠️',
       title: '現金周轉',
-      text: `現金不足，自動向銀行借 ${formatNT(need)} 周轉。注意別讓月現金流變負，否則會破產！`,
+      text: `資產已賣光、現金仍不足，自動向銀行借 ${formatNT(need)} 周轉。別讓月現金流變負，否則會破產！`,
     });
   }
 }
@@ -1462,20 +1514,13 @@ function sellAsset(teamId, payload = {}) {
     return { ok: true, proceeds };
   }
 
-  // 整筆賣出（房地產/企業/定存，或未指定數量）
-  let proceeds = asset.value;
-  const li = team.assetLiabilities.findIndex((l) => l.linkedAssetUid === uid);
-  if (li >= 0) {
-    proceeds -= team.assetLiabilities[li].balance;
-    team.assetLiabilities.splice(li, 1);
-  }
-  team.cash += proceeds;
-  team.assets.splice(idx, 1);
-  addHistory(team, { round: state.round, type: 'sell', text: `賣出 ${asset.emoji} ${asset.name}`, delta: proceeds });
-  addFeed(`${team.name} 賣出 ${asset.emoji} ${asset.name}`);
+  // 整筆賣出（房地產/企業會折價變現；流動資產照市價）
+  const { asset: soldAsset, proceeds, illiquid, grossValue } = liquidateAsset(team, idx, false);
+  addHistory(team, { round: state.round, type: 'sell', text: `賣出 ${soldAsset.emoji} ${soldAsset.name}`, delta: proceeds });
+  addFeed(`${team.name} 賣出 ${soldAsset.emoji} ${soldAsset.name}${illiquid ? '（折價變現）' : ''}`);
   emitTeam(team);
   broadcastTeams();
-  return { ok: true, proceeds };
+  return { ok: true, proceeds, illiquid, grossValue };
 }
 
 

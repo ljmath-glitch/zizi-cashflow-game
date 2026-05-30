@@ -282,7 +282,7 @@ function FinancePanel({ team, phase }) {
 
       {team.bankrupt && (
         <div className="bg-red-600 text-white text-center py-2 font-bold">
-          💀 你已破產被淘汰（現金歸零、入不敷出）
+          💀 你已破產被淘汰（資產賣光、仍入不敷出）
         </div>
       )}
 
@@ -792,20 +792,26 @@ function AssetRow({ a, teamId, canSell }) {
 
   const isShares = a.category === 'dividend' && a.units != null;
   const isCrypto = a.category === 'crypto' && a.units != null;
+  // 房地產/企業：直接賣會折價（拿約帳面 75%），等「🤝收購卡」較划算
+  const illiquid = a.category === 'realestate' || a.category === 'business';
   const cost = a.totalCost != null ? a.totalCost : a.buyValue;
   const diff = a.value - (cost || 0);
   const pct = cost ? Math.round((diff / cost) * 100) : 0;
 
-  const gainText = diff >= 0 ? `帳面賺 ${Math.abs(pct)}% 🎉` : `認賠 ${Math.abs(pct)}%`;
-  // 賣出靠 ack 確認：成功才報喜，失敗顯示原因（不會跳假成功）
+  // 賣出靠 ack 確認：成功顯示「實拿金額」，失敗顯示原因（不會跳假成功）
   function emitSell(payload, title) {
     socket.emit('student:sell', { teamId, ...payload }, (res) => {
-      if (res?.ok) toast({ emoji: '💵', title, text: gainText, tone: diff >= 0 ? 'good' : 'info' });
-      else toast({ emoji: '⚠️', title: res?.reason || '賣出失敗', tone: 'bad' });
+      if (res?.ok) {
+        const got = res.proceeds != null ? `實拿 ${formatMoney(res.proceeds)}` : '已賣出';
+        toast({ emoji: '💵', title, text: res.illiquid ? `${got}（已折價變現）` : got, tone: 'good' });
+      } else {
+        toast({ emoji: '⚠️', title: res?.reason || '賣出失敗', tone: 'bad' });
+      }
     });
   }
   function sellWhole() {
-    if (!window.confirm(`確定全部賣出 ${a.emoji} ${a.name}？`)) return;
+    const warn = illiquid ? '\n\n⚠️ 直接賣會折價（約拿回帳面 75%，再扣貸款）。等「🤝收購卡」通常更划算！' : '';
+    if (!window.confirm(`確定全部賣出 ${a.emoji} ${a.name}？${warn}`)) return;
     emitSell({ uid: a.uid }, `賣出 ${a.name}`);
   }
   function sellPart() {
@@ -841,6 +847,9 @@ function AssetRow({ a, teamId, canSell }) {
               ? ' ‧ 無配息（賺價差）'
               : ''}
           </p>
+          {illiquid && (
+            <p className="text-[0.65rem] text-amber-600 mt-0.5">💡 直接賣約 75% 折價；等 🤝 收購卡較划算</p>
+          )}
         </div>
         {(isShares || isCrypto) ? (
           <button
