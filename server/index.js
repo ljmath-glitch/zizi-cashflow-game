@@ -1,4 +1,4 @@
-// 茲茲一百萬挑戰賽 — 後端伺服器（多房間版）
+// 茲茲財富自由挑戰賽 — 後端伺服器（多房間版）
 // Express 提供前端 + Socket.IO 即時通訊，全部跑在同一個連接埠（預設 3000）
 // 每個「房間」是一場獨立的遊戲，用房號隔開；同一網址可同時開很多場。
 import express from 'express';
@@ -156,7 +156,7 @@ if (isProd) {
 
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log('========================================');
-  console.log('🎮  茲茲一百萬挑戰賽 — 伺服器已啟動（多房間）');
+  console.log('🎮  茲茲財富自由挑戰賽 — 伺服器已啟動（多房間）');
   console.log(`    本機： http://localhost:${PORT}`);
   console.log(`    區網： http://${lanIp}:${PORT}`);
   if (!isProd) console.log('    開發模式前端： http://localhost:5173');

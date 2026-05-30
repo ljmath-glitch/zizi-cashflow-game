@@ -4,13 +4,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 茲茲品牌色（參考官網：香檳金 + 奶油 + 近黑 + 深藍）
+        // 茲茲品牌色（奶油白 × 明亮金；不用藍色）
         zizi: {
-          blue: '#1E3A8A', // 深藍（遊戲主色）
-          gold: '#F59E0B', // 金色（活潑強調）
-          champagne: '#C8A96A', // 官網香檳金（質感點綴）
-          cream: '#F6F5F1', // 奶油底
-          ink: '#1A1A1A', // 近黑文字
+          gold: '#F59E0B', // 明亮琥珀金（主色／主按鈕）
+          amber: '#FBBF24', // 較亮的金（漸層用）
+          champagne: '#C8A96A', // 香檳金（質感點綴）
+          cream: '#FBF8F1', // 奶油白底
+          ink: '#3A2C18', // 暖墨棕（標題與深色文字，取代原本的藍）
+          caramel: '#8A4F12', // 焦糖（大螢幕深色用）
         },
       },
       fontFamily: {

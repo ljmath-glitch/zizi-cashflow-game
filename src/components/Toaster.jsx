@@ -38,7 +38,7 @@ export default function Toaster() {
   const tone = {
     good: { ring: 'ring-emerald-200/70', bar: 'bg-emerald-400', badge: 'from-emerald-400 to-emerald-600', glow: 'shadow-[0_18px_50px_-12px_rgba(16,185,129,0.55)]', text: 'text-emerald-950' },
     bad: { ring: 'ring-rose-200/70', bar: 'bg-rose-400', badge: 'from-rose-400 to-rose-600', glow: 'shadow-[0_18px_50px_-12px_rgba(244,63,94,0.55)]', text: 'text-rose-950' },
-    info: { ring: 'ring-indigo-200/70', bar: 'bg-indigo-400', badge: 'from-zizi-blue to-indigo-600', glow: 'shadow-[0_18px_50px_-12px_rgba(30,58,138,0.5)]', text: 'text-indigo-950' },
+    info: { ring: 'ring-amber-200/70', bar: 'bg-amber-400', badge: 'from-zizi-gold to-amber-600', glow: 'shadow-[0_18px_50px_-12px_rgba(245,158,11,0.5)]', text: 'text-amber-950' },
   };
 
   return (

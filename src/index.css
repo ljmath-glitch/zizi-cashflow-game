@@ -102,12 +102,12 @@ button:active:not(:disabled) {
   animation-iteration-count: infinite;
 }
 
-/* App 背景：柔和奶油漸層 + 極淡的品牌光暈（香檳金 + 深藍） */
+/* App 背景：奶油白 + 極淡的金色光暈 */
 .app-bg {
   background:
-    radial-gradient(1100px 560px at 100% -8%, rgba(200, 169, 106, 0.20), transparent 60%),
-    radial-gradient(900px 480px at -12% 112%, rgba(30, 58, 138, 0.10), transparent 55%),
-    #f6f5f1;
+    radial-gradient(1100px 560px at 100% -8%, rgba(245, 158, 11, 0.16), transparent 60%),
+    radial-gradient(900px 480px at -12% 112%, rgba(200, 169, 106, 0.18), transparent 55%),
+    #fbf8f1;
 }
 
 /* 玻璃擬態卡片（半透明 + 模糊） */
@@ -125,12 +125,12 @@ button:active:not(:disabled) {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* 大螢幕深色背景：深藍漸層 + 香檳金/深藍光暈，營造空間層次 */
+/* 大螢幕深色背景：暖金 → 焦糖漸層 + 金色光暈，營造空間層次 */
 .screen-bg {
   background:
-    radial-gradient(1200px 700px at 85% -10%, rgba(200, 169, 106, 0.16), transparent 55%),
-    radial-gradient(1000px 700px at 0% 110%, rgba(99, 102, 241, 0.22), transparent 55%),
-    linear-gradient(160deg, #1e3a8a 0%, #1a2456 55%, #141a36 100%);
+    radial-gradient(1200px 700px at 85% -10%, rgba(253, 224, 71, 0.22), transparent 55%),
+    radial-gradient(1000px 700px at 0% 110%, rgba(180, 83, 9, 0.30), transparent 55%),
+    linear-gradient(160deg, #c2841b 0%, #8a4f12 55%, #5a300c 100%);
 }
 
 /* 分頁滑動指示器：膠囊在底層平滑滑動 */

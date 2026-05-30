@@ -95,7 +95,7 @@ export default function Screen() {
       <header className="relative flex items-center justify-between px-8 py-3 border-b border-white/10 shrink-0 backdrop-blur-sm">
         <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-zizi-champagne to-transparent" />
         <h1 className="text-2xl font-bold">
-          茲茲一百萬挑戰賽
+          茲茲財富自由挑戰賽
           {ROOM && <span className="ml-2 text-white/50 text-base">房號 {ROOM}</span>}
           <span className="ml-3 text-zizi-gold text-lg">
             {phase === 'lobby' ? '等待開始' : phase === 'ended' ? '遊戲結束' : `第 ${round} / ${maxRounds} 回合`}
@@ -287,7 +287,7 @@ function MonthReport({ report }) {
   );
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-zizi-ink/70 backdrop-blur-sm">
-      <div className="card-pop bg-gradient-to-b from-zizi-blue to-indigo-900 border-2 border-zizi-gold rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] w-[34rem] max-w-[92vw] p-7 text-white">
+      <div className="card-pop bg-gradient-to-b from-amber-800 to-amber-950 border-2 border-zizi-gold rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] w-[34rem] max-w-[92vw] p-7 text-white">
         <p className="text-center text-white/60">— 第 {round} 回合 —</p>
 
         {prevEvent ? (
@@ -373,7 +373,7 @@ function CardOverlay({ payload }) {
   const { deck, card, teamName, professionName, professionEmoji } = payload;
   const META = {
     small: { label: '機會・小生意', color: 'bg-emerald-500' },
-    big: { label: '機會・大買賣', color: 'bg-sky-600' },
+    big: { label: '機會・大買賣', color: 'bg-amber-600' },
     market: { label: '市場風雲', color: 'bg-amber-500' },
     doodad: { label: '額外支出', color: 'bg-rose-500' },
     acquire: { label: '房產收購要約', color: 'bg-teal-600' },
@@ -385,7 +385,7 @@ function CardOverlay({ payload }) {
         <div className={'py-2 text-center text-white font-bold ' + m.color}>{m.label}</div>
         <div className="p-6 text-center">
           <div className="text-7xl mb-3">{card.emoji}</div>
-          <h3 className="text-2xl font-black text-zizi-blue">{card.name}</h3>
+          <h3 className="text-2xl font-black text-zizi-ink">{card.name}</h3>
           {card.desc && <p className="text-slate-500 mt-2">{card.desc}</p>}
           {card.amount != null && deck === 'doodad' && (
             <p className="mt-3 text-rose-500 font-bold text-xl">-{formatMoney(card.amount)}{card.recurring ? ' / 月' : ''}</p>

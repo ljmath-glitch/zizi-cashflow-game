@@ -34,13 +34,13 @@ export default function Student() {
 
   return (
     <div className="min-h-full app-bg flex flex-col">
-      <header className="relative bg-gradient-to-r from-zizi-blue via-indigo-800 to-zizi-blue text-white px-4 py-3 flex items-center justify-between shadow-lg overflow-hidden">
-        {/* 標題列頂端一道香檳金細光 */}
-        <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-zizi-champagne to-transparent" />
-        <h1 className="font-bold flex items-center gap-1.5">
-          <span className="text-zizi-gold drop-shadow">⚡</span>
-          茲茲一百萬挑戰賽
-          <span className="ml-1 text-zizi-gold text-xs font-medium bg-white/10 ring-1 ring-white/15 rounded-full px-2 py-0.5">
+      <header className="relative bg-gradient-to-r from-amber-500 via-zizi-gold to-amber-500 text-white px-4 py-3 flex items-center justify-between shadow-lg overflow-hidden">
+        {/* 標題列頂端一道白色細光 */}
+        <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+        <h1 className="font-bold flex items-center gap-1.5 drop-shadow-md">
+          <span className="drop-shadow">⚡</span>
+          茲茲財富自由挑戰賽
+          <span className="ml-1 text-white text-xs font-medium bg-black/15 ring-1 ring-white/25 rounded-full px-2 py-0.5">
             {roundLabel}
           </span>
         </h1>
@@ -99,7 +99,7 @@ function JoinForm({ connected, join, resume, offerProfessions }) {
   if (options) {
     return (
       <main className="flex-1 flex flex-col items-center gap-4 p-6">
-        <h2 className="text-xl font-bold text-zizi-blue mt-2">選一個職業</h2>
+        <h2 className="text-xl font-bold text-zizi-ink mt-2">選一個職業</h2>
         <p className="text-sm text-slate-500">{teamName || '你們這組'}，挑一張職業卡開始挑戰！</p>
         <div className="w-full max-w-md space-y-3">
           {options.map((p) => (
@@ -116,9 +116,9 @@ function JoinForm({ connected, join, resume, offerProfessions }) {
     <main className="flex-1 flex flex-col items-center justify-center gap-5 p-6">
       <div className="glass ring-1 ring-white/50 shadow-soft rounded-[2rem] px-7 py-8 w-full max-w-xs flex flex-col items-center gap-5">
         <div className="text-5xl animate-float drop-shadow-sm">📱</div>
-        <h2 className="text-xl font-bold text-zizi-blue -mt-1">加入遊戲</h2>
+        <h2 className="text-xl font-bold text-zizi-ink -mt-1">加入遊戲</h2>
         <p className="text-center text-xs text-slate-500 -mt-3">
-          🎯 目標：讓<b className="text-zizi-blue">被動收入超過總支出</b>，跳出老鼠賽跑圈、達成財富自由！
+          🎯 目標：讓<b className="text-zizi-ink">被動收入超過總支出</b>，跳出老鼠賽跑圈、達成財富自由！
         </p>
         <div className="w-full space-y-3">
           <label className="block">
@@ -129,7 +129,7 @@ function JoinForm({ connected, join, resume, offerProfessions }) {
               onChange={(e) => setTeamName(e.target.value)}
               placeholder="輸入你們這組的隊名"
               maxLength={20}
-              className="mt-1 w-full rounded-xl border border-slate-300 bg-white/70 px-3 py-2 focus:border-zizi-blue focus:ring-2 focus:ring-zizi-gold/30 focus:outline-none transition"
+              className="mt-1 w-full rounded-xl border border-slate-300 bg-white/70 px-3 py-2 focus:border-zizi-gold focus:ring-2 focus:ring-zizi-gold/30 focus:outline-none transition"
             />
           </label>
           <button
@@ -149,12 +149,12 @@ function JoinForm({ connected, join, resume, offerProfessions }) {
             value={code}
             onChange={(e) => setCode(e.target.value)}
             placeholder="例如 T3-4829"
-            className="flex-1 rounded-xl border border-slate-300 px-3 py-2 focus:border-zizi-blue focus:outline-none"
+            className="flex-1 rounded-xl border border-slate-300 px-3 py-2 focus:border-zizi-gold focus:outline-none"
           />
           <button
             onClick={handleResume}
             disabled={!connected || busy}
-            className="rounded-xl bg-zizi-blue text-white font-medium px-4 disabled:opacity-50"
+            className="rounded-xl bg-zizi-ink text-white font-medium px-4 disabled:opacity-50"
           >
             重新登入
           </button>
@@ -179,7 +179,7 @@ function ProfessionChoice({ prof, disabled, onPick }) {
       <div className="flex items-center gap-3">
         <span className="text-4xl">{prof.emoji}</span>
         <div className="flex-1">
-          <p className="text-lg font-bold text-zizi-blue">
+          <p className="text-lg font-bold text-zizi-ink">
             {prof.name}
             <span className={'ml-2 text-xs rounded-full px-2 py-0.5 ' + (prof.hasHouse ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-500')}>
               {prof.hasHouse ? '🏠 有自住房' : '🏠 租屋族'}
@@ -204,7 +204,7 @@ function ProfessionChoice({ prof, disabled, onPick }) {
           good={prof.netWorthStart >= 0}
         />
       </div>
-      <div className="mt-2 bg-zizi-blue/5 rounded-lg px-3 py-2 text-xs text-zizi-blue">
+      <div className="mt-2 bg-zizi-gold/10 rounded-lg px-3 py-2 text-xs text-zizi-ink">
         🎯 被動收入達 <b>{formatMoney(prof.freedomThreshold)}/月</b> 就財富自由！
       </div>
     </button>
@@ -260,7 +260,7 @@ function FinancePanel({ team, phase }) {
   return (
     <div className="flex-1 flex flex-col">
       {/* 職業卡 + 存款 + 月現金流（深藍懸浮玻璃面板） */}
-      <div className="bg-gradient-to-b from-zizi-blue to-indigo-900 text-white px-4 pb-4 pt-1">
+      <div className="bg-gradient-to-b from-zizi-caramel to-zizi-ink text-white px-4 pb-4 pt-1">
         <div className="bg-white/10 ring-1 ring-white/15 backdrop-blur rounded-2xl p-3 flex items-center gap-3 shadow-lg">
           <span className="text-4xl grid place-items-center w-14 h-14 rounded-2xl bg-white/10 ring-1 ring-white/15">{team.professionEmoji}</span>
           <div className="flex-1 min-w-0">
@@ -309,7 +309,7 @@ function FinancePanel({ team, phase }) {
       <nav className="px-3 pt-3 pb-2 bg-white/60 backdrop-blur border-b border-white/50">
         <div className="relative flex p-1 bg-slate-100/80 rounded-2xl">
           <span
-            className="seg-indicator absolute inset-y-1 left-1 rounded-xl bg-white shadow-[0_2px_10px_rgba(30,58,138,0.18)]"
+            className="seg-indicator absolute inset-y-1 left-1 rounded-xl bg-white shadow-[0_2px_10px_rgba(245,158,11,0.28)]"
             style={{
               width: `calc((100% - 0.5rem) / ${TABS.length})`,
               transform: `translateX(calc(${idx} * 100%))`,
@@ -321,7 +321,7 @@ function FinancePanel({ team, phase }) {
               onClick={() => changeTab(t.key)}
               className={
                 'relative z-10 flex-1 py-2 text-sm font-semibold rounded-xl transition-colors ' +
-                (tab === t.key ? 'text-zizi-blue' : 'text-slate-400')
+                (tab === t.key ? 'text-zizi-ink' : 'text-slate-400')
               }
             >
               {t.label}
@@ -406,7 +406,7 @@ function PendingModal({ team }) {
       <Overlay>
         <div className="text-center">
           <div className="text-4xl mb-1">🎲</div>
-          <h3 className="text-lg font-bold text-zizi-blue mb-1">機會來了！</h3>
+          <h3 className="text-lg font-bold text-zizi-ink mb-1">機會來了！</h3>
           <p className="text-sm text-slate-500 mb-4">選一種投資機會抽卡</p>
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -419,7 +419,7 @@ function PendingModal({ team }) {
             <button
               disabled={busy}
               onClick={() => decide('student:chooseDeck', { deck: 'big' })}
-              className="rounded-xl bg-sky-600 text-white font-bold py-4 disabled:opacity-50"
+              className="rounded-xl bg-amber-600 text-white font-bold py-4 disabled:opacity-50"
             >
               🔵 大買賣<span className="block text-xs font-normal">昂貴、報酬高</span>
             </button>
@@ -440,7 +440,7 @@ function PendingModal({ team }) {
         <div className="text-center">
           <div className="text-5xl mb-1">{c.emoji}</div>
           <p className="text-xs text-zizi-gold font-medium">{pa.deck === 'big' ? '大額機會' : '小額機會'}</p>
-          <h3 className="text-lg font-bold text-zizi-blue">{c.name}</h3>
+          <h3 className="text-lg font-bold text-zizi-ink">{c.name}</h3>
           {c.story && <p className="text-xs text-slate-500 mt-1 mb-2 leading-relaxed">{c.story}</p>}
           <div className="bg-slate-50 rounded-xl p-3 text-sm grid grid-cols-2 gap-y-1 mb-3">
             <span className="text-slate-400">需要現金（頭期）</span>
@@ -518,7 +518,7 @@ function PendingModal({ team }) {
       <Overlay>
         <div className="text-center">
           <div className="text-5xl mb-1">🤝</div>
-          <h3 className="text-lg font-bold text-zizi-blue">有人想收購你的房產！</h3>
+          <h3 className="text-lg font-bold text-zizi-ink">有人想收購你的房產！</h3>
           <p className="text-sm text-slate-500 mt-1">{pa.buyer} 開出收購價</p>
           <div className="bg-emerald-50 rounded-xl p-4 my-4">
             <p className="text-sm text-slate-500">開價 {formatMoney(pa.offerPrice)}</p>
@@ -564,7 +564,7 @@ function PendingModal({ team }) {
       <Overlay>
         <div className="text-center">
           <div className="text-4xl mb-1">❤️</div>
-          <h3 className="text-lg font-bold text-zizi-blue">慈善捐款</h3>
+          <h3 className="text-lg font-bold text-zizi-ink">慈善捐款</h3>
           <p className="text-sm text-slate-500 mt-1 mb-4">
             捐出 <b>{formatMoney(pa.cost)}</b>（總收入 10%），接下來 <b>3 回合</b>可以擲<b>兩顆骰子</b>跑更快！
           </p>
@@ -639,7 +639,7 @@ function RollBar({ team, phase }) {
   if (myTurn && !rolled) {
     return (
       <div className="bg-zizi-gold/15 border-y-2 border-zizi-gold px-4 py-3 flex items-center justify-between">
-        <span className="font-bold text-zizi-blue">👉 換你擲骰子了！</span>
+        <span className="font-bold text-zizi-ink">👉 換你擲骰子了！</span>
         <button
           onClick={doRoll}
           disabled={rolling}
@@ -655,9 +655,9 @@ function RollBar({ team, phase }) {
   if (rolled && result) {
     const sq = SQUARE_META[result.square];
     return (
-      <div className="bg-zizi-blue/5 px-4 py-2.5 text-sm text-slate-700">
+      <div className="bg-zizi-gold/10 px-4 py-2.5 text-sm text-slate-700">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-bold text-zizi-blue">🎲 {result.rolls?.join('+')}＝{result.steps}</span>
+          <span className="font-bold text-zizi-ink">🎲 {result.rolls?.join('+')}＝{result.steps}</span>
           {result.skipped ? (
             <span>💼 失業輪空</span>
           ) : (
@@ -744,7 +744,7 @@ function IncomeStatement({ team }) {
       </Section>
 
       {/* 月現金流 */}
-      <div className="bg-zizi-blue text-white rounded-2xl p-4 flex items-center justify-between">
+      <div className="bg-gradient-to-r from-zizi-gold to-amber-500 text-white rounded-2xl p-4 flex items-center justify-between shadow-glow">
         <span className="font-semibold">月現金流（每回合入帳）</span>
         <span className="text-xl font-bold tabular-nums">
           {(d.cashflow ?? 0) >= 0 ? '+' : '-'}{formatMoney(Math.abs(d.cashflow ?? 0))}
@@ -869,14 +869,14 @@ function AssetRow({ a, teamId, canSell }) {
               <input type="number" min="1" max={a.qty} value={qty} onChange={(e) => setQty(e.target.value)}
                 className="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
               <span className="text-xs text-slate-400">股</span>
-              <button onClick={() => setQty(a.qty)} className="text-xs text-zizi-blue underline">全部</button>
+              <button onClick={() => setQty(a.qty)} className="text-xs text-zizi-ink underline">全部</button>
             </>
           ) : (
             <>
               <input type="number" min="1000" step="1000" value={amount} onChange={(e) => setAmount(e.target.value)}
                 className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
               <span className="text-xs text-slate-400">元</span>
-              <button onClick={() => setAmount(Math.round(a.value))} className="text-xs text-zizi-blue underline">全部</button>
+              <button onClick={() => setAmount(Math.round(a.value))} className="text-xs text-zizi-ink underline">全部</button>
             </>
           )}
           <button onClick={sellPart} disabled={!canSell}
@@ -974,9 +974,9 @@ function BalanceSheet({ team, phase }) {
           <p className="font-bold text-red-500 tabular-nums">{formatMoney(d.liabilitiesTotal || 0)}</p>
         </div>
       </div>
-      <div className="bg-zizi-blue/5 rounded-2xl p-3 text-center">
+      <div className="bg-zizi-gold/10 rounded-2xl p-3 text-center">
         <p className="text-xs text-slate-500">淨資產（資產＋現金−負債）</p>
-        <p className={'text-xl font-bold tabular-nums ' + ((netWorthOf(team)) >= 0 ? 'text-zizi-blue' : 'text-red-500')}>
+        <p className={'text-xl font-bold tabular-nums ' + ((netWorthOf(team)) >= 0 ? 'text-zizi-ink' : 'text-red-500')}>
           {formatMoney(netWorthOf(team))}
         </p>
       </div>
@@ -1141,7 +1141,7 @@ function MarketTab({ team, phase }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <span className="text-sm text-slate-500">
-          可用存款 <span className="font-bold text-zizi-blue">{formatMoney(team.cash)}</span>
+          可用存款 <span className="font-bold text-zizi-ink">{formatMoney(team.cash)}</span>
         </span>
         {!canBuy && <span className="text-xs text-amber-600">等待老師開始本回合操作</span>}
       </div>
@@ -1198,7 +1198,7 @@ function MarketCard({ item, canBuy, onBuy, inst }) {
               <span className="text-slate-500">現價</span>
               <span className="font-bold text-slate-800 tabular-nums">{price}</span>
               <span className={up ? 'text-green-600' : 'text-red-500'}>{up ? '▲' : '▼'}{Math.abs(pct)}%</span>
-              <span className="text-zizi-blue underline">{showChart ? '收起圖' : '看走勢圖'}</span>
+              <span className="text-zizi-ink underline">{showChart ? '收起圖' : '看走勢圖'}</span>
             </button>
           )}
         </div>

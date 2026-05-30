@@ -41,8 +41,8 @@ function Home() {
   const origin = window.location.origin;
 
   return (
-    <div className="min-h-full bg-zizi-blue text-white flex flex-col items-center justify-center p-6">
-      <h1 className="text-3xl font-bold mb-1">茲茲一百萬挑戰賽</h1>
+    <div className="min-h-full screen-bg text-white flex flex-col items-center justify-center p-6">
+      <h1 className="text-3xl font-bold mb-1">茲茲財富自由挑戰賽</h1>
       <p className="text-zizi-gold mb-8">成為一道閃電，點燃孩子的學習熱誠 ⚡</p>
 
       {!code ? (
@@ -69,7 +69,7 @@ function Home() {
               onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
               placeholder="例如 ABC12"
               maxLength={5}
-              className="w-full rounded-xl px-3 py-2 text-center text-zizi-blue font-bold tracking-widest mb-3"
+              className="w-full rounded-xl px-3 py-2 text-center text-zizi-ink font-bold tracking-widest mb-3"
             />
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => joinAs('student')} className="rounded-xl bg-white/20 hover:bg-white/30 py-2 font-medium">📱 學生加入</button>

@@ -14,7 +14,7 @@ export default function RoomGuard({ children }) {
 
   if (!ROOM || invalid) {
     return (
-      <div className="min-h-full bg-zizi-blue text-white flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-full screen-bg text-white flex flex-col items-center justify-center p-6 text-center">
         <div className="text-5xl mb-3">🚪</div>
         <p className="text-xl font-bold mb-2">找不到房間</p>
         <p className="text-white/70 mb-6">

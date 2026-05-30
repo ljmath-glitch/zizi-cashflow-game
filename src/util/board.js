@@ -4,7 +4,7 @@ export const SQUARE_META = {
   doodad: { label: '額外支出', emoji: '💸', color: 'bg-rose-500' },
   charity: { label: '慈善', emoji: '❤️', color: 'bg-pink-500' },
   payday: { label: '發薪', emoji: '💰', color: 'bg-amber-500' },
-  market: { label: '市場', emoji: '📈', color: 'bg-sky-500' },
+  market: { label: '市場', emoji: '📈', color: 'bg-teal-500' },
   baby: { label: '生小孩', emoji: '👶', color: 'bg-violet-500' },
   downsized: { label: '失業', emoji: '💼', color: 'bg-slate-500' },
 };
