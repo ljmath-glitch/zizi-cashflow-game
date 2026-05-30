@@ -136,10 +136,10 @@ export default function Screen() {
 
       {game?.spotlight && <Spotlight team={game.spotlight} />}
       {game?.showTutorial && <Tutorial />}
-      {report && !game?.showTutorial && <MonthReport report={report} />}
-      {drawn && <CardOverlay payload={drawn} />}
-      {celebrate && <Celebration name={celebrate.name} />}
-      {bankrupt && <BankruptOverlay payload={bankrupt} />}
+      {report && !game?.showTutorial && <MonthReport report={report} onClose={() => setReport(null)} />}
+      {drawn && <CardOverlay payload={drawn} onClose={() => setDrawn(null)} />}
+      {celebrate && <Celebration name={celebrate.name} onClose={() => setCelebrate(null)} />}
+      {bankrupt && <BankruptOverlay payload={bankrupt} onClose={() => setBankrupt(null)} />}
     </div>
   );
 }
@@ -275,7 +275,7 @@ function Tutorial() {
 }
 
 // 月初彈窗：回顧上個月 + 公布本月突發事件
-function MonthReport({ report }) {
+function MonthReport({ report, onClose }) {
   const { round, prevEvent, thisEvent, moves, scale, rumor } = report;
   const moveRow = (label, emoji, pct) => (
     <div className="flex items-center justify-between px-4 py-1.5">
@@ -286,7 +286,8 @@ function MonthReport({ report }) {
     </div>
   );
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-zizi-ink/70 backdrop-blur-sm">
+    <div onClick={onClose} className="fixed inset-0 z-40 flex items-center justify-center bg-zizi-ink/70 backdrop-blur-sm cursor-pointer">
+      <span className="absolute bottom-6 inset-x-0 text-center text-white/55 text-sm">👆 點畫面任一處關閉</span>
       <div className="card-pop bg-gradient-to-b from-amber-800 to-amber-950 border-2 border-zizi-gold rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] w-[34rem] max-w-[92vw] p-7 text-white">
         <p className="text-center text-white/60">— 第 {round} 回合 —</p>
 
@@ -323,11 +324,11 @@ function MonthReport({ report }) {
 }
 
 // 跳出老鼠賽跑圈大慶祝（煙火 + 彩帶 + 隊名）
-function Celebration({ name }) {
+function Celebration({ name, onClose }) {
   const confetti = Array.from({ length: 40 });
   const emojis = ['🎉', '✨', '🏆', '💰', '🎊', '⭐'];
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zizi-ink/80 backdrop-blur-sm overflow-hidden">
+    <div onClick={onClose} className="fixed inset-0 z-50 flex items-center justify-center bg-zizi-ink/80 backdrop-blur-sm overflow-hidden cursor-pointer">
       {confetti.map((_, i) => (
         <span
           key={i}
@@ -353,9 +354,9 @@ function Celebration({ name }) {
 }
 
 // 破產淘汰動畫
-function BankruptOverlay({ payload }) {
+function BankruptOverlay({ payload, onClose }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zizi-ink/85 backdrop-blur-sm">
+    <div onClick={onClose} className="fixed inset-0 z-50 flex items-center justify-center bg-zizi-ink/85 backdrop-blur-sm cursor-pointer">
       <div className="text-center card-pop">
         <div className="text-8xl mb-4">💀</div>
         <p className="text-6xl font-black text-red-500 my-3 drop-shadow-lg">
@@ -369,7 +370,7 @@ function BankruptOverlay({ payload }) {
 }
 
 // 抽牌翻牌動畫（覆蓋全螢幕中央）
-function CardOverlay({ payload }) {
+function CardOverlay({ payload, onClose }) {
   const { deck, card, teamName, professionName, professionEmoji } = payload;
   const META = {
     small: { label: '機會・小生意', color: 'bg-emerald-500' },
@@ -380,7 +381,8 @@ function CardOverlay({ payload }) {
   };
   const m = META[deck] || { label: '事件', color: 'bg-slate-500' };
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-zizi-ink/45 backdrop-blur-sm pointer-events-none">
+    <div onClick={onClose} className="fixed inset-0 z-40 flex items-center justify-center bg-zizi-ink/45 backdrop-blur-sm cursor-pointer">
+      <span className="absolute bottom-6 inset-x-0 text-center text-white/55 text-sm">👆 點畫面任一處關閉</span>
       <div className="card-pop bg-white rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] ring-1 ring-black/5 w-80 overflow-hidden">
         <div className={'py-2 text-center text-white font-bold ' + m.color}>{m.label}</div>
         <div className="p-6 text-center">
