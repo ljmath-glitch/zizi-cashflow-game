@@ -950,7 +950,7 @@ function resolveSquare(team, type) {
   switch (type) {
     case 'opportunity': {
       // 若持有房地產，有機會出現「收購要約」；否則正常選小生意/大買賣
-      const offer = maybeAcquisitionOffer(team, 0.45);
+      const offer = maybeAcquisitionOffer(team);
       if (offer) {
         team.pendingAction = offer;
         announceCard('acquire', offer.card, team);
@@ -964,16 +964,9 @@ function resolveSquare(team, type) {
       team.pendingAction = { type: 'charity', cost };
       break;
     }
-    case 'market': {
-      // 市場格：先觸發全班行情卡；若持有房地產，另有機會冒出收購要約（房市交易主場）
+    case 'market':
       applyMarketCard(team, drawCard('market'));
-      const offer = maybeAcquisitionOffer(team, 0.4);
-      if (offer) {
-        team.pendingAction = offer;
-        announceCard('acquire', offer.card, team);
-      }
       break;
-    }
     case 'doodad':
       applyDoodad(team, drawCard('doodad'));
       break;
@@ -1039,11 +1032,11 @@ function applyMarketCard(lander, card) {
 // 買家名稱池（增添情境感）
 const BUYERS = ['建設公司', '海外投資客', '隔壁鄰居', '連鎖民宿業者', '科技新貴', '包租公協會', '地產基金'];
 
-// 若該組持有房地產，prob 機率產生一筆收購要約（對標某間房）
-function maybeAcquisitionOffer(team, prob = 0.45) {
+// 若該組持有房地產，35% 機率產生一筆收購要約（對標某間房）
+function maybeAcquisitionOffer(team) {
   const houses = (team.assets || []).filter((a) => a.category === 'realestate');
   if (houses.length === 0) return null;
-  if (Math.random() > prob) return null;
+  if (Math.random() > 0.35) return null;
 
   const asset = houses[Math.floor(Math.random() * houses.length)];
   // 開價依該房的售價範圍（priceLow~priceHigh）抽出，低機率偏向高端（重劃/搶手）
