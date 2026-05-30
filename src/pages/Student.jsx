@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { socket } from '../socket.js';
 import { useConnection } from '../hooks/useConnection.js';
 import { useGameState } from '../hooks/useGameState.js';
@@ -13,8 +13,10 @@ import {
   PASSIVE_LABEL,
 } from '../util/finance.js';
 import { SQUARE_META } from '../util/board.js';
+import { toast } from '../util/toast.js';
 import ConnectionBadge from '../components/ConnectionBadge.jsx';
 import Sparkline from '../components/Sparkline.jsx';
+import Toaster from '../components/Toaster.jsx';
 
 // 學生端（手機）— v2(M6)：完整損益表 + 資產負債表 + 市場（現代化資產）
 export default function Student() {
@@ -31,11 +33,16 @@ export default function Student() {
       : `第 ${game.round} 回合`;
 
   return (
-    <div className="min-h-full bg-slate-50 flex flex-col">
-      <header className="bg-zizi-blue text-white px-4 py-3 flex items-center justify-between">
-        <h1 className="font-bold">
+    <div className="min-h-full app-bg flex flex-col">
+      <header className="relative bg-gradient-to-r from-zizi-blue via-indigo-800 to-zizi-blue text-white px-4 py-3 flex items-center justify-between shadow-lg overflow-hidden">
+        {/* 標題列頂端一道香檳金細光 */}
+        <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-zizi-champagne to-transparent" />
+        <h1 className="font-bold flex items-center gap-1.5">
+          <span className="text-zizi-gold drop-shadow">⚡</span>
           茲茲一百萬挑戰賽
-          <span className="ml-2 text-zizi-gold text-sm">{roundLabel}</span>
+          <span className="ml-1 text-zizi-gold text-xs font-medium bg-white/10 ring-1 ring-white/15 rounded-full px-2 py-0.5">
+            {roundLabel}
+          </span>
         </h1>
         <ConnectionBadge connected={connected} />
       </header>
@@ -44,7 +51,7 @@ export default function Student() {
         <>
           <FinancePanel team={team} phase={phase} />
           <PendingModal team={team} />
-          <EventToast />
+          <Toaster />
         </>
       ) : resuming ? (
         <div className="flex-1 flex items-center justify-center text-slate-400">還原中…</div>
@@ -107,32 +114,34 @@ function JoinForm({ connected, join, resume, offerProfessions }) {
   // 第一步畫面：輸入隊名
   return (
     <main className="flex-1 flex flex-col items-center justify-center gap-5 p-6">
-      <div className="text-5xl">📱</div>
-      <h2 className="text-xl font-bold text-zizi-blue">加入遊戲</h2>
-      <p className="text-center text-xs text-slate-500 max-w-xs -mt-2">
-        🎯 目標：讓<b className="text-zizi-blue">被動收入超過總支出</b>，跳出老鼠賽跑圈、達成財富自由！
-      </p>
-      <div className="w-full max-w-xs space-y-3">
-        <label className="block">
-          <span className="text-sm text-slate-600">隊名</span>
-          <input
-            type="text"
-            value={teamName}
-            onChange={(e) => setTeamName(e.target.value)}
-            placeholder="輸入你們這組的隊名"
-            maxLength={20}
-            className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:border-zizi-blue focus:outline-none"
-          />
-        </label>
-        <button
-          onClick={handleNext}
-          disabled={!connected || busy}
-          className="w-full rounded-xl bg-zizi-gold text-white font-semibold py-3 disabled:opacity-50"
-        >
-          {busy ? '抽卡中…' : '🎴 抽職業卡（二選一）'}
-        </button>
+      <div className="glass ring-1 ring-white/50 shadow-soft rounded-[2rem] px-7 py-8 w-full max-w-xs flex flex-col items-center gap-5">
+        <div className="text-5xl animate-float drop-shadow-sm">📱</div>
+        <h2 className="text-xl font-bold text-zizi-blue -mt-1">加入遊戲</h2>
+        <p className="text-center text-xs text-slate-500 -mt-3">
+          🎯 目標：讓<b className="text-zizi-blue">被動收入超過總支出</b>，跳出老鼠賽跑圈、達成財富自由！
+        </p>
+        <div className="w-full space-y-3">
+          <label className="block">
+            <span className="text-sm text-slate-600">隊名</span>
+            <input
+              type="text"
+              value={teamName}
+              onChange={(e) => setTeamName(e.target.value)}
+              placeholder="輸入你們這組的隊名"
+              maxLength={20}
+              className="mt-1 w-full rounded-xl border border-slate-300 bg-white/70 px-3 py-2 focus:border-zizi-blue focus:ring-2 focus:ring-zizi-gold/30 focus:outline-none transition"
+            />
+          </label>
+          <button
+            onClick={handleNext}
+            disabled={!connected || busy}
+            className="w-full rounded-xl bg-gradient-to-r from-zizi-gold to-amber-500 text-white font-semibold py-3 shadow-glow disabled:opacity-50 disabled:shadow-none"
+          >
+            {busy ? '抽卡中…' : '🎴 抽職業卡（二選一）'}
+          </button>
+        </div>
       </div>
-      <div className="w-full max-w-xs border-t pt-4">
+      <div className="w-full max-w-xs border-t border-slate-200/70 pt-4">
         <p className="text-xs text-slate-500 mb-2">已經有組別代號？輸入它重新登入：</p>
         <div className="flex gap-2">
           <input
@@ -165,7 +174,7 @@ function ProfessionChoice({ prof, disabled, onPick }) {
     <button
       onClick={onPick}
       disabled={disabled}
-      className="w-full text-left bg-white rounded-2xl shadow-sm p-4 border-2 border-transparent hover:border-zizi-gold transition disabled:opacity-50"
+      className="w-full text-left glass ring-1 ring-white/50 rounded-3xl shadow-soft p-4 border-2 border-transparent hover:border-zizi-gold hover:-translate-y-0.5 hover:shadow-glow transition-all duration-200 disabled:opacity-50"
     >
       <div className="flex items-center gap-3">
         <span className="text-4xl">{prof.emoji}</span>
@@ -222,23 +231,46 @@ const TABS = [
 
 function FinancePanel({ team, phase }) {
   const [tab, setTab] = useState('finance');
+  const [dir, setDir] = useState(1); // 內容滑入方向：右切=+1、左切=-1
+  const idx = TABS.findIndex((t) => t.key === tab);
   const free = isFinanciallyFree(team);
   const d = team.derived || {};
 
+  function changeTab(key) {
+    const ni = TABS.findIndex((t) => t.key === key);
+    if (ni === idx) return;
+    setDir(ni > idx ? 1 : -1);
+    setTab(key);
+  }
+
+  // 手指左右滑動切換分頁（滑動 UI）
+  const touchX = useRef(null);
+  function onTouchStart(e) {
+    touchX.current = e.touches[0].clientX;
+  }
+  function onTouchEnd(e) {
+    if (touchX.current == null) return;
+    const dx = e.changedTouches[0].clientX - touchX.current;
+    touchX.current = null;
+    if (Math.abs(dx) < 60) return;
+    const ni = dx < 0 ? Math.min(idx + 1, TABS.length - 1) : Math.max(idx - 1, 0);
+    if (ni !== idx) changeTab(TABS[ni].key);
+  }
+
   return (
     <div className="flex-1 flex flex-col">
-      {/* 職業卡 + 存款 + 月現金流 */}
-      <div className="bg-zizi-blue text-white px-4 pb-3 pt-1">
-        <div className="bg-white/10 rounded-2xl p-3 flex items-center gap-3">
-          <span className="text-4xl">{team.professionEmoji}</span>
-          <div className="flex-1">
-            <p className="text-xs text-white/60">
+      {/* 職業卡 + 存款 + 月現金流（深藍懸浮玻璃面板） */}
+      <div className="bg-gradient-to-b from-zizi-blue to-indigo-900 text-white px-4 pb-4 pt-1">
+        <div className="bg-white/10 ring-1 ring-white/15 backdrop-blur rounded-2xl p-3 flex items-center gap-3 shadow-lg">
+          <span className="text-4xl grid place-items-center w-14 h-14 rounded-2xl bg-white/10 ring-1 ring-white/15">{team.professionEmoji}</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-white/60 truncate">
               {team.name} ‧ 代號 <span className="font-mono text-zizi-gold">{team.id}</span>
             </p>
-            <p className="text-lg font-bold leading-tight">{team.professionName}</p>
-            <p className="text-xs text-zizi-gold">{team.professionPerk}</p>
+            <p className="text-lg font-bold leading-tight truncate">{team.professionName}</p>
+            <p className="text-xs text-zizi-gold truncate">{team.professionPerk}</p>
           </div>
-          <div className="text-right">
+          <div className="text-right shrink-0">
             <p className="text-xs text-white/60">存款</p>
             <p className="text-lg font-bold tabular-nums">{formatMoney(team.cash)}</p>
             <p className={'text-xs tabular-nums ' + ((d.cashflow ?? 0) >= 0 ? 'text-green-300' : 'text-red-300')}>
@@ -273,26 +305,42 @@ function FinancePanel({ team, phase }) {
 
       {!team.bankrupt && <RollBar team={team} phase={phase} />}
 
-      <nav className="flex bg-white border-b text-sm">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={
-              'flex-1 py-2.5 font-medium ' +
-              (tab === t.key ? 'text-zizi-blue border-b-2 border-zizi-gold' : 'text-slate-400')
-            }
-          >
-            {t.label}
-          </button>
-        ))}
+      {/* 滑動膠囊式分頁：白色指示器在底層平滑滑到所選分頁 */}
+      <nav className="px-3 pt-3 pb-2 bg-white/60 backdrop-blur border-b border-white/50">
+        <div className="relative flex p-1 bg-slate-100/80 rounded-2xl">
+          <span
+            className="seg-indicator absolute inset-y-1 left-1 rounded-xl bg-white shadow-[0_2px_10px_rgba(30,58,138,0.18)]"
+            style={{
+              width: `calc((100% - 0.5rem) / ${TABS.length})`,
+              transform: `translateX(calc(${idx} * 100%))`,
+            }}
+          />
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => changeTab(t.key)}
+              className={
+                'relative z-10 flex-1 py-2 text-sm font-semibold rounded-xl transition-colors ' +
+                (tab === t.key ? 'text-zizi-blue' : 'text-slate-400')
+              }
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </nav>
 
-      <main className="flex-1 p-4 overflow-auto">
-        {tab === 'finance' && <IncomeStatement team={team} />}
-        {tab === 'market' && <MarketTab team={team} phase={phase} />}
-        {tab === 'balance' && <BalanceSheet team={team} phase={phase} />}
-        {tab === 'history' && <HistoryTab team={team} />}
+      <main
+        className="flex-1 p-4 overflow-auto"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
+        <div key={tab} className="slide-in" style={{ '--slide-from': dir > 0 ? '16px' : '-16px' }}>
+          {tab === 'finance' && <IncomeStatement team={team} />}
+          {tab === 'market' && <MarketTab team={team} phase={phase} />}
+          {tab === 'balance' && <BalanceSheet team={team} phase={phase} />}
+          {tab === 'history' && <HistoryTab team={team} />}
+        </div>
       </main>
     </div>
   );
@@ -302,8 +350,8 @@ function FinancePanel({ team, phase }) {
 // 彈窗外框（模組層級的穩定元件；不可定義在 PendingModal 內，否則每次 render 會重掛、吃掉點擊）
 function Overlay({ children }) {
   return (
-    <div className="fixed inset-0 z-30 bg-black/50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="w-full max-w-sm bg-white rounded-2xl p-5 shadow-xl my-auto">{children}</div>
+    <div className="fixed inset-0 z-30 bg-zizi-ink/55 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+      <div className="card-pop w-full max-w-sm bg-white/95 ring-1 ring-white/60 rounded-3xl p-5 shadow-2xl my-auto">{children}</div>
     </div>
   );
 }
@@ -387,14 +435,20 @@ function PendingModal({ team }) {
             </button>
             {afford ? (
               <button
-                onClick={() => socket.emit('student:dealDecision', { teamId: team.id, accept: true })}
-                className="rounded-xl bg-zizi-gold text-white font-bold py-3"
+                onClick={() => {
+                  socket.emit('student:dealDecision', { teamId: team.id, accept: true });
+                  toast({ emoji: c.emoji, title: `成交！買下 ${c.name}`, text: mi >= 0 ? `每月現金流 +${formatMoney(mi)} 入袋 🎉` : '看好它的增值翻盤！', tone: 'good' });
+                }}
+                className="rounded-xl bg-gradient-to-r from-zizi-gold to-amber-500 text-white font-bold py-3 shadow-glow"
               >
                 買下來
               </button>
             ) : (
               <button
-                onClick={() => socket.emit('student:dealDecision', { teamId: team.id, accept: true, withLoan: true })}
+                onClick={() => {
+                  socket.emit('student:dealDecision', { teamId: team.id, accept: true, withLoan: true });
+                  toast({ emoji: c.emoji, title: `貸款買下 ${c.name}`, text: '記得快還高利貸（月息 20%）！', tone: 'info' });
+                }}
                 className="rounded-xl bg-slate-700 text-white font-bold py-2.5 text-sm leading-tight"
               >
                 💳 高利貸購買<span className="block text-[0.65rem] font-normal">月息 20%，較貴！</span>
@@ -431,8 +485,11 @@ function PendingModal({ team }) {
               不賣
             </button>
             <button
-              onClick={() => socket.emit('student:acquireDecision', { teamId: team.id, accept: true })}
-              className="rounded-xl bg-emerald-600 text-white font-bold py-3"
+              onClick={() => {
+                socket.emit('student:acquireDecision', { teamId: team.id, accept: true });
+                toast({ emoji: '💰', title: '成功賣出獲利！', text: `清貸款後淨入 ${formatMoney(pa.net)} 🎉`, tone: 'good' });
+              }}
+              className="rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold py-3 shadow-[0_8px_24px_-8px_rgba(16,185,129,0.6)]"
             >
               賣出獲利
             </button>
@@ -461,8 +518,11 @@ function PendingModal({ team }) {
             </button>
             <button
               disabled={!afford}
-              onClick={() => socket.emit('student:charityDecision', { teamId: team.id, donate: true })}
-              className="rounded-xl bg-pink-500 text-white font-bold py-3 disabled:opacity-40"
+              onClick={() => {
+                socket.emit('student:charityDecision', { teamId: team.id, donate: true });
+                toast({ emoji: '❤️', title: '謝謝你的善心！', text: '接下來 3 回合可擲兩顆骰子，跑更快 🎲🎲', tone: 'good' });
+              }}
+              className="rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold py-3 disabled:opacity-40 shadow-[0_8px_24px_-8px_rgba(244,63,94,0.6)]"
             >
               捐款
             </button>
@@ -475,27 +535,7 @@ function PendingModal({ team }) {
   return null;
 }
 
-// 自動事件提示（額外支出 / 生小孩 / 失業 等）
-function EventToast() {
-  const [evt, setEvt] = useState(null);
-  useEffect(() => {
-    function on(e) {
-      setEvt(e);
-      setTimeout(() => setEvt(null), 3800);
-    }
-    socket.on('student:event', on);
-    return () => socket.off('student:event', on);
-  }, []);
-  if (!evt) return null;
-  return (
-    <div className="fixed top-16 inset-x-0 z-40 flex justify-center px-4 pointer-events-none">
-      <div className="bg-zizi-blue text-white rounded-2xl shadow-xl px-4 py-3 max-w-sm">
-        <p className="font-bold">{evt.emoji} {evt.title}</p>
-        <p className="text-sm text-white/80">{evt.text}</p>
-      </div>
-    </div>
-  );
-}
+// 註：自動事件提示（額外支出/生小孩/失業…）已統一由 components/Toaster.jsx 接收 student:event 顯示
 
 const SQUARE_HINT = {
   payday: '領到月現金流 💰',
@@ -603,13 +643,19 @@ function IncomeStatement({ team }) {
   return (
     <div className="space-y-4">
       {/* 非工資收入重點卡 */}
-      <div className="bg-white rounded-2xl shadow-sm p-4">
+      <div className="bg-white rounded-2xl shadow-soft p-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-slate-600">財富自由進度</span>
-          <span className="text-sm font-bold text-zizi-gold">{pct}%</span>
+          <span className="text-sm font-medium text-slate-600">🎯 財富自由進度</span>
+          <span className="text-sm font-bold text-zizi-gold tabular-nums">{pct}%</span>
         </div>
-        <div className="h-3 w-full rounded-full bg-slate-100 overflow-hidden">
-          <div className="h-full bg-zizi-gold transition-all" style={{ width: pct + '%' }} />
+        <div className="relative h-3 w-full rounded-full bg-slate-100 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-amber-400 to-zizi-gold transition-all duration-500"
+            style={{ width: pct + '%' }}
+          />
+          {pct > 0 && pct < 100 && (
+            <div className="shimmer absolute inset-y-0 left-0 rounded-full" style={{ width: pct + '%' }} />
+          )}
         </div>
         <p className="mt-2 text-xs text-slate-500">
           非工資收入 {formatMoney(d.passiveTotal || 0)} / 總支出 {formatMoney(d.totalExpense || 0)}
@@ -686,13 +732,16 @@ function AssetRow({ a, teamId, canSell }) {
   const diff = a.value - (cost || 0);
   const pct = cost ? Math.round((diff / cost) * 100) : 0;
 
+  const gainText = diff >= 0 ? `帳面賺 ${Math.abs(pct)}% 🎉` : `認賠 ${Math.abs(pct)}%`;
   function sellWhole() {
     if (!window.confirm(`確定全部賣出 ${a.emoji} ${a.name}？`)) return;
     socket.emit('student:sell', { teamId, uid: a.uid });
+    toast({ emoji: '💵', title: `賣出 ${a.name}`, text: gainText, tone: diff >= 0 ? 'good' : 'info' });
   }
   function sellPart() {
     if (isShares) socket.emit('student:sell', { teamId, uid: a.uid, sellQty: Number(qty) });
     else if (isCrypto) socket.emit('student:sell', { teamId, uid: a.uid, sellAmount: Number(amount) });
+    toast({ emoji: '💵', title: `賣出部分 ${a.name}`, text: gainText, tone: diff >= 0 ? 'good' : 'info' });
     setOpen(false);
   }
 
@@ -987,10 +1036,19 @@ function MarketTab({ team, phase }) {
     fetch('/api/market').then((r) => r.json()).then(setMarket).catch(() => setMarket([]));
   }, []);
 
-  function buy(payload) {
+  function buy(payload, item) {
     socket.emit('student:buy', { teamId: team.id, ...payload }, (res) => {
-      setMsg(res?.ok ? { ok: true, text: '購買成功 ✅' } : { ok: false, text: res?.reason || '購買失敗' });
-      setTimeout(() => setMsg(null), 2000);
+      if (res?.ok) {
+        toast({
+          emoji: item?.emoji || '🎉',
+          title: `恭喜入手 ${item?.name || '新資產'}！`,
+          text: '已加入你的資產組合，點一下關閉',
+          tone: 'good',
+        });
+      } else {
+        setMsg({ ok: false, text: res?.reason || '購買失敗' });
+        setTimeout(() => setMsg(null), 2000);
+      }
     });
   }
 
@@ -1094,10 +1152,11 @@ function MarketCard({ item, canBuy, onBuy, inst }) {
           onClick={() =>
             onBuy(
               item.kind === 'shares' ? { marketId: item.id, qty: Number(qty) }
-                : { marketId: item.id, amount: Number(amount) }
+                : { marketId: item.id, amount: Number(amount) },
+              item
             )
           }
-          className="flex-1 rounded-lg bg-zizi-gold text-white font-semibold py-2 text-sm disabled:opacity-40"
+          className="flex-1 rounded-lg bg-gradient-to-r from-zizi-gold to-amber-500 text-white font-semibold py-2 text-sm shadow-sm disabled:opacity-40 disabled:shadow-none"
         >
           {item.kind === 'shares'
             ? `買入（${formatMoney((price || item.price) * Number(qty || 0))}）`
