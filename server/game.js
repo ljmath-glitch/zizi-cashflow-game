@@ -536,9 +536,9 @@ function passiveBreakdown(team) {
   return b;
 }
 
-// 每月貸款月付：銀行貸款 10% + 高利貸 20%
-const BANK_RATE = 0.1; // 一般銀行貸款月息
-const SHARK_RATE = 0.2; // 高利貸（緊急貸款購買）月息
+// 每月貸款月付：銀行貸款 7% + 高利貸 14%
+const BANK_RATE = 0.07; // 一般銀行貸款月息
+const SHARK_RATE = 0.14; // 高利貸（緊急貸款購買）月息
 // 直接變現折價：房地產/企業這類「不易脫手」的資產，自己賣只拿回帳面價的 75%（折價 25%）。
 // 想拿好價錢就等「收購卡」🤝（那條走原價/溢價、不折價）。股票/ETF/加密/定存屬流動資產，照市價賣、不折價。
 const LIQUIDATION_KEEP = 0.75;
@@ -1194,12 +1194,12 @@ function dealDecision(teamId, accept, withLoan = false) {
 
   if (team.cash < card.cost) {
     if (withLoan) {
-      // 直接貸款購買＝高利貸（月息 20%，比一般銀行貸款貴）：借差額（湊整到萬元）
+      // 直接貸款購買＝高利貸（月息 14%，比一般銀行貸款貴）：借差額（湊整到萬元）
       const need = Math.ceil((card.cost - team.cash) / 10000) * 10000;
       team.personalLiabilities.loanShark = (team.personalLiabilities.loanShark || 0) + need;
       team.cash += need;
       addHistory(team, { round: state.round, type: 'loan', text: `高利貸購買 ${card.name}`, delta: need });
-      addFeed(`💳 ${team.name} 借高利貸 ${formatNT(need)}（月息20%）買下 ${card.emoji} ${card.name}`);
+      addFeed(`💳 ${team.name} 借高利貸 ${formatNT(need)}（月息14%）買下 ${card.emoji} ${card.name}`);
     } else {
       // 買不起 → 退回機會卡讓玩家重新決定（回合尚未結束）
       team.pendingAction = { type: 'deal', deck: card.deck, card };
@@ -1394,7 +1394,7 @@ function buyAsset(teamId, { marketId, qty, amount } = {}) {
 
 // ── 銀行貸款 / 還款 ──
 
-// 借錢：以萬元為單位，每月利息為貸款餘額的 10%（計入總支出）
+// 借錢：以萬元為單位，每月利息為貸款餘額的 7%（計入總支出）
 function loanMoney(teamId, amount) {
   if (state.phase !== 'running') return { ok: false, reason: '目前不是操作時間' };
   const team = getTeam(teamId);

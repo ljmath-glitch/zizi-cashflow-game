@@ -294,12 +294,12 @@ function FinancePanel({ team, phase }) {
 
       {!team.bankrupt && (team.personalLiabilities?.loanShark || 0) > 0 && (
         <div className="bg-red-700 text-white text-center py-1.5 text-sm font-medium">
-          🔴 高利貸 {formatMoney(team.personalLiabilities.loanShark)}，每月利息 {formatMoney(Math.round(team.personalLiabilities.loanShark * 0.2))}（月息20%，快還！）
+          🔴 高利貸 {formatMoney(team.personalLiabilities.loanShark)}，每月利息 {formatMoney(Math.round(team.personalLiabilities.loanShark * 0.14))}（月息14%，快還！）
         </div>
       )}
       {!team.bankrupt && (team.personalLiabilities?.bankLoan || 0) > 0 && (
         <div className="bg-red-500 text-white text-center py-1.5 text-sm font-medium">
-          ⚠️ 銀行貸款 {formatMoney(team.personalLiabilities.bankLoan)}，每月利息 {formatMoney(Math.round(team.personalLiabilities.bankLoan * 0.1))}
+          ⚠️ 銀行貸款 {formatMoney(team.personalLiabilities.bankLoan)}，每月利息 {formatMoney(Math.round(team.personalLiabilities.bankLoan * 0.07))}
         </div>
       )}
 
@@ -498,13 +498,13 @@ function PendingModal({ team }) {
                   decide('student:dealDecision', { accept: true, withLoan: true }, {
                     emoji: c.emoji,
                     title: `貸款買下 ${c.name}`,
-                    text: '記得快還高利貸（月息 20%）！',
+                    text: '記得快還高利貸（月息 14%）！',
                     tone: 'info',
                   })
                 }
                 className="rounded-xl bg-slate-700 text-white font-bold py-2.5 text-sm leading-tight disabled:opacity-50"
               >
-                💳 高利貸購買<span className="block text-[0.65rem] font-normal">月息 20%，較貴！</span>
+                💳 高利貸購買<span className="block text-[0.65rem] font-normal">月息 14%，較貴！</span>
               </button>
             )}
           </div>
@@ -1013,7 +1013,7 @@ function BalanceSheet({ team, phase }) {
             {(pl.loanShark || 0) > 0 && (
               <div className="bg-red-100 rounded-2xl px-4 py-2.5 flex items-center justify-between ring-1 ring-red-300">
                 <span className="text-sm text-red-700 font-medium">
-                  🔴 高利貸 <span className="text-xs font-normal">（月息 20%！於上方優先還款）</span>
+                  🔴 高利貸 <span className="text-xs font-normal">（月息 14%！於上方優先還款）</span>
                 </span>
                 <span className="text-sm font-bold text-red-700 tabular-nums">-{formatMoney(pl.loanShark)}</span>
               </div>
@@ -1024,7 +1024,7 @@ function BalanceSheet({ team, phase }) {
             {(pl.bankLoan || 0) > 0 && (
               <div className="bg-red-50 rounded-2xl px-4 py-2.5 flex items-center justify-between">
                 <span className="text-sm text-slate-600">
-                  銀行貸款 <span className="text-xs text-slate-400">（月息 10%，於上方還款）</span>
+                  銀行貸款 <span className="text-xs text-slate-400">（月息 7%，於上方還款）</span>
                 </span>
                 <span className="text-sm font-medium text-red-600 tabular-nums">-{formatMoney(pl.bankLoan)}</span>
               </div>
@@ -1066,7 +1066,7 @@ function LoanPanel({ team, phase }) {
           目前欠 <b className="text-red-500">{formatMoney(bal)}</b>
         </span>
       </div>
-      <p className="text-xs text-slate-400">利息：每月還貸款餘額的 10%（借越多、月支出越重）</p>
+      <p className="text-xs text-slate-400">利息：每月還貸款餘額的 7%（借越多、月支出越重）</p>
 
       {msg && (
         <div className={'rounded-lg px-3 py-1.5 text-sm text-center ' + (msg.ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
