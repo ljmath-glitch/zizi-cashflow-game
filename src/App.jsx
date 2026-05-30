@@ -60,10 +60,10 @@ function Home() {
             </button>
           </div>
 
-          {/* 學生/大螢幕用房號加入 */}
+          {/* 用房號加入：老師 / 大螢幕 / 學生 */}
           <div className="bg-white/10 rounded-2xl p-5">
             <p className="text-lg font-semibold mb-1 text-center">用房號加入</p>
-            <p className="text-sm text-white/60 mb-3 text-center">輸入老師給的房號</p>
+            <p className="text-sm text-white/60 mb-3 text-center">輸入房號，選擇你的身分加入</p>
             <input
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
@@ -71,6 +71,7 @@ function Home() {
               maxLength={5}
               className="w-full rounded-xl px-3 py-2 text-center text-zizi-ink font-bold tracking-widest mb-3"
             />
+            <button onClick={() => joinAs('teacher')} className="w-full rounded-xl bg-zizi-gold hover:brightness-105 text-white py-2.5 font-bold mb-2">🎛️ 老師控制台</button>
             <div className="grid grid-cols-2 gap-2">
               <button onClick={() => joinAs('student')} className="rounded-xl bg-white/20 hover:bg-white/30 py-2 font-medium">📱 學生加入</button>
               <button onClick={() => joinAs('screen')} className="rounded-xl bg-white/20 hover:bg-white/30 py-2 font-medium">📺 大螢幕</button>
@@ -83,13 +84,14 @@ function Home() {
         <div className="w-full max-w-md bg-white/10 rounded-2xl p-6 text-center">
           <p className="text-sm text-white/60">你的房號</p>
           <p className="text-5xl font-black text-zizi-gold tracking-widest my-2">{code}</p>
-          <p className="text-sm text-white/60 mb-4">把房號或下面連結分享給學生即可加入</p>
+          <p className="text-sm text-white/60 mb-1">把房號或下面連結分享給學生即可加入</p>
+          <p className="text-xs text-white/40 mb-4">💡 記住房號 <b className="text-zizi-gold">{code}</b>，之後回首頁輸入它就能再進老師端</p>
           <div className="space-y-2 text-left">
             <a href={`/teacher?room=${code}`} className="block bg-zizi-gold text-white rounded-xl px-4 py-3 font-bold text-center">
               🎛️ 進入老師端
             </a>
-            <a href={`/screen?room=${code}`} className="block bg-white/15 hover:bg-white/25 rounded-xl px-4 py-2.5 text-center">
-              📺 大螢幕端（投影用）
+            <a href={`/screen?room=${code}`} target="_blank" rel="noopener" className="block bg-white/15 hover:bg-white/25 rounded-xl px-4 py-2.5 text-center">
+              📺 大螢幕端（投影用）<span className="text-xs text-white/50">↗ 開新分頁</span>
             </a>
             <div className="bg-white/10 rounded-xl px-4 py-2.5">
               <p className="text-xs text-white/50">學生連結</p>
