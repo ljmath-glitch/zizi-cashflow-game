@@ -357,9 +357,49 @@ function Overlay({ children }) {
 }
 
 // 格子互動彈窗：機會（選牌庫→買/放棄）、慈善（捐/不捐）
+// 重要：所有決定都用 socket ack 確認，成功才關閉彈窗（不靠廣播，手機斷線重連也不會卡死）；
+// 並用 busy 防連點，避免狂按狂跳 toast。
 function PendingModal({ team }) {
   const pa = team.pendingAction;
+  const [busy, setBusy] = useState(false);
+  const [resolvedKey, setResolvedKey] = useState(null);
+
+  // 用 pendingAction 的內容當識別；換成新的事件時自動「解鎖」重新顯示
+  const paKey = pa
+    ? `${pa.type}:${pa.card?.id ?? ''}:${pa.cost ?? ''}:${pa.offerPrice ?? ''}`
+    : null;
+
+  // 事件變了就重置（避免上一個的 busy/已處理狀態殘留）
+  useEffect(() => {
+    setBusy(false);
+  }, [paKey]);
+
   if (!pa) return null;
+  if (resolvedKey === paKey) return null; // 已送出且伺服器確認 → 先關閉，等新狀態進來
+
+  // 送出決定：靠 ack 判斷成敗。成功→關閉(+慶祝)；失敗→顯示原因；逾時→解鎖可重試
+  function decide(event, args, okToast) {
+    if (busy) return;
+    setBusy(true);
+    let done = false;
+    const timer = setTimeout(() => {
+      if (!done) {
+        setBusy(false);
+        toast({ emoji: '📡', title: '連線有點慢，請再按一次', tone: 'bad' });
+      }
+    }, 4000);
+    socket.emit(event, { teamId: team.id, ...args }, (res) => {
+      done = true;
+      clearTimeout(timer);
+      setBusy(false);
+      if (res?.ok) {
+        setResolvedKey(paKey);
+        if (okToast) toast(okToast);
+      } else {
+        toast({ emoji: '⚠️', title: res?.reason || '操作失敗，請再試一次', tone: 'bad' });
+      }
+    });
+  }
 
   if (pa.type === 'opportunity') {
     return (
@@ -370,14 +410,16 @@ function PendingModal({ team }) {
           <p className="text-sm text-slate-500 mb-4">選一種投資機會抽卡</p>
           <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={() => socket.emit('student:chooseDeck', { teamId: team.id, deck: 'small' })}
-              className="rounded-xl bg-emerald-500 text-white font-bold py-4"
+              disabled={busy}
+              onClick={() => decide('student:chooseDeck', { deck: 'small' })}
+              className="rounded-xl bg-emerald-500 text-white font-bold py-4 disabled:opacity-50"
             >
               🟢 小生意<span className="block text-xs font-normal">便宜、現金少也能玩</span>
             </button>
             <button
-              onClick={() => socket.emit('student:chooseDeck', { teamId: team.id, deck: 'big' })}
-              className="rounded-xl bg-sky-600 text-white font-bold py-4"
+              disabled={busy}
+              onClick={() => decide('student:chooseDeck', { deck: 'big' })}
+              className="rounded-xl bg-sky-600 text-white font-bold py-4 disabled:opacity-50"
             >
               🔵 大買賣<span className="block text-xs font-normal">昂貴、報酬高</span>
             </button>
@@ -428,28 +470,39 @@ function PendingModal({ team }) {
           )}
           <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={() => socket.emit('student:dealDecision', { teamId: team.id, accept: false })}
-              className="rounded-xl border border-slate-300 text-slate-600 font-semibold py-3"
+              disabled={busy}
+              onClick={() => decide('student:dealDecision', { accept: false })}
+              className="rounded-xl border border-slate-300 text-slate-600 font-semibold py-3 disabled:opacity-50"
             >
               放棄
             </button>
             {afford ? (
               <button
-                onClick={() => {
-                  socket.emit('student:dealDecision', { teamId: team.id, accept: true });
-                  toast({ emoji: c.emoji, title: `成交！買下 ${c.name}`, text: mi >= 0 ? `每月現金流 +${formatMoney(mi)} 入袋 🎉` : '看好它的增值翻盤！', tone: 'good' });
-                }}
-                className="rounded-xl bg-gradient-to-r from-zizi-gold to-amber-500 text-white font-bold py-3 shadow-glow"
+                disabled={busy}
+                onClick={() =>
+                  decide('student:dealDecision', { accept: true }, {
+                    emoji: c.emoji,
+                    title: `成交！買下 ${c.name}`,
+                    text: mi >= 0 ? `每月現金流 +${formatMoney(mi)} 入袋 🎉` : '看好它的增值翻盤！',
+                    tone: 'good',
+                  })
+                }
+                className="rounded-xl bg-gradient-to-r from-zizi-gold to-amber-500 text-white font-bold py-3 shadow-glow disabled:opacity-50"
               >
                 買下來
               </button>
             ) : (
               <button
-                onClick={() => {
-                  socket.emit('student:dealDecision', { teamId: team.id, accept: true, withLoan: true });
-                  toast({ emoji: c.emoji, title: `貸款買下 ${c.name}`, text: '記得快還高利貸（月息 20%）！', tone: 'info' });
-                }}
-                className="rounded-xl bg-slate-700 text-white font-bold py-2.5 text-sm leading-tight"
+                disabled={busy}
+                onClick={() =>
+                  decide('student:dealDecision', { accept: true, withLoan: true }, {
+                    emoji: c.emoji,
+                    title: `貸款買下 ${c.name}`,
+                    text: '記得快還高利貸（月息 20%）！',
+                    tone: 'info',
+                  })
+                }
+                className="rounded-xl bg-slate-700 text-white font-bold py-2.5 text-sm leading-tight disabled:opacity-50"
               >
                 💳 高利貸購買<span className="block text-[0.65rem] font-normal">月息 20%，較貴！</span>
               </button>
@@ -479,17 +532,23 @@ function PendingModal({ team }) {
           <p className="text-xs text-slate-400 mb-4">賣出後會清償該房貸、淨額入帳；之後就少了這筆租金現金流。</p>
           <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={() => socket.emit('student:acquireDecision', { teamId: team.id, accept: false })}
-              className="rounded-xl border border-slate-300 text-slate-600 font-semibold py-3"
+              disabled={busy}
+              onClick={() => decide('student:acquireDecision', { accept: false })}
+              className="rounded-xl border border-slate-300 text-slate-600 font-semibold py-3 disabled:opacity-50"
             >
               不賣
             </button>
             <button
-              onClick={() => {
-                socket.emit('student:acquireDecision', { teamId: team.id, accept: true });
-                toast({ emoji: '💰', title: '成功賣出獲利！', text: `清貸款後淨入 ${formatMoney(pa.net)} 🎉`, tone: 'good' });
-              }}
-              className="rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold py-3 shadow-[0_8px_24px_-8px_rgba(16,185,129,0.6)]"
+              disabled={busy}
+              onClick={() =>
+                decide('student:acquireDecision', { accept: true }, {
+                  emoji: '💰',
+                  title: '成功賣出獲利！',
+                  text: `清貸款後淨入 ${formatMoney(pa.net)} 🎉`,
+                  tone: 'good',
+                })
+              }
+              className="rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold py-3 shadow-[0_8px_24px_-8px_rgba(16,185,129,0.6)] disabled:opacity-50"
             >
               賣出獲利
             </button>
@@ -511,17 +570,22 @@ function PendingModal({ team }) {
           </p>
           <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={() => socket.emit('student:charityDecision', { teamId: team.id, donate: false })}
-              className="rounded-xl border border-slate-300 text-slate-600 font-semibold py-3"
+              disabled={busy}
+              onClick={() => decide('student:charityDecision', { donate: false })}
+              className="rounded-xl border border-slate-300 text-slate-600 font-semibold py-3 disabled:opacity-50"
             >
               不捐
             </button>
             <button
-              disabled={!afford}
-              onClick={() => {
-                socket.emit('student:charityDecision', { teamId: team.id, donate: true });
-                toast({ emoji: '❤️', title: '謝謝你的善心！', text: '接下來 3 回合可擲兩顆骰子，跑更快 🎲🎲', tone: 'good' });
-              }}
+              disabled={!afford || busy}
+              onClick={() =>
+                decide('student:charityDecision', { donate: true }, {
+                  emoji: '❤️',
+                  title: '謝謝你的善心！',
+                  text: '接下來 3 回合可擲兩顆骰子，跑更快 🎲🎲',
+                  tone: 'good',
+                })
+              }
               className="rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold py-3 disabled:opacity-40 shadow-[0_8px_24px_-8px_rgba(244,63,94,0.6)]"
             >
               捐款
@@ -733,15 +797,20 @@ function AssetRow({ a, teamId, canSell }) {
   const pct = cost ? Math.round((diff / cost) * 100) : 0;
 
   const gainText = diff >= 0 ? `帳面賺 ${Math.abs(pct)}% 🎉` : `認賠 ${Math.abs(pct)}%`;
+  // 賣出靠 ack 確認：成功才報喜，失敗顯示原因（不會跳假成功）
+  function emitSell(payload, title) {
+    socket.emit('student:sell', { teamId, ...payload }, (res) => {
+      if (res?.ok) toast({ emoji: '💵', title, text: gainText, tone: diff >= 0 ? 'good' : 'info' });
+      else toast({ emoji: '⚠️', title: res?.reason || '賣出失敗', tone: 'bad' });
+    });
+  }
   function sellWhole() {
     if (!window.confirm(`確定全部賣出 ${a.emoji} ${a.name}？`)) return;
-    socket.emit('student:sell', { teamId, uid: a.uid });
-    toast({ emoji: '💵', title: `賣出 ${a.name}`, text: gainText, tone: diff >= 0 ? 'good' : 'info' });
+    emitSell({ uid: a.uid }, `賣出 ${a.name}`);
   }
   function sellPart() {
-    if (isShares) socket.emit('student:sell', { teamId, uid: a.uid, sellQty: Number(qty) });
-    else if (isCrypto) socket.emit('student:sell', { teamId, uid: a.uid, sellAmount: Number(amount) });
-    toast({ emoji: '💵', title: `賣出部分 ${a.name}`, text: gainText, tone: diff >= 0 ? 'good' : 'info' });
+    if (isShares) emitSell({ uid: a.uid, sellQty: Number(qty) }, `賣出部分 ${a.name}`);
+    else if (isCrypto) emitSell({ uid: a.uid, sellAmount: Number(amount) }, `賣出部分 ${a.name}`);
     setOpen(false);
   }
 
@@ -828,7 +897,10 @@ function DebtRow({ debt, teamId, cash, canAct }) {
   const rate = debt.value > 0 ? (debt.monthly / debt.value) * 100 : 0;
 
   function repay(amount) {
-    socket.emit('student:repayDebt', { teamId, key: debt.key, amount });
+    socket.emit('student:repayDebt', { teamId, key: debt.key, amount }, (res) => {
+      if (res?.ok) toast({ emoji: '✅', title: `已還款 ${debt.label}`, text: `還了 ${formatMoney(amount)}`, tone: 'good' });
+      else toast({ emoji: '⚠️', title: res?.reason || '還款失敗', tone: 'bad' });
+    });
     setOpen(false);
   }
 

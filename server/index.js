@@ -48,6 +48,13 @@ function roomOf(socket) {
   return getRoom(socket.data.code);
 }
 
+// 確保此 socket 仍在自己的「隊伍房間」（emitTeam 用這個房間廣播）。
+// 手機在行動網路/雲端常斷線重連，重連後若沒回到房間，伺服器的 student:team 更新就送不到，
+// 會造成彈窗關不掉、按了像沒反應。每個學生動作前都補一次 join（idempotent，重覆呼叫無害）。
+function ensureTeamRoom(socket, teamId) {
+  if (socket.data.code && teamId) socket.join(socket.data.code + '|team:' + teamId);
+}
+
 io.on('connection', (socket) => {
   const code = String(socket.handshake.query.room || '').toUpperCase();
   const room = getRoom(code);
@@ -126,16 +133,16 @@ io.on('connection', (socket) => {
     socket.emit('student:team', payload);
     ack?.({ ok: true, team: payload });
   });
-  socket.on('student:buy', (payload = {}, ack) => ack?.(roomOf(socket)?.buyAsset(payload.teamId, payload) || { ok: false }));
-  socket.on('student:sell', ({ teamId, ...payload } = {}, ack) => ack?.(roomOf(socket)?.sellAsset(teamId, payload) || { ok: false }));
-  socket.on('student:loan', ({ teamId, amount } = {}, ack) => ack?.(roomOf(socket)?.loanMoney(teamId, amount) || { ok: false }));
-  socket.on('student:repay', ({ teamId, amount } = {}, ack) => ack?.(roomOf(socket)?.repayLoan(teamId, amount) || { ok: false }));
-  socket.on('student:repayDebt', ({ teamId, key, amount } = {}, ack) => ack?.(roomOf(socket)?.repayDebt(teamId, key, amount) || { ok: false }));
-  socket.on('student:roll', ({ teamId } = {}, ack) => ack?.(roomOf(socket)?.rollDice(teamId) || { ok: false }));
-  socket.on('student:chooseDeck', ({ teamId, deck } = {}, ack) => ack?.(roomOf(socket)?.chooseDeck(teamId, deck) || { ok: false }));
-  socket.on('student:dealDecision', ({ teamId, accept, withLoan } = {}, ack) => ack?.(roomOf(socket)?.dealDecision(teamId, accept, withLoan) || { ok: false }));
-  socket.on('student:charityDecision', ({ teamId, donate } = {}, ack) => ack?.(roomOf(socket)?.charityDecision(teamId, donate) || { ok: false }));
-  socket.on('student:acquireDecision', ({ teamId, accept } = {}, ack) => ack?.(roomOf(socket)?.acquireDecision(teamId, accept) || { ok: false }));
+  socket.on('student:buy', (payload = {}, ack) => { ensureTeamRoom(socket, payload.teamId); ack?.(roomOf(socket)?.buyAsset(payload.teamId, payload) || { ok: false }); });
+  socket.on('student:sell', ({ teamId, ...payload } = {}, ack) => { ensureTeamRoom(socket, teamId); ack?.(roomOf(socket)?.sellAsset(teamId, payload) || { ok: false }); });
+  socket.on('student:loan', ({ teamId, amount } = {}, ack) => { ensureTeamRoom(socket, teamId); ack?.(roomOf(socket)?.loanMoney(teamId, amount) || { ok: false }); });
+  socket.on('student:repay', ({ teamId, amount } = {}, ack) => { ensureTeamRoom(socket, teamId); ack?.(roomOf(socket)?.repayLoan(teamId, amount) || { ok: false }); });
+  socket.on('student:repayDebt', ({ teamId, key, amount } = {}, ack) => { ensureTeamRoom(socket, teamId); ack?.(roomOf(socket)?.repayDebt(teamId, key, amount) || { ok: false }); });
+  socket.on('student:roll', ({ teamId } = {}, ack) => { ensureTeamRoom(socket, teamId); ack?.(roomOf(socket)?.rollDice(teamId) || { ok: false }); });
+  socket.on('student:chooseDeck', ({ teamId, deck } = {}, ack) => { ensureTeamRoom(socket, teamId); ack?.(roomOf(socket)?.chooseDeck(teamId, deck) || { ok: false }); });
+  socket.on('student:dealDecision', ({ teamId, accept, withLoan } = {}, ack) => { ensureTeamRoom(socket, teamId); ack?.(roomOf(socket)?.dealDecision(teamId, accept, withLoan) || { ok: false }); });
+  socket.on('student:charityDecision', ({ teamId, donate } = {}, ack) => { ensureTeamRoom(socket, teamId); ack?.(roomOf(socket)?.charityDecision(teamId, donate) || { ok: false }); });
+  socket.on('student:acquireDecision', ({ teamId, accept } = {}, ack) => { ensureTeamRoom(socket, teamId); ack?.(roomOf(socket)?.acquireDecision(teamId, accept) || { ok: false }); });
 
   socket.on('disconnect', () => {});
 });
