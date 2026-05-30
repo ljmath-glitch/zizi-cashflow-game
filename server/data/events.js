@@ -49,15 +49,16 @@ export const BIG_EVENTS = [
   { id: 'b_curb', emoji: '🏚️', title: '政府重手打炒房', desc: '房地產明顯下修', effects: { realestate: 0.85 }, catastrophe: true },
 ];
 
-// 股市情報（暗示未來可能的行情，有機率成真、也可能落空或反向）
+// 股市情報（小道消息／傳聞，暗示「下回合」可能的行情，約 55% 成真、也可能落空）
+// 注意：用「市場面／坊間傳聞」的口吻，避免跟「大事件」的官方題材（如央行升降息）撞詞而看起來自相矛盾。
 export const RUMORS = [
   { text: '小道消息：某 AI 大廠財報亮眼，科技股可能要噴了…', sector: 'stock', dir: 'up' },
-  { text: '傳聞：央行可能升息，股市恐拉回…', sector: 'stock', dir: 'down' },
+  { text: '傳聞：外資連日調節持股，下回合股市恐拉回…', sector: 'stock', dir: 'down' },
   { text: '幣圈瘋傳：有大戶在掃貨比特幣…', sector: 'crypto', dir: 'up' },
   { text: '網路謠言：某交易所出問題，小心幣價跳水…', sector: 'crypto', dir: 'down' },
   { text: '分析師：地緣風險升高，黃金石油看漲…', sector: 'commodity', dir: 'up' },
-  { text: '消息面：房市要降溫了，建商急著出貨…', sector: 'realestate', dir: 'down' },
-  { text: '法人看好：明年景氣復甦，傳產股有戲…', sector: 'stock', dir: 'up' },
+  { text: '消息面：房市買氣轉冷，屋主開始讓價…', sector: 'realestate', dir: 'down' },
+  { text: '法人看好：景氣有望復甦，傳產股有戲…', sector: 'stock', dir: 'up' },
 ];
 
 export function randomRumor() {
