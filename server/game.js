@@ -439,6 +439,9 @@ function resetTeamFinances(team) {
   if (!prof) return;
   team.cash = prof.savings;
   team.salary = prof.salary;
+  team.baseSalary = prof.salary; // 景氣連動職業的基準薪（餐廳/廚師用）
+  team.incomeFollowsMarket = !!prof.incomeFollowsMarket; // 收入隨景氣起伏
+  team.layoffImmune = !!prof.layoffImmune; // 鐵飯碗：免失業
   team.expenses = { ...prof.expenses }; // 各項月支出（稅金/房貸/車貸/學貸/卡債/額外）
   team.perChild = prof.perChild;
   team.children = 0;
@@ -742,10 +745,16 @@ function checkFreedom(team) {
 
 function settleTeam(team) {
   if (team.bankrupt) return; // 已淘汰不再結算
-  // 浮動收入職業（YouTuber）每月於範圍內重抽（取整到千）
+  // 浮動收入職業（YouTuber/電商/業務）每月於範圍內重抽（取整到千）
   if (team.variableIncome) {
     const [lo, hi] = team.variableIncome;
     team.salary = Math.round((lo + Math.random() * (hi - lo)) / 1000) * 1000;
+  } else if (team.incomeFollowsMarket) {
+    // 餐廳/廚師：收入隨「本回合市場景氣」起伏（以股市效果當景氣代理），另加生意小波動
+    const stockEff = state.monthlyEvent?.effects?.stock ?? 1;
+    const macro = Math.max(0.7, Math.min(1.3, 1 + (stockEff - 1) * 2));
+    const noise = 0.92 + Math.random() * 0.16; // ±8% 生意波動
+    team.salary = Math.round(((team.baseSalary || team.salary) * macro * noise) / 1000) * 1000;
   }
   const d = computeDerived(team);
   team.cash += d.cashflow; // 月現金流入帳（可能為負）
@@ -941,7 +950,7 @@ function resolveSquare(team, type) {
   switch (type) {
     case 'opportunity': {
       // 若持有房地產，有機會出現「收購要約」；否則正常選小生意/大買賣
-      const offer = maybeAcquisitionOffer(team);
+      const offer = maybeAcquisitionOffer(team, 0.45);
       if (offer) {
         team.pendingAction = offer;
         announceCard('acquire', offer.card, team);
@@ -955,9 +964,16 @@ function resolveSquare(team, type) {
       team.pendingAction = { type: 'charity', cost };
       break;
     }
-    case 'market':
+    case 'market': {
+      // 市場格：先觸發全班行情卡；若持有房地產，另有機會冒出收購要約（房市交易主場）
       applyMarketCard(team, drawCard('market'));
+      const offer = maybeAcquisitionOffer(team, 0.4);
+      if (offer) {
+        team.pendingAction = offer;
+        announceCard('acquire', offer.card, team);
+      }
       break;
+    }
     case 'doodad':
       applyDoodad(team, drawCard('doodad'));
       break;
@@ -1023,11 +1039,11 @@ function applyMarketCard(lander, card) {
 // 買家名稱池（增添情境感）
 const BUYERS = ['建設公司', '海外投資客', '隔壁鄰居', '連鎖民宿業者', '科技新貴', '包租公協會', '地產基金'];
 
-// 若該組持有房地產，35% 機率產生一筆收購要約（對標某間房）
-function maybeAcquisitionOffer(team) {
+// 若該組持有房地產，prob 機率產生一筆收購要約（對標某間房）
+function maybeAcquisitionOffer(team, prob = 0.45) {
   const houses = (team.assets || []).filter((a) => a.category === 'realestate');
   if (houses.length === 0) return null;
-  if (Math.random() > 0.35) return null;
+  if (Math.random() > prob) return null;
 
   const asset = houses[Math.floor(Math.random() * houses.length)];
   // 開價依該房的售價範圍（priceLow~priceHigh）抽出，低機率偏向高端（重劃/搶手）
@@ -1147,6 +1163,13 @@ function haveBaby(team) {
 
 // 失業：付一個月總支出 + 下回合輪空，並使慈善失效
 function downsize(team) {
+  // 鐵飯碗職業（警察/公務員）免於失業
+  if (team.layoffImmune) {
+    addFeed(`🛡️ ${team.name} 是鐵飯碗，免於這次裁員`);
+    emitEvent(team, { emoji: '🛡️', title: '鐵飯碗，免裁員', text: '你的工作非常穩定，這次裁員與你無關！' });
+    emitTeam(team);
+    return;
+  }
   const d = computeDerived(team);
   team.cash -= d.totalExpense;
   team.skipTurns += 1;

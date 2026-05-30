@@ -12,13 +12,14 @@ export const SQUARE_TYPES = {
 };
 
 // 24 格排列：發薪日均勻分布 3 格（骰子經過/停在才領當月現金流＝過了一個月）
-// 機會最多、市場格次之，其餘人生事件穿插
+// 配置：機會 9、市場 5、發薪 3、額外支出 3、慈善 2、生小孩 1、失業 1
+// 市場格比重提高（行情更活、也是賣房收購的主要場合），機會降到約 1/3
 const LAYOUT = [
-  'opportunity', 'doodad', 'opportunity', 'charity',
-  'opportunity', 'payday', 'opportunity', 'market',
-  'opportunity', 'doodad', 'opportunity', 'baby',
-  'opportunity', 'payday', 'opportunity', 'market',
-  'opportunity', 'doodad', 'opportunity', 'downsized',
+  'opportunity', 'doodad', 'market', 'opportunity',
+  'charity', 'payday', 'opportunity', 'market',
+  'doodad', 'opportunity', 'baby', 'market',
+  'opportunity', 'payday', 'opportunity', 'doodad',
+  'market', 'opportunity', 'charity', 'downsized',
   'opportunity', 'payday', 'opportunity', 'market',
 ];
 

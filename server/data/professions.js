@@ -58,11 +58,12 @@ export const PROFESSIONS = [
     emoji: '🍜',
     salary: 70000,
     variableIncome: null,
+    incomeFollowsMarket: true, // 收入隨「本回合市場景氣」起伏
     expenses: { tax: 8000, homeMortgage: 12000, carLoan: 6000, schoolLoan: 0, creditCard: 4000, other: 10000 },
     perChild: 3500,
     savings: 60000,
     liabilities: { homeMortgage: 1500000, carLoan: 400000, schoolLoan: 0, creditCard: 50000 },
-    perk: '收入受市場景氣影響',
+    perk: '🍜 生意隨景氣起伏：市場好收入↑、差則↓',
   },
   {
     id: 'police',
@@ -70,23 +71,24 @@ export const PROFESSIONS = [
     emoji: '👮',
     salary: 50000,
     variableIncome: null,
+    layoffImmune: true, // 鐵飯碗：免於「失業」事件
     expenses: { tax: 5000, homeMortgage: 9000, carLoan: 5000, schoolLoan: 2000, creditCard: 2000, other: 5000 },
     perChild: 3000,
     savings: 50000,
     liabilities: { homeMortgage: 1100000, carLoan: 300000, schoolLoan: 120000, creditCard: 25000 },
-    perk: '穩定、有加班獎金',
+    perk: '🛡️ 鐵飯碗：穩定、不會被裁員（免失業）',
   },
   {
     id: 'sales',
     name: '業務員',
     emoji: '💼',
-    salary: 35000,
-    variableIncome: null,
+    salary: 45000, // 代表值；每月在 variableIncome 範圍內依「業績」浮動
+    variableIncome: [20000, 70000], // 業績提成：時好時壞
     expenses: { tax: 3000, homeMortgage: 0, carLoan: 4000, schoolLoan: 3000, creditCard: 5000, other: 10000 },
     perChild: 2500,
     savings: 20000,
     liabilities: { homeMortgage: 0, carLoan: 250000, schoolLoan: 200000, creditCard: 60000 },
-    perk: '低底薪、卡債高，靠投資翻身',
+    perk: '📈 業績浮動（20k–70k）、卡債高，靠提成與投資翻身',
   },
   {
     id: 'nurse',
@@ -154,11 +156,12 @@ export const PROFESSIONS = [
     emoji: '🏛️',
     salary: 52000,
     variableIncome: null,
+    layoffImmune: true, // 鐵飯碗：免於「失業」事件
     expenses: { tax: 5000, homeMortgage: 9000, carLoan: 4000, schoolLoan: 2000, creditCard: 1500, other: 4500 },
     perChild: 3000,
     savings: 70000,
     liabilities: { homeMortgage: 1100000, carLoan: 250000, schoolLoan: 120000, creditCard: 15000 },
-    perk: '超穩定、退休保障好',
+    perk: '🛡️ 鐵飯碗：超穩定、不會被裁員（免失業）',
   },
   {
     id: 'chef',
@@ -166,11 +169,12 @@ export const PROFESSIONS = [
     emoji: '👨‍🍳',
     salary: 45000,
     variableIncome: null,
+    incomeFollowsMarket: true, // 收入隨「本回合市場景氣」起伏
     expenses: { tax: 3500, homeMortgage: 7000, carLoan: 4000, schoolLoan: 1500, creditCard: 3000, other: 6000 },
     perChild: 2800,
     savings: 35000,
     liabilities: { homeMortgage: 900000, carLoan: 250000, schoolLoan: 80000, creditCard: 35000 },
-    perk: '有機會自己開店',
+    perk: '🍳 生意隨景氣起伏，有機會自己開店',
   },
   {
     id: 'ecommerce',
