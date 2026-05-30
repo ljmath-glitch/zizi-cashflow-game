@@ -299,16 +299,19 @@ function FinancePanel({ team, phase }) {
 }
 
 // 損益表：收入（工資 + 被動四類）− 支出各項 = 月現金流，含財富自由進度
-// 格子互動彈窗：機會（選牌庫→買/放棄）、慈善（捐/不捐）
-function PendingModal({ team }) {
-  const pa = team.pendingAction;
-  if (!pa) return null;
-
-  const Overlay = ({ children }) => (
+// 彈窗外框（模組層級的穩定元件；不可定義在 PendingModal 內，否則每次 render 會重掛、吃掉點擊）
+function Overlay({ children }) {
+  return (
     <div className="fixed inset-0 z-30 bg-black/50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="w-full max-w-sm bg-white rounded-2xl p-5 shadow-xl my-auto">{children}</div>
     </div>
   );
+}
+
+// 格子互動彈窗：機會（選牌庫→買/放棄）、慈善（捐/不捐）
+function PendingModal({ team }) {
+  const pa = team.pendingAction;
+  if (!pa) return null;
 
   if (pa.type === 'opportunity') {
     return (
