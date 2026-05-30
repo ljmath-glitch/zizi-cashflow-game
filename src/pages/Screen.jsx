@@ -91,8 +91,9 @@ export default function Screen() {
   const rolledCount = teams.filter((t) => t.hasRolled).length;
 
   return (
-    <div className="h-screen bg-zizi-blue text-white flex flex-col overflow-hidden">
-      <header className="flex items-center justify-between px-8 py-3 border-b border-white/20 shrink-0">
+    <div className="h-screen screen-bg text-white flex flex-col overflow-hidden">
+      <header className="relative flex items-center justify-between px-8 py-3 border-b border-white/10 shrink-0 backdrop-blur-sm">
+        <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-zizi-champagne to-transparent" />
         <h1 className="text-2xl font-bold">
           茲茲一百萬挑戰賽
           {ROOM && <span className="ml-2 text-white/50 text-base">房號 {ROOM}</span>}
@@ -163,7 +164,7 @@ function Spotlight({ team }) {
   ].filter((r) => (r[1] || 0) > 0);
 
   return (
-    <div className="fixed inset-0 z-50 bg-zizi-blue/95 flex flex-col items-center justify-center p-8 overflow-auto">
+    <div className="fixed inset-0 z-50 bg-zizi-ink/85 backdrop-blur-md flex flex-col items-center justify-center p-8 overflow-auto">
       <div className="flex items-center gap-3 mb-4">
         <span className="text-5xl">{team.professionEmoji}</span>
         <div>
@@ -174,21 +175,21 @@ function Spotlight({ team }) {
 
       <div className="grid grid-cols-3 gap-5 max-w-6xl w-full">
         {/* 收入 */}
-        <div className="bg-white/10 rounded-2xl p-4">
+        <div className="glass-dark rounded-2xl p-4">
           <h3 className="text-lg font-bold text-green-300 mb-2">收入　總 {formatMoney(d.totalIncome)}</h3>
           {incomeRows.map(([l, v]) => (
             <div key={l} className="flex justify-between text-white/85 py-0.5"><span>{l}</span><span className="tabular-nums">+{formatMoney(v)}</span></div>
           ))}
         </div>
         {/* 支出 */}
-        <div className="bg-white/10 rounded-2xl p-4">
+        <div className="glass-dark rounded-2xl p-4">
           <h3 className="text-lg font-bold text-red-300 mb-2">支出　總 {formatMoney(d.totalExpense)}</h3>
           {expenseRows.map(([l, v]) => (
             <div key={l} className="flex justify-between text-white/85 py-0.5"><span>{l}</span><span className="tabular-nums">-{formatMoney(v)}</span></div>
           ))}
         </div>
         {/* 資產負債 */}
-        <div className="bg-white/10 rounded-2xl p-4">
+        <div className="glass-dark rounded-2xl p-4">
           <h3 className="text-lg font-bold text-zizi-gold mb-2">資產負債</h3>
           <div className="flex justify-between text-white/85 py-0.5"><span>資產總值</span><span className="tabular-nums">{formatMoney(d.assetsValue)}</span></div>
           <div className="flex justify-between text-white/85 py-0.5"><span>負債總額</span><span className="tabular-nums text-red-300">-{formatMoney(d.liabilitiesTotal)}</span></div>
@@ -220,12 +221,12 @@ function Tutorial() {
     { e: '💼', t: '失業', d: '付一個月支出並暫停一回合' },
   ];
   return (
-    <div className="fixed inset-0 z-50 bg-zizi-blue/95 flex flex-col items-center justify-center p-10 overflow-auto">
+    <div className="fixed inset-0 z-50 bg-zizi-ink/85 backdrop-blur-md flex flex-col items-center justify-center p-10 overflow-auto">
       <h2 className="text-4xl font-black text-zizi-gold mb-2">📖 新手教學</h2>
       <p className="text-white/70 mb-6">目標：讓「被動收入 ＞ 總支出」，跳出老鼠賽跑圈、財富自由！</p>
 
       <div className="grid grid-cols-2 gap-6 max-w-5xl w-full">
-        <div className="bg-white/10 rounded-2xl p-5">
+        <div className="glass-dark rounded-2xl p-5">
           <h3 className="text-xl font-bold text-white mb-3">🕹️ 怎麼玩</h3>
           <ol className="space-y-2 text-white/85 list-decimal list-inside">
             <li>手機掃 QR 加入，<b>二選一</b>抽職業卡（看清楚有沒有房、負債多少）</li>
@@ -237,7 +238,7 @@ function Tutorial() {
           </ol>
         </div>
 
-        <div className="bg-white/10 rounded-2xl p-5">
+        <div className="glass-dark rounded-2xl p-5">
           <h3 className="text-xl font-bold text-white mb-3">🎯 格子說明</h3>
           <div className="space-y-1.5 text-white/85 text-sm">
             {squares.map((s) => (
@@ -251,17 +252,17 @@ function Tutorial() {
       </div>
 
       <div className="mt-6 grid grid-cols-3 gap-4 max-w-5xl w-full text-center">
-        <div className="bg-white/10 rounded-2xl p-4">
+        <div className="glass-dark rounded-2xl p-4">
           <p className="text-3xl">📈</p>
           <p className="text-white font-bold mt-1">會浮動的資產</p>
           <p className="text-white/60 text-sm">股票、ETF、加密貨幣有價格走勢圖，加密波動最大</p>
         </div>
-        <div className="bg-white/10 rounded-2xl p-4">
+        <div className="glass-dark rounded-2xl p-4">
           <p className="text-3xl">🏠</p>
           <p className="text-white font-bold mt-1">房地產</p>
           <p className="text-white/60 text-sm">士林/天母不同房型；有人會出價收購，可賺一筆</p>
         </div>
-        <div className="bg-white/10 rounded-2xl p-4">
+        <div className="glass-dark rounded-2xl p-4">
           <p className="text-3xl">💳</p>
           <p className="text-white font-bold mt-1">銀行貸款</p>
           <p className="text-white/60 text-sm">缺現金可借，但每月要還 10% 利息，別越借越窮</p>
@@ -285,8 +286,8 @@ function MonthReport({ report }) {
     </div>
   );
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60">
-      <div className="card-pop bg-zizi-blue border-2 border-zizi-gold rounded-3xl shadow-2xl w-[34rem] max-w-[92vw] p-7 text-white">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-zizi-ink/70 backdrop-blur-sm">
+      <div className="card-pop bg-gradient-to-b from-zizi-blue to-indigo-900 border-2 border-zizi-gold rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] w-[34rem] max-w-[92vw] p-7 text-white">
         <p className="text-center text-white/60">— 第 {round} 回合 —</p>
 
         {prevEvent ? (
@@ -326,7 +327,7 @@ function Celebration({ name }) {
   const confetti = Array.from({ length: 40 });
   const emojis = ['🎉', '✨', '🏆', '💰', '🎊', '⭐'];
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zizi-blue/80 overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zizi-ink/80 backdrop-blur-sm overflow-hidden">
       {confetti.map((_, i) => (
         <span
           key={i}
@@ -354,7 +355,7 @@ function Celebration({ name }) {
 // 破產淘汰動畫
 function BankruptOverlay({ payload }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zizi-ink/85 backdrop-blur-sm">
       <div className="text-center card-pop">
         <div className="text-8xl mb-4">💀</div>
         <p className="text-6xl font-black text-red-500 my-3 drop-shadow-lg">
@@ -379,8 +380,8 @@ function CardOverlay({ payload }) {
   };
   const m = META[deck] || { label: '事件', color: 'bg-slate-500' };
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 pointer-events-none">
-      <div className="card-pop bg-white rounded-3xl shadow-2xl w-80 overflow-hidden">
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-zizi-ink/45 backdrop-blur-sm pointer-events-none">
+      <div className="card-pop bg-white rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] ring-1 ring-black/5 w-80 overflow-hidden">
         <div className={'py-2 text-center text-white font-bold ' + m.color}>{m.label}</div>
         <div className="p-6 text-center">
           <div className="text-7xl mb-3">{card.emoji}</div>
@@ -476,7 +477,7 @@ function MarketBar({ market, monthlyEvent }) {
   }
 
   return (
-    <div className="bg-white/5 rounded-2xl px-4 py-3 flex items-center gap-4">
+    <div className="glass-dark rounded-2xl px-4 py-3 flex items-center gap-4 shadow-lg">
       {monthlyEvent && (
         <div className="flex items-center gap-2 pr-4 border-r border-white/15 max-w-[36%]">
           <span className="text-3xl">{monthlyEvent.emoji}</span>
@@ -577,7 +578,7 @@ function Board({ board, teams, round, timeLeft, phase, currentTurnId }) {
 function Leaderboard({ ranked, ended }) {
   const medal = ['🥇', '🥈', '🥉'];
   return (
-    <div className="bg-white/5 rounded-2xl p-4 flex-1 min-h-0 overflow-auto">
+    <div className="glass-dark rounded-2xl p-4 flex-1 min-h-0 overflow-auto shadow-lg">
       <h2 className="text-xl font-bold mb-3">🏆 排行榜</h2>
       <div className="space-y-1.5">
         {ranked.map((t, i) => {
@@ -625,7 +626,7 @@ function Leaderboard({ ranked, ended }) {
 
 function FeedPanel({ feed }) {
   return (
-    <div className="bg-white/5 rounded-2xl p-4 h-56 shrink-0 flex flex-col">
+    <div className="glass-dark rounded-2xl p-4 h-56 shrink-0 flex flex-col shadow-lg">
       <h2 className="text-lg font-bold mb-2">📢 最新動態</h2>
       <div className="flex-1 overflow-auto space-y-1.5">
         {feed.map((f, i) => (

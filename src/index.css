@@ -117,6 +117,22 @@ button:active:not(:disabled) {
   -webkit-backdrop-filter: blur(10px);
 }
 
+/* 深色玻璃面板（用於深藍大螢幕） */
+.glass-dark {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 大螢幕深色背景：深藍漸層 + 香檳金/深藍光暈，營造空間層次 */
+.screen-bg {
+  background:
+    radial-gradient(1200px 700px at 85% -10%, rgba(200, 169, 106, 0.16), transparent 55%),
+    radial-gradient(1000px 700px at 0% 110%, rgba(99, 102, 241, 0.22), transparent 55%),
+    linear-gradient(160deg, #1e3a8a 0%, #1a2456 55%, #141a36 100%);
+}
+
 /* 分頁滑動指示器：膠囊在底層平滑滑動 */
 .seg-indicator {
   transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);

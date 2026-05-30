@@ -41,15 +41,18 @@ export default function Teacher() {
   }
 
   return (
-    <div className="min-h-full bg-slate-100 flex flex-col">
-      <header className="bg-zizi-blue text-white px-4 py-3 flex items-center justify-between">
-        <h1 className="font-bold">老師控制台</h1>
+    <div className="min-h-full app-bg flex flex-col">
+      <header className="relative bg-gradient-to-r from-zizi-blue via-indigo-800 to-zizi-blue text-white px-4 py-3 flex items-center justify-between shadow-lg overflow-hidden">
+        <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-zizi-champagne to-transparent" />
+        <h1 className="font-bold flex items-center gap-1.5">
+          <span className="text-zizi-gold drop-shadow">🎛️</span>老師控制台
+        </h1>
         <ConnectionBadge connected={connected} />
       </header>
 
       <main className="flex-1 p-5 space-y-5 max-w-md w-full mx-auto">
         {/* 狀態卡 */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm flex items-center justify-between">
+        <div className="glass ring-1 ring-white/50 rounded-2xl p-4 shadow-soft flex items-center justify-between">
           <div>
             <p className="text-sm text-slate-500">{PHASE_LABEL[phase]}</p>
             <p className="text-lg font-semibold text-zizi-blue">
@@ -73,7 +76,7 @@ export default function Teacher() {
 
         {/* 目前輪到誰擲骰（依序輪流） */}
         {phase === 'running' && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm flex items-center justify-between">
+          <div className="glass ring-1 ring-white/50 rounded-2xl p-4 shadow-soft flex items-center justify-between">
             <div>
               <p className="text-sm text-slate-500">目前輪到擲骰</p>
               {(() => {
@@ -100,7 +103,7 @@ export default function Teacher() {
         )}
 
         {/* 已加入組別（點「投影」把該組財務投到大螢幕教學） */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
+        <div className="glass ring-1 ring-white/50 rounded-2xl p-4 shadow-soft">
           <p className="text-sm text-slate-500 mb-2">
             已加入 <span className="font-bold text-zizi-blue">{teams.length}</span> 組
             <span className="text-xs text-slate-400 ml-1">（點「投影」可在大螢幕分析該組）</span>
@@ -130,8 +133,10 @@ export default function Teacher() {
         <button
           onClick={() => socket.emit('teacher:tutorial', { show: !game?.showTutorial })}
           className={
-            'w-full rounded-2xl py-2.5 font-medium shadow-sm ' +
-            (game?.showTutorial ? 'bg-zizi-gold text-white' : 'bg-white text-zizi-blue')
+            'w-full rounded-2xl py-2.5 font-medium shadow-soft ' +
+            (game?.showTutorial
+              ? 'bg-gradient-to-r from-zizi-gold to-amber-500 text-white shadow-glow'
+              : 'glass ring-1 ring-white/50 text-zizi-blue')
           }
         >
           📖 {game?.showTutorial ? '關閉教學說明（大螢幕）' : '在大螢幕顯示新手教學'}
@@ -139,7 +144,7 @@ export default function Teacher() {
 
         {/* lobby 階段：參數設定 */}
         {phase === 'lobby' && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+          <div className="glass ring-1 ring-white/50 rounded-2xl p-4 shadow-soft space-y-3">
             <p className="text-sm font-medium text-slate-600">遊戲設定</p>
             <div className="flex gap-3">
               <label className="flex-1">
@@ -150,7 +155,7 @@ export default function Teacher() {
                   step="0.5"
                   value={minutes}
                   onChange={(e) => setMinutes(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:border-zizi-blue focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-slate-300 bg-white/70 px-3 py-2 focus:border-zizi-blue focus:ring-2 focus:ring-zizi-gold/30 focus:outline-none transition"
                 />
               </label>
               <label className="flex-1">
@@ -160,7 +165,7 @@ export default function Teacher() {
                   min="1"
                   value={totalRounds}
                   onChange={(e) => setTotalRounds(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 focus:border-zizi-blue focus:outline-none"
+                  className="mt-1 w-full rounded-xl border border-slate-300 bg-white/70 px-3 py-2 focus:border-zizi-blue focus:ring-2 focus:ring-zizi-gold/30 focus:outline-none transition"
                 />
               </label>
             </div>
@@ -284,7 +289,7 @@ function SaveLoadPanel() {
   }
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+    <div className="glass ring-1 ring-white/50 rounded-2xl p-4 shadow-soft space-y-3">
       <div className="flex gap-3">
         <button
           onClick={manualSave}
@@ -333,10 +338,10 @@ function ControlButton({ emoji, label, onClick, primary, full }) {
     <button
       onClick={onClick}
       className={
-        'rounded-2xl p-4 shadow-sm flex flex-col items-center gap-1 font-semibold transition ' +
+        'rounded-2xl p-4 flex flex-col items-center gap-1 font-semibold transition ' +
         (primary
-          ? 'bg-zizi-gold text-white hover:brightness-105 '
-          : 'bg-white text-zizi-blue hover:bg-slate-50 ') +
+          ? 'bg-gradient-to-r from-zizi-gold to-amber-500 text-white shadow-glow hover:brightness-105 '
+          : 'glass ring-1 ring-white/50 text-zizi-blue shadow-soft hover:bg-white/90 ') +
         (full ? 'col-span-2' : '')
       }
     >
