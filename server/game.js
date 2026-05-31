@@ -1327,7 +1327,7 @@ function buyAsset(teamId, { marketId, qty, amount } = {}) {
     income = (q * (item.dividendPerYear || 0)) / 12; // 股利
   } else if (item.kind === 'amount') {
     const amt = Math.floor(Number(amount) || 0);
-    if (amt < 1000) return { ok: false, reason: '投入金額需至少 1,000' };
+    if (amt < 100) return { ok: false, reason: '投入金額需至少 100' };
     cost = amt;
     value = amt;
     if (instId) units = amt / instPrice; // 加密：依現價換算持有單位，之後隨價格浮動

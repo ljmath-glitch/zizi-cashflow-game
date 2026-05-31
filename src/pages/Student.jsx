@@ -882,7 +882,7 @@ function AssetRow({ a, teamId, canSell }) {
             </>
           ) : (
             <>
-              <input type="number" min="1000" step="1000" value={amount} onChange={(e) => setAmount(e.target.value)}
+              <input type="number" min="100" step="100" value={amount} onChange={(e) => setAmount(e.target.value)}
                 className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
               <span className="text-xs text-slate-400">元</span>
               <button onClick={() => setAmount(Math.round(a.value))} className="text-xs text-zizi-ink underline">全部</button>
@@ -1111,7 +1111,6 @@ function LoanPanel({ team, phase }) {
 function MarketTab({ team, phase }) {
   const game = useGameState();
   const [market, setMarket] = useState([]);
-  const [msg, setMsg] = useState(null);
 
   useEffect(() => {
     fetch('/api/market').then((r) => r.json()).then(setMarket).catch(() => setMarket([]));
@@ -1127,8 +1126,8 @@ function MarketTab({ team, phase }) {
           tone: 'good',
         });
       } else {
-        setMsg({ ok: false, text: res?.reason || '購買失敗' });
-        setTimeout(() => setMsg(null), 2000);
+        // 失敗用明顯的跳出視窗顯示原因（例：投入金額需至少 1,000、存款不足）
+        toast({ emoji: '⚠️', title: res?.reason || '購買失敗', tone: 'bad' });
       }
     });
   }
@@ -1154,12 +1153,6 @@ function MarketTab({ team, phase }) {
         </span>
         {!canBuy && <span className="text-xs text-amber-600">等待老師開始本回合操作</span>}
       </div>
-
-      {msg && (
-        <div className={'rounded-xl px-3 py-2 text-sm text-center ' + (msg.ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
-          {msg.text}
-        </div>
-      )}
 
       <p className="text-xs text-slate-400">💡 房地產與企業副業要靠停在「🎲機會」格抽到才能買賣</p>
 
@@ -1225,7 +1218,7 @@ function MarketCard({ item, canBuy, onBuy, inst }) {
             className="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
         )}
         {item.kind === 'amount' && (
-          <input type="number" min="1000" step="1000" value={amount} onChange={(e) => setAmount(e.target.value)}
+          <input type="number" min="100" step="100" value={amount} onChange={(e) => setAmount(e.target.value)}
             className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
         )}
         <button
