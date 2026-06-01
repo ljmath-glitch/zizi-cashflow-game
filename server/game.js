@@ -772,13 +772,12 @@ function settleTeam(team) {
 }
 
 // 整筆變現一項資產：房地產/企業折價(LIQUIDATION_KEEP)，並清掉連帶貸款，現金入帳。
-// 回傳 { proceeds, illiquid, grossValue }。forced=true 代表破產自動變現（折價更深）。
-function liquidateAsset(team, idx, forced = false) {
+// 回傳 { proceeds, illiquid, grossValue }。
+function liquidateAsset(team, idx) {
   const asset = team.assets[idx];
   const illiquid = ILLIQUID_CATS.includes(asset.category);
-  // 房地產/企業折價；破產被迫賤賣再多砍一成
-  let keep = illiquid ? LIQUIDATION_KEEP : 1;
-  if (forced) keep *= 0.9;
+  // 房地產/企業折價變現；股票/加密/定存等流動資產照市價
+  const keep = illiquid ? LIQUIDATION_KEEP : 1;
   let saleValue = Math.round(asset.value * keep);
   const li = team.assetLiabilities.findIndex((l) => l.linkedAssetUid === asset.uid);
   if (li >= 0) {
@@ -790,54 +789,26 @@ function liquidateAsset(team, idx, forced = false) {
   return { asset, proceeds: saleValue, illiquid, grossValue: asset.value };
 }
 
-// 破產自動變現：現金見底時，逐一賣資產補現金（先賣流動性高、再賣房地產/企業），直到轉正或賣光。
-function autoLiquidate(team) {
-  // 排序：股票/加密/原物料/定存等流動資產優先賣，房地產/企業留到最後（折價較重）
-  while (team.cash <= 0 && team.assets.length > 0) {
-    const order = team.assets
-      .map((a, i) => ({ i, illiquid: ILLIQUID_CATS.includes(a.category) }))
-      .sort((x, y) => (x.illiquid === y.illiquid ? 0 : x.illiquid ? 1 : -1));
-    const { i } = order[0];
-    const { asset, proceeds } = liquidateAsset(team, i, true);
-    addHistory(team, { round: state.round, type: 'sell', text: `週轉賣出 ${asset.emoji} ${asset.name}`, delta: proceeds });
-    addFeed(`💸 ${team.name} 現金見底，被迫變現 ${asset.emoji} ${asset.name}（折價）`);
-  }
-}
-
-// 現金 ≤ 0 時的處理（先賣資產自救，全賣光才可能淘汰）：
-//  1) 自動變現資產補現金 → 轉正就撐住（鼓勵自己賣資產顧現金流）
-//  2) 資產賣光仍為負：月現金流<0=結構性虧損→淘汰；月現金流≥0(只是一次性支出)→小額周轉貸款撐住
+// 現金 ≤ 0 時的處理（不強賣資產、不自動借大錢，把選擇權留給玩家）：
+//  - 真正資不抵債（淨資產<0：把資產都賣了也還不清負債）且又入不敷出（月現金流<0）→ 淘汰
+//  - 否則：允許現金暫時為負（紅字），提醒玩家「自己挑資產賣掉、或用借錢按鈕周轉」自救
 function checkBankruptOrCover(team) {
   if (team.bankrupt || team.cash > 0) return;
-
-  const hadAssets = (team.assets || []).length > 0;
-  autoLiquidate(team); // 先賣資產抵債
-  if (team.cash > 0) {
-    if (hadAssets) {
-      emitEvent(team, {
-        emoji: '💸',
-        title: '變現資產周轉',
-        text: '現金見底，自動賣掉部分資產補現金（房地產/企業會折價）。注意：被動收入也跟著少了！',
-      });
-    }
+  const d = computeDerived(team); // netWorth = 現金(此時為負) + 資產現值 − 所有負債
+  if (d.netWorth < 0 && d.cashflow < 0) {
+    bankruptTeam(team); // 賣光也還不清、又持續失血 → 淘汰
     return;
   }
-
-  // 資產已賣光仍為負
-  const cashflow = computeDerived(team).cashflow;
-  if (cashflow < 0) {
-    bankruptTeam(team); // 無資產可賣、又入不敷出 → 淘汰
-  } else {
-    const need = Math.ceil(-team.cash / 10000) * 10000 || 10000;
-    team.personalLiabilities.bankLoan += need;
-    team.cash += need;
-    addFeed(`⚠️ ${team.name} 現金見底，自動周轉貸款 ${formatNT(need)}`);
-    emitEvent(team, {
-      emoji: '⚠️',
-      title: '現金周轉',
-      text: `資產已賣光、現金仍不足，自動向銀行借 ${formatNT(need)} 周轉。別讓月現金流變負，否則會破產！`,
-    });
-  }
+  const shortfall = -team.cash;
+  const hasAssets = (team.assets || []).length > 0;
+  addFeed(`⚠️ ${team.name} 現金見底（缺 ${formatNT(shortfall)}），需自行賣資產或借錢周轉`);
+  emitEvent(team, {
+    emoji: '🆘',
+    title: `現金見底，缺 ${formatNT(shortfall)}`,
+    text: hasAssets
+      ? '別急著淘汰！到「資產負債」頁挑你想賣的資產變現，或用「借錢」周轉，撐住現金流就能翻身。'
+      : '月現金流為負、又沒有資產可賣——快還掉高息負債或設法增加收入，否則會破產！',
+  });
 }
 
 // 破產淘汰：標記、移出擲骰輪流、廣播動畫
@@ -1531,7 +1502,7 @@ function sellAsset(teamId, payload = {}) {
   }
 
   // 整筆賣出（房地產/企業會折價變現；流動資產照市價）
-  const { asset: soldAsset, proceeds, illiquid, grossValue } = liquidateAsset(team, idx, false);
+  const { asset: soldAsset, proceeds, illiquid, grossValue } = liquidateAsset(team, idx);
   addHistory(team, { round: state.round, type: 'sell', text: `賣出 ${soldAsset.emoji} ${soldAsset.name}`, delta: proceeds });
   addFeed(`${team.name} 賣出 ${soldAsset.emoji} ${soldAsset.name}${illiquid ? '（折價變現）' : ''}`);
   emitTeam(team);

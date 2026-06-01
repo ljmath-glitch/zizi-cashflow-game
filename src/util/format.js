@@ -6,9 +6,10 @@ export function formatTime(totalSeconds) {
   return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
 }
 
-// 把金額格式化為 $1,234,567
+// 把金額格式化為 $1,234,567（負數顯示為 -$1,234,567）
 export function formatMoney(n) {
-  return '$' + Math.round(n || 0).toLocaleString('en-US');
+  const v = Math.round(n || 0);
+  return (v < 0 ? '-$' : '$') + Math.abs(v).toLocaleString('en-US');
 }
 
 // 遊戲階段的中文標籤

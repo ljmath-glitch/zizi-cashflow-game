@@ -271,8 +271,8 @@ function FinancePanel({ team, phase }) {
             <p className="text-xs text-zizi-gold truncate">{team.professionPerk}</p>
           </div>
           <div className="text-right shrink-0">
-            <p className="text-xs text-white/60">存款</p>
-            <p className="text-lg font-bold tabular-nums">{formatMoney(team.cash)}</p>
+            <p className="text-xs text-white/60">{team.cash < 0 ? '存款（欠款待補）' : '存款'}</p>
+            <p className={'text-lg font-bold tabular-nums ' + (team.cash < 0 ? 'text-rose-300' : '')}>{formatMoney(team.cash)}</p>
             <p className={'text-xs tabular-nums ' + ((d.cashflow ?? 0) >= 0 ? 'text-green-300' : 'text-red-300')}>
               月現金流 {(d.cashflow ?? 0) >= 0 ? '+' : '-'}{formatMoney(Math.abs(d.cashflow ?? 0))}
             </p>
@@ -282,7 +282,7 @@ function FinancePanel({ team, phase }) {
 
       {team.bankrupt && (
         <div className="bg-red-600 text-white text-center py-2 font-bold">
-          💀 你已破產被淘汰（資產賣光、仍入不敷出）
+          💀 你已破產被淘汰（資不抵債、又入不敷出）
         </div>
       )}
 
