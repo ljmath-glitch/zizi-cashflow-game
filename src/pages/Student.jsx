@@ -292,14 +292,9 @@ function FinancePanel({ team, phase }) {
         </div>
       )}
 
-      {!team.bankrupt && (team.personalLiabilities?.loanShark || 0) > 0 && (
-        <div className="bg-red-700 text-white text-center py-1.5 text-sm font-medium">
-          🔴 高利貸 {formatMoney(team.personalLiabilities.loanShark)}，每月利息 {formatMoney(Math.round(team.personalLiabilities.loanShark * 0.14))}（月息14%，快還！）
-        </div>
-      )}
       {!team.bankrupt && (team.personalLiabilities?.bankLoan || 0) > 0 && (
         <div className="bg-red-500 text-white text-center py-1.5 text-sm font-medium">
-          ⚠️ 銀行貸款 {formatMoney(team.personalLiabilities.bankLoan)}，每月利息 {formatMoney(Math.round(team.personalLiabilities.bankLoan * 0.07))}
+          ⚠️ 銀行貸款 {formatMoney(team.personalLiabilities.bankLoan)}，每月利息 {formatMoney(Math.round(team.personalLiabilities.bankLoan * 0.10))}（月息10%）
         </div>
       )}
 
@@ -446,10 +441,10 @@ function PendingModal({ team }) {
             <span className="text-slate-400">需要現金（頭期）</span>
             <span className="text-right font-semibold">{formatMoney(c.cost)}</span>
             {c.mortgage > 0 && (<>
-              <span className="text-slate-400">連帶貸款</span>
+              <span className="text-slate-400">抵押貸款<span className="text-[0.6rem]">（不計息、賣出時清償）</span></span>
               <span className="text-right font-semibold text-red-500">{formatMoney(c.mortgage)}</span>
             </>)}
-            <span className="text-slate-400">每月現金流</span>
+            <span className="text-slate-400">每月現金流<span className="text-[0.6rem]">（已扣抵押貸）</span></span>
             <span className={'text-right font-semibold ' + (mi >= 0 ? 'text-green-600' : 'text-red-500')}>
               {mi >= 0 ? '+' : '-'}{formatMoney(Math.abs(mi))}
             </span>
@@ -498,13 +493,13 @@ function PendingModal({ team }) {
                   decide('student:dealDecision', { accept: true, withLoan: true }, {
                     emoji: c.emoji,
                     title: `貸款買下 ${c.name}`,
-                    text: '記得快還高利貸（月息 14%）！',
+                    text: '不夠的頭期向銀行借（月息 10%），記得還！',
                     tone: 'info',
                   })
                 }
                 className="rounded-xl bg-slate-700 text-white font-bold py-2.5 text-sm leading-tight disabled:opacity-50"
               >
-                💳 高利貸購買<span className="block text-[0.65rem] font-normal">月息 14%，較貴！</span>
+                💳 貸款購買<span className="block text-[0.65rem] font-normal">銀行借頭期，月息 10%</span>
               </button>
             )}
           </div>
@@ -810,7 +805,7 @@ function AssetRow({ a, teamId, canSell }) {
     });
   }
   function sellWhole() {
-    const warn = illiquid ? '\n\n⚠️ 直接賣會折價（約拿回帳面 75%，再扣貸款）。等「🤝收購卡」通常更划算！' : '';
+    const warn = illiquid ? '\n\n⚠️ 直接賣只拿帳面 75%，且要先還清抵押貸款。若不夠還，實拿會歸零、等於失去房產（但不會欠債）。等「🤝收購卡」通常更划算！' : '';
     if (!window.confirm(`確定全部賣出 ${a.emoji} ${a.name}？${warn}`)) return;
     emitSell({ uid: a.uid }, `賣出 ${a.name}`);
   }
@@ -1006,32 +1001,24 @@ function BalanceSheet({ team, phase }) {
       </div>
 
       {/* 負債 */}
-      {(startDebts.length > 0 || (pl.bankLoan || 0) > 0 || (pl.loanShark || 0) > 0 || (team.assetLiabilities || []).length > 0) && (
+      {(startDebts.length > 0 || (pl.bankLoan || 0) > 0 || (team.assetLiabilities || []).length > 0) && (
         <div>
-          <p className="text-sm font-medium text-slate-500 mb-2">負債（付清可免除每月還款）</p>
+          <p className="text-sm font-medium text-slate-500 mb-2">負債</p>
           <div className="space-y-2">
-            {(pl.loanShark || 0) > 0 && (
-              <div className="bg-red-100 rounded-2xl px-4 py-2.5 flex items-center justify-between ring-1 ring-red-300">
-                <span className="text-sm text-red-700 font-medium">
-                  🔴 高利貸 <span className="text-xs font-normal">（月息 14%！於上方優先還款）</span>
-                </span>
-                <span className="text-sm font-bold text-red-700 tabular-nums">-{formatMoney(pl.loanShark)}</span>
-              </div>
-            )}
             {startDebts.map((r) => (
               <DebtRow key={r.key} debt={r} teamId={team.id} cash={team.cash} canAct={canSell} />
             ))}
             {(pl.bankLoan || 0) > 0 && (
               <div className="bg-red-50 rounded-2xl px-4 py-2.5 flex items-center justify-between">
                 <span className="text-sm text-slate-600">
-                  銀行貸款 <span className="text-xs text-slate-400">（月息 7%，於上方還款）</span>
+                  銀行貸款 <span className="text-xs text-slate-400">（月息 10%，於上方還款）</span>
                 </span>
                 <span className="text-sm font-medium text-red-600 tabular-nums">-{formatMoney(pl.bankLoan)}</span>
               </div>
             )}
             {(team.assetLiabilities || []).map((l) => (
               <div key={l.uid} className="bg-red-50 rounded-2xl px-4 py-2.5 flex items-center justify-between">
-                <span className="text-sm text-slate-600">{l.emoji} {l.name}<span className="text-xs text-slate-400">（賣出資產時自動清償）</span></span>
+                <span className="text-sm text-slate-600">{l.emoji} {l.name}<span className="text-xs text-slate-400">（不計息，賣出時自動清償）</span></span>
                 <span className="text-sm font-medium text-red-600 tabular-nums">-{formatMoney(l.balance)}</span>
               </div>
             ))}
@@ -1049,7 +1036,7 @@ function LoanPanel({ team, phase }) {
   const [msg, setMsg] = useState(null);
   const canAct = phase === 'running';
   const pl = team.personalLiabilities || {};
-  const bal = (pl.bankLoan || 0) + (pl.loanShark || 0); // 還款總額（高利貸優先還）
+  const bal = (pl.bankLoan || 0); // 銀行貸款餘額
 
   function emit(ev, amount) {
     socket.emit(ev, { teamId: team.id, amount: Number(amount) }, (res) => {
@@ -1066,7 +1053,7 @@ function LoanPanel({ team, phase }) {
           目前欠 <b className="text-red-500">{formatMoney(bal)}</b>
         </span>
       </div>
-      <p className="text-xs text-slate-400">利息：每月還貸款餘額的 7%（借越多、月支出越重）</p>
+      <p className="text-xs text-slate-400">利息：每月還貸款餘額的 10%（借越多、月支出越重）</p>
 
       {msg && (
         <div className={'rounded-lg px-3 py-1.5 text-sm text-center ' + (msg.ok ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>

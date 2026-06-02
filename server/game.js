@@ -445,7 +445,7 @@ function resetTeamFinances(team) {
   team.expenses = { ...prof.expenses }; // 各項月支出（稅金/房貸/車貸/學貸/卡債/額外）
   team.perChild = prof.perChild;
   team.children = 0;
-  team.personalLiabilities = { ...prof.liabilities, bankLoan: 0, loanShark: 0 }; // 各項負債餘額（含高利貸）
+  team.personalLiabilities = { ...prof.liabilities, bankLoan: 0, loanShark: 0 }; // 各項負債餘額（loanShark 已停用、保留為 0 相容舊存檔）
   team.assets = []; // 投資資產（每筆含 category）
   team.assetLiabilities = []; // 投資連動負債（房貸/企業貸款）
   team.charityTurns = 0; // 慈善剩餘可用次數（擲兩顆骰）
@@ -539,19 +539,18 @@ function passiveBreakdown(team) {
   return b;
 }
 
-// 每月貸款月付：銀行貸款 7% + 高利貸 14%
-const BANK_RATE = 0.07; // 一般銀行貸款月息
-const SHARK_RATE = 0.14; // 高利貸（緊急貸款購買）月息
+// 每月銀行貸款月付：餘額 × 月息。抵押貸款(房產連動)不計息、也不能還，只在賣出時清償。
+const BANK_RATE = 0.10; // 一般銀行貸款月息（好算；已取消高利貸）
 // 直接變現折價：房地產/企業這類「不易脫手」的資產，自己賣只拿回帳面價的 75%（折價 25%）。
 // 想拿好價錢就等「收購卡」🤝（那條走原價/溢價、不折價）。股票/ETF/加密/定存屬流動資產，照市價賣、不折價。
 const LIQUIDATION_KEEP = 0.75;
 const ILLIQUID_CATS = ['realestate', 'business'];
 function bankLoanPayment(team) {
   const l = team.personalLiabilities || {};
-  return Math.round((l.bankLoan || 0) * BANK_RATE + (l.loanShark || 0) * SHARK_RATE);
+  return Math.round((l.bankLoan || 0) * BANK_RATE);
 }
 
-// 總支出 = 各項月支出 + 小孩支出×人數 + 貸款月付（含高利貸）
+// 總支出 = 各項月支出 + 小孩支出×人數 + 銀行貸款月付（抵押貸款不計息）
 function computeTotalExpense(team) {
   const e = team.expenses || {};
   const base = (e.tax || 0) + (e.homeMortgage || 0) + (e.carLoan || 0) +
@@ -771,8 +770,8 @@ function settleTeam(team) {
   emitTeam(team);
 }
 
-// 整筆變現一項資產：房地產/企業折價(LIQUIDATION_KEEP)，並清掉連帶貸款，現金入帳。
-// 回傳 { proceeds, illiquid, grossValue }。
+// 整筆變現一項資產：房地產/企業折價(LIQUIDATION_KEEP)，75% 變現先還抵押貸款，現金入帳。
+// 不夠還抵押貸款 → 歸零（不會欠債，等於失去這個房產契約）。回傳 { proceeds, illiquid, grossValue }。
 function liquidateAsset(team, idx) {
   const asset = team.assets[idx];
   const illiquid = ILLIQUID_CATS.includes(asset.category);
@@ -781,9 +780,10 @@ function liquidateAsset(team, idx) {
   let saleValue = Math.round(asset.value * keep);
   const li = team.assetLiabilities.findIndex((l) => l.linkedAssetUid === asset.uid);
   if (li >= 0) {
-    saleValue -= team.assetLiabilities[li].balance; // 賣出同時清償該資產貸款
+    saleValue -= team.assetLiabilities[li].balance; // 變現先還抵押貸款
     team.assetLiabilities.splice(li, 1);
   }
+  saleValue = Math.max(0, saleValue); // 不夠還抵押貸→歸零，不欠債（失去房產契約）
   team.cash += saleValue;
   team.assets.splice(idx, 1);
   return { asset, proceeds: saleValue, illiquid, grossValue: asset.value };
@@ -1022,9 +1022,9 @@ function maybeAcquisitionOffer(team) {
     const premium = Math.random() < 0.12 ? 0.5 + Math.random() * 0.3 : 0.1 + Math.random() * 0.2;
     offerPrice = Math.round(asset.value * (1 + premium));
   }
-  // 賣出淨額 = 開價 − 該房貸款
+  // 賣出淨額 = 開價 − 抵押貸款（不夠則歸零，不欠債）
   const mortgage = asset.mortgageAmt || 0;
-  const net = offerPrice - mortgage;
+  const net = Math.max(0, offerPrice - mortgage);
   const buyer = BUYERS[Math.floor(Math.random() * BUYERS.length)];
   const where = [asset.location, asset.roomType].filter(Boolean).join(' ');
   // 相對「投入頭期」的報酬率
@@ -1061,12 +1061,13 @@ function acquireDecision(teamId, accept) {
 
   if (accept) {
     let proceeds = offerPrice;
-    // 清償連動房貸
+    // 清償抵押貸款
     const li = team.assetLiabilities.findIndex((l) => l.linkedAssetUid === assetUid);
     if (li >= 0) {
       proceeds -= team.assetLiabilities[li].balance;
       team.assetLiabilities.splice(li, 1);
     }
+    proceeds = Math.max(0, proceeds); // 不夠還抵押貸→歸零，不欠債
     team.cash += proceeds;
     team.assets.splice(idx, 1);
     addHistory(team, { round: state.round, type: 'sell', text: `被收購：${asset.emoji} ${asset.name}`, delta: proceeds });
@@ -1181,12 +1182,12 @@ function dealDecision(teamId, accept, withLoan = false) {
 
   if (team.cash < card.cost) {
     if (withLoan) {
-      // 直接貸款購買＝高利貸（月息 14%，比一般銀行貸款貴）：借差額（湊整到萬元）
+      // 頭期不夠 → 向銀行借差額（月息 10%，湊整到萬元）補頭期
       const need = Math.ceil((card.cost - team.cash) / 10000) * 10000;
-      team.personalLiabilities.loanShark = (team.personalLiabilities.loanShark || 0) + need;
+      team.personalLiabilities.bankLoan = (team.personalLiabilities.bankLoan || 0) + need;
       team.cash += need;
-      addHistory(team, { round: state.round, type: 'loan', text: `高利貸購買 ${card.name}`, delta: need });
-      addFeed(`💳 ${team.name} 借高利貸 ${formatNT(need)}（月息14%）買下 ${card.emoji} ${card.name}`);
+      addHistory(team, { round: state.round, type: 'loan', text: `銀行貸款補頭期 ${card.name}`, delta: need });
+      addFeed(`💳 ${team.name} 向銀行借 ${formatNT(need)}（月息10%）補頭期買下 ${card.emoji} ${card.name}`);
     } else {
       // 買不起 → 退回機會卡讓玩家重新決定（回合尚未結束）
       team.pendingAction = { type: 'deal', deck: card.deck, card };
@@ -1230,7 +1231,7 @@ function dealDecision(teamId, accept, withLoan = false) {
   if (card.mortgage) {
     team.assetLiabilities.push({
       uid: nextUid(),
-      name: `${card.name} 貸款`,
+      name: `${card.name} 抵押貸款`,
       emoji: '🏦',
       balance: card.mortgage,
       linkedAssetUid: uid,
@@ -1381,7 +1382,7 @@ function buyAsset(teamId, { marketId, qty, amount } = {}) {
 
 // ── 銀行貸款 / 還款 ──
 
-// 借錢：以萬元為單位，每月利息為貸款餘額的 7%（計入總支出）
+// 借錢：以萬元為單位，每月利息為貸款餘額的 10%（計入總支出）
 function loanMoney(teamId, amount) {
   if (state.phase !== 'running') return { ok: false, reason: '目前不是操作時間' };
   const team = getTeam(teamId);
@@ -1399,23 +1400,20 @@ function loanMoney(teamId, amount) {
   return { ok: true };
 }
 
-// 還款：先還利率高的高利貸，再還銀行貸款（不能超過現金或餘額）
+// 還款：償還銀行貸款（不能超過現金或餘額）
 function repayLoan(teamId, amount) {
   if (state.phase !== 'running') return { ok: false, reason: '目前不是操作時間' };
   const team = getTeam(teamId);
   if (!team) return { ok: false, reason: '找不到組別' };
   amount = Math.floor(Number(amount) || 0);
   const l = team.personalLiabilities;
-  const bal = (l.loanShark || 0) + (l.bankLoan || 0);
-  if (bal <= 0) return { ok: false, reason: '目前沒有貸款' };
+  const bal = (l.bankLoan || 0);
+  if (bal <= 0) return { ok: false, reason: '目前沒有銀行貸款' };
   if (amount <= 0) return { ok: false, reason: '金額需大於 0' };
   amount = Math.min(amount, bal);
   if (team.cash < amount) return { ok: false, reason: '現金不足以還這麼多' };
   team.cash -= amount;
-  let left = amount;
-  const payShark = Math.min(left, l.loanShark || 0); // 先還高利貸
-  l.loanShark = (l.loanShark || 0) - payShark; left -= payShark;
-  l.bankLoan = (l.bankLoan || 0) - left;
+  l.bankLoan = (l.bankLoan || 0) - amount;
   addHistory(team, { round: state.round, type: 'repay', text: `還貸款 -${formatNT(amount)}`, delta: -amount });
   addFeed(`✅ ${team.name} 還了貸款 ${formatNT(amount)}`);
   emitTeam(team);

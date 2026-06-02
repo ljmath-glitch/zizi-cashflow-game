@@ -265,7 +265,7 @@ function Tutorial() {
         <div className="glass-dark rounded-2xl p-4">
           <p className="text-3xl">💳</p>
           <p className="text-white font-bold mt-1">銀行貸款</p>
-          <p className="text-white/60 text-sm">缺現金可借，但每月要還 7% 利息，別越借越窮</p>
+          <p className="text-white/60 text-sm">缺現金可借，但每月要還 10% 利息，別越借越窮</p>
         </div>
       </div>
 
