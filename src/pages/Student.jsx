@@ -638,9 +638,9 @@ function RollBar({ team, phase }) {
         <button
           onClick={doRoll}
           disabled={rolling}
-          className="rounded-xl bg-zizi-gold text-white font-bold px-6 py-2.5 text-lg disabled:opacity-50"
+          className="rounded-xl bg-zizi-gold text-white font-bold px-6 py-2.5 text-lg disabled:opacity-80"
         >
-          🎲 擲骰子
+          {rolling ? (<><span className="roll-wiggle">🎲</span> 擲骰中…</>) : '🎲 擲骰子'}
         </button>
       </div>
     );

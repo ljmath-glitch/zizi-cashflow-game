@@ -6,6 +6,13 @@ import { useTeams } from '../hooks/useTeams.js';
 import { formatTime, PHASE_LABEL } from '../util/format.js';
 import ConnectionBadge from '../components/ConnectionBadge.jsx';
 
+// 難度選項（需與 server/game.js 的 DIFFICULTY 一致）
+const DIFFICULTIES = [
+  { key: 'easy', emoji: '🌱', label: '輕鬆', desc: '起始存款×2、機會卡現金流×1.5、額外支出7折 — 適合第一次玩' },
+  { key: 'normal', emoji: '⚖️', label: '標準', desc: '原汁原味的現金流挑戰' },
+  { key: 'hard', emoji: '🔥', label: '挑戰', desc: '機會卡現金流8折、額外支出×1.3 — 高手限定' },
+];
+
 // 老師端（手機/筆電）— 模組 2：開始/暫停/下一回合/重置 + 調整回合參數
 export default function Teacher() {
   const { connected } = useConnection();
@@ -54,7 +61,13 @@ export default function Teacher() {
         {/* 狀態卡 */}
         <div className="glass ring-1 ring-white/50 rounded-2xl p-4 shadow-soft flex items-center justify-between">
           <div>
-            <p className="text-sm text-slate-500">{PHASE_LABEL[phase]}</p>
+            <p className="text-sm text-slate-500">
+              {PHASE_LABEL[phase]}
+              {(() => {
+                const d = DIFFICULTIES.find((x) => x.key === (game?.difficulty || 'normal'));
+                return d ? <span className="ml-2 text-xs bg-slate-100 rounded-full px-2 py-0.5">{d.emoji} {d.label}</span> : null;
+              })()}
+            </p>
             <p className="text-lg font-semibold text-zizi-ink">
               {phase === 'lobby' ? '尚未開始' : `第 ${round} / ${maxRounds} 回合`}
             </p>
@@ -146,6 +159,34 @@ export default function Teacher() {
         {phase === 'lobby' && (
           <div className="glass ring-1 ring-white/50 rounded-2xl p-4 shadow-soft space-y-3">
             <p className="text-sm font-medium text-slate-600">遊戲設定</p>
+
+            {/* 難度選擇（只能在開始前選；影響起始存款、機會卡現金流、額外支出） */}
+            <div>
+              <span className="text-xs text-slate-500">難度</span>
+              <div className="mt-1 grid grid-cols-3 gap-2">
+                {DIFFICULTIES.map((d) => {
+                  const on = (game?.difficulty || 'normal') === d.key;
+                  return (
+                    <button
+                      key={d.key}
+                      onClick={() => socket.emit('teacher:setConfig', { difficulty: d.key })}
+                      className={
+                        'rounded-xl py-2 text-sm font-semibold ring-1 transition ' +
+                        (on
+                          ? 'bg-gradient-to-r from-zizi-gold to-amber-500 text-white ring-amber-400 shadow-glow'
+                          : 'bg-white/70 text-slate-600 ring-slate-200 hover:ring-zizi-gold/50')
+                      }
+                    >
+                      {d.emoji} {d.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-1.5 text-xs text-slate-400">
+                {DIFFICULTIES.find((d) => d.key === (game?.difficulty || 'normal'))?.desc}
+              </p>
+            </div>
+
             <div className="flex gap-3">
               <label className="flex-1">
                 <span className="text-xs text-slate-500">每回合分鐘</span>

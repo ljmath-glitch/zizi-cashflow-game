@@ -10,6 +10,13 @@ import { SQUARE_META, GRID, cellOf } from '../util/board.js';
 import ConnectionBadge from '../components/ConnectionBadge.jsx';
 import Sparkline from '../components/Sparkline.jsx';
 
+// 難度標示（與 server/game.js 的 DIFFICULTY 對應）
+const DIFF_META = {
+  easy: { emoji: '🌱', label: '輕鬆' },
+  normal: { emoji: '⚖️', label: '標準' },
+  hard: { emoji: '🔥', label: '挑戰' },
+};
+
 // 大螢幕端（投影機）— M7：等待室 QR / 進行中老鼠賽跑圈盤面 + 排行榜 + 動態
 export default function Screen() {
   const { connected } = useConnection();
@@ -22,6 +29,8 @@ export default function Screen() {
   const [celebrate, setCelebrate] = useState(null); // 跳出老鼠圈大慶祝
   const [report, setReport] = useState(null); // 月初回顧/預告彈窗
   const [bankrupt, setBankrupt] = useState(null); // 破產淘汰動畫
+  const [deal, setDeal] = useState(null); // 買賣直播（機會卡選擇→思考→決定）
+  const [dice, setDice] = useState(null); // 擲骰結果橫幅
 
   useEffect(() => {
     fetch('/api/server-info').then((r) => r.json()).then(setServerInfo).catch(() => {});
@@ -29,11 +38,25 @@ export default function Screen() {
   }, []);
 
   useEffect(() => {
-    let cardTimer, freedTimer;
+    let cardTimer, freedTimer, dealTimer, diceTimer;
     function onCard(payload) {
+      // 小生意/大買賣/收購改由「買賣直播」呈現，這裡只翻市場風雲與額外支出卡
+      if (payload?.deck === 'small' || payload?.deck === 'big' || payload?.deck === 'acquire') return;
       setDrawn(payload);
       clearTimeout(cardTimer);
       cardTimer = setTimeout(() => setDrawn(null), 4200);
+    }
+    // 買賣直播：choosing/deciding 一直掛著等玩家動作；decided 顯示結果後自動收掉
+    function onDeal(payload) {
+      clearTimeout(dealTimer);
+      setDeal(payload || null);
+      if (payload?.stage === 'decided') dealTimer = setTimeout(() => setDeal(null), 8000);
+    }
+    // 擲骰橫幅：顯示骰面與停留格，幾秒後淡出
+    function onMove(payload) {
+      setDice(payload);
+      clearTimeout(diceTimer);
+      diceTimer = setTimeout(() => setDice(null), 4000);
     }
     function onFreed(payload) {
       setCelebrate(payload);
@@ -55,15 +78,21 @@ export default function Screen() {
     socket.on('game:freed', onFreed);
     socket.on('month:report', onReport);
     socket.on('game:bankrupt', onBankrupt);
+    socket.on('deal:live', onDeal);
+    socket.on('board:move', onMove);
     return () => {
       socket.off('card:drawn', onCard);
       socket.off('game:freed', onFreed);
       socket.off('month:report', onReport);
       socket.off('game:bankrupt', onBankrupt);
+      socket.off('deal:live', onDeal);
+      socket.off('board:move', onMove);
       clearTimeout(cardTimer);
       clearTimeout(freedTimer);
       clearTimeout(reportTimer);
       clearTimeout(bankruptTimer);
+      clearTimeout(dealTimer);
+      clearTimeout(diceTimer);
     };
   }, []);
 
@@ -100,6 +129,11 @@ export default function Screen() {
           <span className="ml-3 text-zizi-gold text-lg">
             {phase === 'lobby' ? '等待開始' : phase === 'ended' ? '遊戲結束' : `第 ${round} / ${maxRounds} 回合`}
           </span>
+          {DIFF_META[game?.difficulty] && (
+            <span className="ml-2 text-sm font-medium bg-white/10 ring-1 ring-white/20 rounded-full px-2.5 py-0.5 text-white/80">
+              {DIFF_META[game.difficulty].emoji} {DIFF_META[game.difficulty].label}
+            </span>
+          )}
         </h1>
         <div className="flex items-center gap-5">
           {phase === 'running' && (
@@ -134,10 +168,14 @@ export default function Screen() {
         )}
       </main>
 
+      {dice && phase === 'running' && <DiceBanner payload={dice} />}
       {game?.spotlight && <Spotlight team={game.spotlight} />}
       {game?.showTutorial && <Tutorial />}
       {report && !game?.showTutorial && <MonthReport report={report} onClose={() => setReport(null)} />}
-      {drawn && <CardOverlay payload={drawn} onClose={() => setDrawn(null)} />}
+      {deal && !game?.showTutorial && !game?.spotlight && (
+        <DealLiveOverlay deal={deal} onClose={() => setDeal(null)} />
+      )}
+      {drawn && !deal && <CardOverlay payload={drawn} onClose={() => setDrawn(null)} />}
       {celebrate && <Celebration name={celebrate.name} onClose={() => setCelebrate(null)} />}
       {bankrupt && <BankruptOverlay payload={bankrupt} onClose={() => setBankrupt(null)} />}
     </div>
@@ -364,6 +402,159 @@ function BankruptOverlay({ payload, onClose }) {
         </p>
         <p className="text-4xl font-bold text-white">破產被淘汰！</p>
         <p className="text-xl text-white/60 mt-3">現金歸零、入不敷出 ☠️</p>
+      </div>
+    </div>
+  );
+}
+
+// 擲骰結果橫幅（頂部滑入：骰面 + 誰擲的 + 停在哪格）
+const DICE_FACES = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+function DiceBanner({ payload }) {
+  const { rolls = [], steps, teamName, professionEmoji, squareEmoji, squareLabel, paydays } = payload;
+  return (
+    <div className="fixed top-16 inset-x-0 z-30 flex justify-center pointer-events-none">
+      <div className="toast-pop glass-dark rounded-2xl px-6 py-3 flex items-center gap-4 shadow-2xl">
+        <span className="dice-shake text-5xl leading-none">
+          {rolls.map((r, i) => (
+            <span key={i}>{DICE_FACES[r] || '🎲'}</span>
+          ))}
+        </span>
+        <div className="leading-tight">
+          <p className="font-bold text-xl">
+            {professionEmoji} {teamName} 擲出 <span className="text-zizi-gold text-2xl">{steps}</span>
+          </p>
+          <p className="text-white/75 text-sm">
+            停在 {squareEmoji} {squareLabel}
+            {paydays > 0 && <span className="ml-2 text-green-300 font-semibold">💰 經過發薪日 ×{paydays}</span>}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 買賣直播：玩家停在機會格後，全班一起看他「選牌庫 → 看卡思考 → 做決定」
+// stage: choosing（選小生意/大買賣）→ deciding（看完整卡面思考）→ decided（蓋章公布結果）
+function DealLiveOverlay({ deal, onClose }) {
+  const { stage, deck, card, team, offer, accept, loanAmount } = deal;
+  const DECK_META = {
+    small: { label: '機會 ‧ 小生意', color: 'bg-emerald-500' },
+    big: { label: '機會 ‧ 大買賣', color: 'bg-amber-600' },
+    acquire: { label: '🤝 房產收購要約', color: 'bg-teal-600' },
+  };
+  const m = DECK_META[deck] || { label: '機會', color: 'bg-slate-500' };
+  const mi = card?.monthlyIncome || 0;
+  const roi = card?.cost ? Math.round(((mi * 12) / card.cost) * 100) : 0;
+
+  // 還在選小生意/大買賣
+  if (stage === 'choosing') {
+    return (
+      <div onClick={onClose} className="fixed inset-0 z-40 flex items-center justify-center bg-zizi-ink/55 backdrop-blur-sm cursor-pointer">
+        <div className="card-pop glass-dark rounded-3xl p-8 w-[30rem] max-w-[92vw] text-center text-white shadow-2xl">
+          <p className="text-lg text-white/70">🎲 停在機會格</p>
+          <p className="text-3xl font-black text-zizi-gold mt-1">{team.professionEmoji} {team.teamName}</p>
+          <p className="text-white/60 text-sm">{team.professionName} ‧ 現金 {formatMoney(team.cash)}</p>
+          <div className="mt-5 grid grid-cols-2 gap-4">
+            <div className="rounded-2xl bg-emerald-500/20 ring-1 ring-emerald-400/50 py-5 animate-pulse">
+              <p className="text-3xl">🟢</p>
+              <p className="font-bold text-lg mt-1">小生意</p>
+              <p className="text-xs text-white/60">便宜、現金少也能玩</p>
+            </div>
+            <div className="rounded-2xl bg-amber-500/20 ring-1 ring-amber-400/50 py-5 animate-pulse">
+              <p className="text-3xl">🔵</p>
+              <p className="font-bold text-lg mt-1">大買賣</p>
+              <p className="text-xs text-white/60">昂貴、報酬高</p>
+            </div>
+          </div>
+          <p className="mt-5 text-zizi-gold font-semibold text-lg pulse-dots">正在選擇要抽哪一疊</p>
+        </div>
+      </div>
+    );
+  }
+
+  // 看卡思考中 / 已做決定（同一張卡面，decided 多蓋一個結果章）
+  const isAcquire = deck === 'acquire';
+  const decided = stage === 'decided';
+  const stampText = !decided
+    ? null
+    : isAcquire
+    ? accept ? '🤝 成交賣出！' : '🙅 不賣！'
+    : accept ? (loanAmount > 0 ? '💳 貸款買下！' : '✅ 買下！') : '🙅 放棄！';
+  const stampTone = decided && accept ? 'text-emerald-600 ring-emerald-500' : 'text-rose-600 ring-rose-500';
+
+  return (
+    <div onClick={onClose} className="fixed inset-0 z-40 flex items-center justify-center bg-zizi-ink/55 backdrop-blur-sm cursor-pointer">
+      {decided && <span className="absolute bottom-6 inset-x-0 text-center text-white/55 text-sm">👆 點畫面任一處關閉</span>}
+      <div className="card-pop relative bg-white rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] w-[26rem] max-w-[92vw] overflow-hidden">
+        <div className={'py-2 text-center text-white font-bold ' + m.color}>{m.label}</div>
+        <div className="px-6 pt-4 pb-6 text-center">
+          <p className="text-sm font-semibold text-slate-500">
+            {team.professionEmoji} {team.teamName}
+            <span className="text-slate-400 font-normal">（{team.professionName}）‧ 現金 {formatMoney(team.cash)}</span>
+          </p>
+          <div className="text-6xl mt-2 mb-1">{card.emoji}</div>
+          <h3 className="text-2xl font-black text-zizi-ink">{card.name}</h3>
+          {card.story && <p className="text-sm text-slate-500 mt-1 leading-relaxed">{card.story}</p>}
+          {card.desc && !card.story && <p className="text-sm text-slate-500 mt-1">{card.desc}</p>}
+
+          {/* 關鍵數字：全班一起評估這筆划不划算 */}
+          {isAcquire && offer ? (
+            <div className="mt-3 bg-emerald-50 rounded-xl p-3 text-sm grid grid-cols-2 gap-y-1 text-left">
+              <span className="text-slate-400">買家開價</span>
+              <span className="text-right font-semibold">{formatMoney(offer.offerPrice)}</span>
+              <span className="text-slate-400">清貸款後淨入</span>
+              <span className="text-right font-bold text-emerald-600">{formatMoney(offer.net)}</span>
+              {typeof offer.gainPct === 'number' && (<>
+                <span className="text-slate-400">相對投入頭期</span>
+                <span className={'text-right font-bold ' + (offer.gainPct >= 0 ? 'text-emerald-600' : 'text-red-500')}>
+                  {offer.gainPct >= 0 ? '賺' : '賠'} {Math.abs(offer.gainPct)}%
+                </span>
+              </>)}
+            </div>
+          ) : (
+            <div className="mt-3 bg-slate-50 rounded-xl p-3 text-sm grid grid-cols-2 gap-y-1 text-left">
+              <span className="text-slate-400">需要現金（頭期）</span>
+              <span className="text-right font-semibold">{formatMoney(card.cost)}</span>
+              {card.mortgage > 0 && (<>
+                <span className="text-slate-400">抵押貸款</span>
+                <span className="text-right font-semibold text-red-500">{formatMoney(card.mortgage)}</span>
+              </>)}
+              <span className="text-slate-400">每月現金流</span>
+              <span className={'text-right font-semibold ' + (mi >= 0 ? 'text-green-600' : 'text-red-500')}>
+                {mi >= 0 ? '+' : '-'}{formatMoney(Math.abs(mi))}
+              </span>
+              <span className="text-slate-400">投資報酬率（年）</span>
+              <span className={'text-right font-bold ' + (roi >= 0 ? 'text-green-600' : 'text-red-500')}>{roi}%</span>
+              {card.priceLow && card.priceHigh && (<>
+                <span className="text-slate-400">售價範圍</span>
+                <span className="text-right font-semibold text-slate-700">{formatMoney(card.priceLow)}~{formatMoney(card.priceHigh)}</span>
+              </>)}
+            </div>
+          )}
+
+          {!decided ? (
+            <p className="mt-4 text-zizi-ink font-bold text-lg pulse-dots">
+              🤔 {team.teamName} 思考中{isAcquire ? '：賣還是不賣？' : '：該不該買？'}
+            </p>
+          ) : (
+            <p className="mt-4 text-sm text-slate-500">
+              {accept && loanAmount > 0
+                ? `向銀行借 ${formatMoney(loanAmount)} 補頭期（月息 10%）`
+                : accept
+                ? isAcquire ? `淨入帳 ${formatMoney(offer?.net || 0)} 💰` : '頭期付清，開始收每月現金流'
+                : '把機會留給下一個人'}
+            </p>
+          )}
+        </div>
+
+        {/* 決定戳章：斜蓋在卡面上 */}
+        {decided && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span className={'stamp-in bg-white/85 backdrop-blur-sm text-4xl font-black px-8 py-4 rounded-2xl ring-4 shadow-2xl ' + stampTone}>
+              {stampText}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -603,7 +794,8 @@ function Leaderboard({ ranked, ended }) {
                 <span className="w-6 text-center font-bold">{medal[i] || i + 1}</span>
                 <span className="text-xl">{t.professionEmoji}</span>
                 <span className="flex-1 font-semibold truncate text-sm">{t.name}</span>
-                <span className="text-sm font-bold text-zizi-gold tabular-nums">{formatMoney(t.netWorth)}</span>
+                {/* key 用淨資產：數字一變就重播彈跳動畫 */}
+                <span key={t.netWorth} className="num-pop text-sm font-bold text-zizi-gold tabular-nums">{formatMoney(t.netWorth)}</span>
               </div>
               <div className="mt-1 flex items-center gap-2">
                 <div className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden">
@@ -632,7 +824,7 @@ function FeedPanel({ feed }) {
       <h2 className="text-lg font-bold mb-2">📢 最新動態</h2>
       <div className="flex-1 overflow-auto space-y-1.5">
         {feed.map((f, i) => (
-          <div key={i} className={'rounded-lg px-2.5 py-1.5 text-xs ' + (i === 0 ? 'bg-zizi-gold/20' : 'bg-white/10 text-white/80')}>
+          <div key={f.ts ?? i} className={'rounded-lg px-2.5 py-1.5 text-xs ' + (i === 0 ? 'feed-in bg-zizi-gold/20' : 'bg-white/10 text-white/80')}>
             {f.text}
           </div>
         ))}

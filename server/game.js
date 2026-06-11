@@ -41,6 +41,14 @@ export function roomExists(code) {
   return !!getRoom(code);
 }
 
+// 難度設定（老師開局前選）：影響起始存款、機會卡現金流、額外支出
+// startCash＝起始存款倍率；dealIncome＝機會卡月現金流倍率；doodad＝額外支出卡金額倍率
+export const DIFFICULTY = {
+  easy: { label: '輕鬆', emoji: '🌱', startCash: 2, dealIncome: 1.5, doodad: 0.7, desc: '起始存款×2、機會卡現金流×1.5、額外支出7折' },
+  normal: { label: '標準', emoji: '⚖️', startCash: 1, dealIncome: 1, doodad: 1, desc: '原汁原味的現金流挑戰' },
+  hard: { label: '挑戰', emoji: '🔥', startCash: 1, dealIncome: 0.8, doodad: 1.3, desc: '機會卡現金流8折、額外支出×1.3，高手限定' },
+};
+
 // ── 單一房間的完整遊戲邏輯 ──
 function makeRoom(code) {
 
@@ -70,7 +78,13 @@ const state = {
   pendingRumor: null, // 待兌現的股市情報
   showTutorial: false, // 大螢幕是否顯示新手教學
   spotlightTeamId: null, // 老師投影到大螢幕教學的組別（平常不公開）
+  difficulty: 'normal', // 難度（easy｜normal｜hard），老師在大廳選
 };
+
+// 目前難度的參數（永遠回傳有效設定）
+function diffCfg() {
+  return DIFFICULTY[state.difficulty] || DIFFICULTY.normal;
+}
 
 // 市場初始化：每支股票/ETF/加密貨幣各自一條價格序列；房地產用分類指數
 function freshMarket() {
@@ -133,6 +147,24 @@ function publicState() {
     monthlyEvent: state.monthlyEvent, // 本月大事件
     showTutorial: state.showTutorial, // 大螢幕教學開關
     spotlight: state.spotlightTeamId ? getTeamPayload(state.spotlightTeamId) : null, // 老師投影的組別完整財務
+    difficulty: state.difficulty, // 本場難度
+  };
+}
+
+// ── 大螢幕「買賣直播」：把玩家抽機會卡 → 思考 → 決定的過程即時投到大螢幕 ──
+// payload：{ stage: 'choosing'｜'deciding'｜'decided', ... }；傳 null 清除
+function broadcastDealLive(payload) {
+  if (io) io.to(code).emit('deal:live', payload);
+}
+
+// 直播用的組別摘要（帶現金，讓全班看得到他買不買得起）
+function dealTeamRef(team) {
+  return {
+    teamId: team.id,
+    teamName: team.name,
+    professionName: team.professionName,
+    professionEmoji: team.professionEmoji,
+    cash: team.cash,
   };
 }
 
@@ -188,6 +220,7 @@ function enterNewRound(roundNumber) {
   state.round = roundNumber;
   state.timeLeft = state.roundSeconds;
   state.currentTurnIndex = 0; // 從第一組重新開始輪
+  broadcastDealLive(null); // 上回合沒做完的買賣直播收掉
   applyMonthlyEvent(); // 跑市場事件，更新市場指數與資產價值
   for (const team of Object.values(state.teams)) {
     if (team.bankrupt) continue; // 已淘汰跳過
@@ -371,6 +404,7 @@ function skipTurn() {
   if (team) {
     team.hasRolledThisRound = true;
     team.pendingAction = null;
+    broadcastDealLive(null); // 若他卡在買賣直播，順便收掉
     addFeed(`⏭️ 老師跳過了 ${team.name} 的回合`);
     emitTeam(team);
   }
@@ -401,6 +435,7 @@ function resetGame() {
   state.timeLeft = 0;
   state.market = freshMarket(); // 市場指數歸 100
   state.monthlyEvent = null;
+  broadcastDealLive(null);
   // 重置各組財務回到起始狀態（保留組別與職業），等同重新開始整場
   for (const team of Object.values(state.teams)) {
     resetTeamFinances(team);
@@ -426,6 +461,7 @@ function clearGame() {
   teamSeq = 0;
   uidSeq = 0;
   feed.length = 0;
+  broadcastDealLive(null);
   broadcast();
   broadcastTeams(); // 連帶觸發自動存檔，讓 autosave.json 也變空白
   if (io) io.to(code).emit('feed:list', feed);
@@ -437,7 +473,7 @@ function clearGame() {
 function resetTeamFinances(team) {
   const prof = getProfession(team.professionId);
   if (!prof) return;
-  team.cash = prof.savings;
+  team.cash = Math.round(prof.savings * diffCfg().startCash); // 起始存款依難度加成
   team.salary = prof.salary;
   team.baseSalary = prof.salary; // 景氣連動職業的基準薪（餐廳/廚師用）
   team.incomeFollowsMarket = !!prof.incomeFollowsMarket; // 收入隨景氣起伏
@@ -470,6 +506,7 @@ function profLiabTotal(prof) {
   return l.homeMortgage + l.carLoan + l.schoolLoan + l.creditCard;
 }
 function professionPublic(prof) {
+  const savings = Math.round(prof.savings * diffCfg().startCash); // 顯示時就帶入難度加成
   return {
     id: prof.id,
     name: prof.name,
@@ -478,9 +515,9 @@ function professionPublic(prof) {
     variableIncome: prof.variableIncome || null,
     expenseTotal: profExpenseTotal(prof),
     cashflowStart: prof.salary - profExpenseTotal(prof),
-    savings: prof.savings,
+    savings,
     liabilitiesTotal: profLiabTotal(prof), // 起始負債總額
-    netWorthStart: prof.savings - profLiabTotal(prof),
+    netWorthStart: savings - profLiabTotal(prof),
     hasHouse: (prof.liabilities.homeMortgage || 0) > 0, // 是否有自住房（有房貸＝有房）
     freedomThreshold: profExpenseTotal(prof), // 被動收入需達此值才財富自由
     perk: prof.perk,
@@ -622,13 +659,25 @@ function broadcastTeams() {
   scheduleAutosave();
 }
 
-// 調整遊戲參數（總回合數、每回合秒數）；建議在 lobby 階段調整
-function setConfig({ maxRounds, roundSeconds } = {}) {
+// 調整遊戲參數（總回合數、每回合秒數、難度）；建議在 lobby 階段調整
+function setConfig({ maxRounds, roundSeconds, difficulty } = {}) {
   if (Number.isFinite(maxRounds) && maxRounds > 0) {
     state.maxRounds = Math.floor(maxRounds);
   }
   if (Number.isFinite(roundSeconds) && roundSeconds > 0) {
     state.roundSeconds = Math.floor(roundSeconds);
+  }
+  // 難度只能在大廳改（遊戲中改會讓進行中的數字混亂）
+  if (difficulty && DIFFICULTY[difficulty] && difficulty !== state.difficulty && state.phase === 'lobby') {
+    state.difficulty = difficulty;
+    const cfg = diffCfg();
+    // 已加入的組別重發起始財務，讓新的起始存款倍率生效
+    for (const team of Object.values(state.teams)) {
+      resetTeamFinances(team);
+      emitTeam(team);
+    }
+    addFeed(`${cfg.emoji} 老師把難度設為「${cfg.label}」（${cfg.desc}）`);
+    broadcastTeams();
   }
   broadcast();
   scheduleAutosave();
@@ -651,6 +700,7 @@ function getSnapshot() {
     currentTurnIndex: state.currentTurnIndex,
     market: state.market,
     monthlyEvent: state.monthlyEvent,
+    difficulty: state.difficulty,
     teamSeq,
     uidSeq,
     feed,
@@ -669,6 +719,7 @@ function loadSnapshot(data) {
   state.teams = data.teams && typeof data.teams === 'object' ? data.teams : {};
   state.market = data.market && data.market.instruments ? data.market : freshMarket();
   state.monthlyEvent = data.monthlyEvent ?? null;
+  state.difficulty = DIFFICULTY[data.difficulty] ? data.difficulty : 'normal';
   state.turnOrder = Array.isArray(data.turnOrder) ? data.turnOrder : Object.keys(state.teams);
   state.currentTurnIndex = Number.isFinite(data.currentTurnIndex) ? data.currentTurnIndex : 0;
   teamSeq = Number.isFinite(data.teamSeq)
@@ -876,7 +927,11 @@ function rollDice(teamId) {
   }
 
   addFeed(`🎲 ${team.name} 擲出 ${rolls.join('+')}＝${steps}，停在 ${square.emoji}${square.label}${paydays ? `（領了 ${paydays} 次薪水）` : ''}`);
-  if (io) io.to(code).emit('board:move', { teamId, from, to, steps, rolls, square: square.type });
+  if (io) io.to(code).emit('board:move', {
+    teamId, from, to, steps, rolls, square: square.type, paydays,
+    teamName: team.name, professionEmoji: team.professionEmoji,
+    squareEmoji: square.emoji, squareLabel: square.label,
+  });
 
   // 破產則結束此回合（已被移出輪流）
   if (team.bankrupt) {
@@ -924,9 +979,18 @@ function resolveSquare(team, type) {
       const offer = maybeAcquisitionOffer(team);
       if (offer) {
         team.pendingAction = offer;
-        announceCard('acquire', offer.card, team);
+        // 收購要約直接進入「考慮中」直播（大螢幕看得到開價與淨入）
+        broadcastDealLive({
+          stage: 'deciding',
+          deck: 'acquire',
+          card: offer.card,
+          offer: { offerPrice: offer.offerPrice, net: offer.net, gainPct: offer.gainPct, buyer: offer.buyer },
+          team: dealTeamRef(team),
+        });
       } else {
         team.pendingAction = { type: 'opportunity' };
+        // 大螢幕直播：他停在機會格，正在選小生意還是大買賣
+        broadcastDealLive({ stage: 'choosing', team: dealTeamRef(team) });
       }
       break;
     }
@@ -1048,12 +1112,13 @@ function maybeAcquisitionOffer(team) {
 function acquireDecision(teamId, accept) {
   const team = getTeam(teamId);
   if (!team || team.pendingAction?.type !== 'acquire') return { ok: false, reason: '目前沒有收購要約' };
-  const { assetUid, offerPrice } = team.pendingAction;
+  const { assetUid, offerPrice, net, gainPct, buyer, card: offerCard } = team.pendingAction;
   team.pendingAction = null;
 
   const idx = (team.assets || []).findIndex((a) => a.uid === assetUid);
   if (idx < 0) {
     // 房產已不在（理論上不會發生），直接換人
+    broadcastDealLive(null);
     if (currentTurnId() === team.id) advanceTurn();
     return { ok: false, reason: '找不到該房產' };
   }
@@ -1073,8 +1138,16 @@ function acquireDecision(teamId, accept) {
     addHistory(team, { round: state.round, type: 'sell', text: `被收購：${asset.emoji} ${asset.name}`, delta: proceeds });
     addFeed(`🤝 ${team.name} 以 ${formatNT(offerPrice)} 賣出 ${asset.roomType || '房產'}（淨入 ${formatNT(proceeds)}）`);
     emitEvent(team, { emoji: '🤝', title: '成交！', text: `賣出 ${asset.name}，扣房貸後淨入帳 ${formatNT(proceeds)}` });
+    broadcastDealLive({
+      stage: 'decided', deck: 'acquire', card: offerCard, accept: true,
+      offer: { offerPrice, net: proceeds, gainPct, buyer }, team: dealTeamRef(team),
+    });
   } else {
     addFeed(`${team.name} 婉拒了 ${asset.roomType || '房產'} 的收購`);
+    broadcastDealLive({
+      stage: 'decided', deck: 'acquire', card: offerCard, accept: false,
+      offer: { offerPrice, net, gainPct, buyer }, team: dealTeamRef(team),
+    });
   }
   checkFreedom(team);
   emitTeam(team);
@@ -1086,6 +1159,9 @@ function acquireDecision(teamId, accept) {
 // 額外支出卡：強制消費（套用在停留的那一組）
 function applyDoodad(team, card) {
   if (!card) return;
+  // 依難度調整支出金額（複製一份再改，取整到百位）
+  const mult = diffCfg().doodad;
+  if (mult !== 1) card = { ...card, amount: Math.round((card.amount * mult) / 100) * 100 };
   // 連動條件：沒出租房 / 沒小孩 就不會發生這筆支出
   if (card.requires === 'realestate' && !(team.assets || []).some((a) => a.category === 'realestate')) {
     addFeed(`😅 ${team.name} 抽到「${card.name}」，但沒有出租房，免了`);
@@ -1153,14 +1229,23 @@ function formatNT(n) {
 
 // ── 機會卡互動：選牌庫 → 抽卡 → 買或放棄 ──
 
+// 依難度調整機會卡（複製一份再改，不能動到原牌庫）：月現金流乘上倍率、取整到百位
+// 只調「正」的現金流——負現金流的養房卡是刻意設計的風險，不因難度放大虧損
+function adjustDealCard(card) {
+  const mult = diffCfg().dealIncome;
+  if (!card || mult === 1 || !(card.monthlyIncome > 0)) return card;
+  return { ...card, monthlyIncome: Math.max(100, Math.round((card.monthlyIncome * mult) / 100) * 100) };
+}
+
 // 玩家選擇小生意 / 大買賣 → 抽一張機會卡
 function chooseDeck(teamId, deck) {
   const team = getTeam(teamId);
   if (!team || team.pendingAction?.type !== 'opportunity') return { ok: false, reason: '目前沒有機會可抽' };
   if (deck !== 'small' && deck !== 'big') return { ok: false, reason: '請選擇小生意或大買賣' };
-  const card = drawCard(deck);
+  const card = adjustDealCard(drawCard(deck));
   team.pendingAction = { type: 'deal', deck, card };
-  announceCard(deck, card, team);
+  // 大螢幕直播：完整卡面（含頭期/貸款/現金流/售價範圍），全班一起看他怎麼選
+  broadcastDealLive({ stage: 'deciding', deck, card, team: dealTeamRef(team) });
   emitTeam(team);
   return { ok: true, card };
 }
@@ -1170,27 +1255,31 @@ function dealDecision(teamId, accept, withLoan = false) {
   const team = getTeam(teamId);
   if (!team || team.pendingAction?.type !== 'deal') return { ok: false, reason: '目前沒有可決定的機會卡' };
   const card = team.pendingAction.card;
+  const deck = team.pendingAction.deck;
   team.pendingAction = null;
 
   if (!accept) {
     addFeed(`${team.name} 放棄了 ${card.emoji} ${card.name}`);
+    broadcastDealLive({ stage: 'decided', deck, card, accept: false, team: dealTeamRef(team) });
     emitTeam(team);
     broadcastTeams();
     if (currentTurnId() === team.id) advanceTurn();
     return { ok: true, bought: false };
   }
 
+  let loanAmount = 0; // 貸款補頭期的金額（大螢幕直播用）
   if (team.cash < card.cost) {
     if (withLoan) {
       // 頭期不夠 → 向銀行借差額（月息 10%，湊整到萬元）補頭期
       const need = Math.ceil((card.cost - team.cash) / 10000) * 10000;
+      loanAmount = need;
       team.personalLiabilities.bankLoan = (team.personalLiabilities.bankLoan || 0) + need;
       team.cash += need;
       addHistory(team, { round: state.round, type: 'loan', text: `銀行貸款補頭期 ${card.name}`, delta: need });
       addFeed(`💳 ${team.name} 向銀行借 ${formatNT(need)}（月息10%）補頭期買下 ${card.emoji} ${card.name}`);
     } else {
       // 買不起 → 退回機會卡讓玩家重新決定（回合尚未結束）
-      team.pendingAction = { type: 'deal', deck: card.deck, card };
+      team.pendingAction = { type: 'deal', deck, card };
       emitTeam(team);
       return { ok: false, reason: '存款不足，買不起這筆' };
     }
@@ -1239,6 +1328,7 @@ function dealDecision(teamId, accept, withLoan = false) {
   }
   addHistory(team, { round: state.round, type: 'buy', text: `機會：買入 ${card.emoji} ${card.name}`, delta: -card.cost });
   addFeed(`${team.name} 把握機會買了 ${card.emoji} ${card.name}`);
+  broadcastDealLive({ stage: 'decided', deck, card, accept: true, loanAmount, team: dealTeamRef(team) });
   checkFreedom(team);
   emitTeam(team);
   broadcastTeams();
