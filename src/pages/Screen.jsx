@@ -6,7 +6,7 @@ import { useGameState } from '../hooks/useGameState.js';
 import { useTeams } from '../hooks/useTeams.js';
 import { useFeed } from '../hooks/useFeed.js';
 import { formatTime, formatMoney } from '../util/format.js';
-import { SQUARE_META, GRID, cellOf } from '../util/board.js';
+import { SQUARE_META, COLS, ROWS, cellOf } from '../util/board.js';
 import ConnectionBadge from '../components/ConnectionBadge.jsx';
 import Sparkline from '../components/Sparkline.jsx';
 
@@ -31,6 +31,7 @@ export default function Screen() {
   const [bankrupt, setBankrupt] = useState(null); // 破產淘汰動畫
   const [deal, setDeal] = useState(null); // 買賣直播（機會卡選擇→思考→決定）
   const [dice, setDice] = useState(null); // 擲骰結果橫幅
+  const [movingId, setMovingId] = useState(null); // 正在走動的代幣（套用跳動動畫）
 
   useEffect(() => {
     fetch('/api/server-info').then((r) => r.json()).then(setServerInfo).catch(() => {});
@@ -38,7 +39,7 @@ export default function Screen() {
   }, []);
 
   useEffect(() => {
-    let cardTimer, freedTimer, dealTimer, diceTimer;
+    let cardTimer, freedTimer, dealTimer, diceTimer, hopTimer;
     function onCard(payload) {
       // 小生意/大買賣/收購改由「買賣直播」呈現，這裡只翻市場風雲與額外支出卡
       if (payload?.deck === 'small' || payload?.deck === 'big' || payload?.deck === 'acquire') return;
@@ -52,11 +53,14 @@ export default function Screen() {
       setDeal(payload || null);
       if (payload?.stage === 'decided') dealTimer = setTimeout(() => setDeal(null), 8000);
     }
-    // 擲骰橫幅：顯示骰面與停留格，幾秒後淡出
+    // 擲骰橫幅：顯示骰面與停留格，幾秒後淡出；同時讓該組代幣跳一段「走路」動畫
     function onMove(payload) {
       setDice(payload);
       clearTimeout(diceTimer);
       diceTimer = setTimeout(() => setDice(null), 4000);
+      setMovingId(payload.teamId);
+      clearTimeout(hopTimer);
+      hopTimer = setTimeout(() => setMovingId(null), 900);
     }
     function onFreed(payload) {
       setCelebrate(payload);
@@ -93,6 +97,7 @@ export default function Screen() {
       clearTimeout(bankruptTimer);
       clearTimeout(dealTimer);
       clearTimeout(diceTimer);
+      clearTimeout(hopTimer);
     };
   }, []);
 
@@ -153,16 +158,16 @@ export default function Screen() {
         {phase === 'lobby' ? (
           <LobbyView studentUrl={studentUrl} teams={teams} />
         ) : (
-          <div className="h-full flex gap-5">
+          <div className="h-full flex gap-4">
             <div className="flex-1 min-w-0 flex flex-col gap-3">
               <MarketBar market={game?.market} monthlyEvent={game?.monthlyEvent} />
               <div className="flex-1 min-h-0 flex items-center justify-center">
-                <Board board={board} teams={teams} round={round} timeLeft={timeLeft} phase={phase} currentTurnId={game?.currentTurnId} />
+                <Board board={board} teams={teams} round={round} timeLeft={timeLeft} phase={phase} currentTurnId={game?.currentTurnId} movingId={movingId} />
               </div>
-            </div>
-            <div className="w-80 shrink-0 flex flex-col gap-4 min-h-0">
-              <Leaderboard ranked={ranked} ended={phase === 'ended'} />
               <FeedPanel feed={feed} />
+            </div>
+            <div className="w-[26rem] shrink-0 flex flex-col gap-3 min-h-0">
+              <TeamsOverview ranked={ranked} ended={phase === 'ended'} currentTurnId={game?.currentTurnId} />
             </div>
           </div>
         )}
@@ -689,11 +694,12 @@ function MarketBar({ market, monthlyEvent }) {
   );
 }
 
-// 老鼠賽跑圈盤面：24 格環狀 + 各組代幣
-function Board({ board, teams, round, timeLeft, phase, currentTurnId }) {
-  const cs = 100 / GRID; // 每格百分比
+// 老鼠賽跑圈盤面：24 格「長方形」環狀（9×5）+ 各組代幣
+function Board({ board, teams, round, timeLeft, phase, currentTurnId, movingId }) {
+  const csx = 100 / COLS; // 每格寬（%）
+  const csy = 100 / ROWS; // 每格高（%）
   const currentTeam = teams.find((t) => t.id === currentTurnId);
-  // 把各組依目前格子分組，方便在同格時錯開排列
+  // 把各組依目前格子分組，方便在同格時錯開排列（避免代幣重疊）
   const byCell = {};
   teams.forEach((t) => {
     const p = t.position || 0;
@@ -701,7 +707,7 @@ function Board({ board, teams, round, timeLeft, phase, currentTurnId }) {
   });
 
   return (
-    <div className="relative aspect-square" style={{ width: 'min(100%, 78vh)' }}>
+    <div className="relative" style={{ width: 'min(100%, 168vh)', aspectRatio: `${COLS} / ${ROWS}`, maxHeight: '100%' }}>
       {/* 格子 */}
       {board.map((sq) => {
         const { r, c } = cellOf(sq.index);
@@ -709,56 +715,70 @@ function Board({ board, teams, round, timeLeft, phase, currentTurnId }) {
         return (
           <div
             key={sq.index}
-            className="absolute p-1"
-            style={{ left: `${c * cs}%`, top: `${r * cs}%`, width: `${cs}%`, height: `${cs}%` }}
+            className="absolute p-1.5"
+            style={{ left: `${c * csx}%`, top: `${r * csy}%`, width: `${csx}%`, height: `${csy}%` }}
           >
-            <div className={'w-full h-full rounded-lg flex flex-col items-center justify-center text-white ' + (meta.color || 'bg-slate-500')}>
-              <span className="text-4xl leading-none">{meta.emoji}</span>
-              <span className="text-sm font-bold mt-1 leading-none">{meta.label}</span>
+            <div className={'w-full h-full rounded-xl flex flex-col items-center justify-center text-white shadow-md ring-1 ring-white/15 ' + (meta.color || 'bg-slate-500')}>
+              <span className="text-5xl leading-none drop-shadow">{meta.emoji}</span>
+              <span className="text-base font-bold mt-1.5 leading-none">{meta.label}</span>
             </div>
           </div>
         );
       })}
 
-      {/* 中央資訊 */}
+      {/* 中央資訊（佔內圈 7×3 格） */}
       <div
         className="absolute flex flex-col items-center justify-center text-center"
-        style={{ left: `${cs}%`, top: `${cs}%`, width: `${5 * cs}%`, height: `${5 * cs}%` }}
+        style={{ left: `${csx}%`, top: `${csy}%`, width: `${(COLS - 2) * csx}%`, height: `${(ROWS - 2) * csy}%` }}
       >
-        <p className="text-white/50 text-lg">老鼠賽跑圈</p>
-        <p className="text-zizi-gold font-black text-5xl my-1">第 {round} 回合</p>
+        <p className="text-white/50 text-xl">🐭 老鼠賽跑圈</p>
+        <p className="text-zizi-gold font-black text-6xl my-1">第 {round} 回合</p>
         {(phase === 'running' || phase === 'paused') && (
-          <p className="text-white/80 text-2xl tabular-nums">⏱ {formatTime(timeLeft)}</p>
+          <p className="text-white/80 text-3xl tabular-nums">⏱ {formatTime(timeLeft)}</p>
         )}
         {phase === 'running' && (
-          <p className="mt-2 text-lg font-bold text-zizi-gold">
+          <p className="mt-2 text-2xl font-bold text-zizi-gold">
             {currentTeam ? `🎲 輪到 ${currentTeam.professionEmoji} ${currentTeam.name}` : '本回合擲完，等待下一回合'}
           </p>
         )}
-        <p className="text-white/40 text-sm mt-2">目標：被動收入 ＞ 總支出 → 跳出老鼠圈</p>
+        <p className="text-white/40 text-base mt-2">目標：被動收入 ＞ 總支出 → 跳出老鼠圈</p>
       </div>
 
-      {/* 代幣（依 position 定位，position 變化時用 CSS 過場滑動） */}
+      {/* 代幣（依 position 定位，position 變化時用 CSS 過場滑動；走動時套跳動動畫） */}
       {teams.map((t) => {
         const p = t.position || 0;
         const { r, c } = cellOf(p);
         const group = byCell[p] || [];
         const k = group.findIndex((x) => x.id === t.id);
         const n = group.length;
-        const offset = (k - (n - 1) / 2) * 2.2; // 同格錯開（百分比）
-        const left = (c + 0.5) * cs + offset;
-        const top = (r + 0.5) * cs;
+        // 同格多人 → 排成最多 3 欄的小網格，x/y 都錯開，徹底不重疊
+        const perRow = Math.min(3, n);
+        const col = k % perRow;
+        const row = Math.floor(k / perRow);
+        const rows = Math.ceil(n / perRow);
+        const dx = (col - (perRow - 1) / 2) * 3.2; // 水平錯開（%）
+        const dy = (row - (rows - 1) / 2) * 5.0; // 垂直錯開（%）
+        const left = (c + 0.5) * csx + dx;
+        const top = (r + 0.5) * csy + dy;
+        const moving = t.id === movingId && !t.bankrupt;
+        const isCurrent = t.id === currentTurnId && !t.bankrupt;
+        // 動畫優先序：走動跳躍 > 輪到呼吸跳動 > 靜止
+        const animClass = moving ? 'token-hop' : isCurrent ? 'token-idle' : '';
         return (
           <div
             key={t.id}
-            className={'absolute z-10 transition-all duration-700 ease-out ' + (t.bankrupt ? 'opacity-40 grayscale' : '')}
+            className={'absolute z-10 transition-all duration-700 ease-out ' + animClass + (t.bankrupt ? ' opacity-40 grayscale' : '')}
             style={{ left: `${left}%`, top: `${top}%`, transform: 'translate(-50%, -50%)' }}
             title={t.name}
           >
-            {t.id === currentTurnId && !t.bankrupt && (
-              <span className="absolute inset-0 -m-1 rounded-full ring-4 ring-zizi-gold animate-ping" />
+            {isCurrent && (
+              <span className="absolute inset-0 -m-1.5 rounded-full ring-4 ring-zizi-gold animate-ping" />
             )}
-            <div className={'relative rounded-full w-9 h-9 flex items-center justify-center text-lg shadow-lg ring-2 ' + (t.bankrupt ? 'bg-slate-600 ring-slate-400' : t.free ? 'bg-green-400 ring-white' : t.id === currentTurnId ? 'bg-zizi-gold ring-white' : 'bg-white ring-zizi-gold')}>
+            {/* 名牌：代幣下方顯示組名，老師一眼看出誰是誰 */}
+            <span className="absolute left-1/2 -translate-x-1/2 top-full mt-0.5 whitespace-nowrap text-[0.7rem] font-bold px-1.5 py-0.5 rounded-full bg-black/55 text-white leading-none shadow">
+              {t.name}
+            </span>
+            <div className={'relative rounded-full w-14 h-14 flex items-center justify-center text-3xl shadow-xl ring-2 ' + (t.bankrupt ? 'bg-slate-600 ring-slate-400' : t.free ? 'bg-green-400 ring-white' : isCurrent ? 'bg-zizi-gold ring-white' : 'bg-white ring-zizi-gold')}>
               {t.bankrupt ? '💀' : t.professionEmoji}
             </div>
           </div>
@@ -768,48 +788,116 @@ function Board({ board, teams, round, timeLeft, phase, currentTurnId }) {
   );
 }
 
-function Leaderboard({ ranked, ended }) {
+// 一筆持有資產的小膠囊（圖示 + 名稱 + 現值 + 月現金流）
+function HoldingChip({ h }) {
+  const mi = h.monthlyIncome || 0;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-lg bg-white/12 ring-1 ring-white/10 px-1.5 py-0.5 text-[0.7rem] leading-none max-w-full">
+      <span className="text-sm">{h.emoji}</span>
+      <span className="font-medium text-white/90 truncate max-w-[6.5rem]">{h.name}</span>
+      <span className="text-white/55 tabular-nums">{formatMoney(h.value)}</span>
+      {mi !== 0 && (
+        <span className={'tabular-nums font-semibold ' + (mi > 0 ? 'text-green-300' : 'text-red-300')}>
+          {mi > 0 ? '+' : '−'}{formatMoney(Math.abs(mi))}/月
+        </span>
+      )}
+    </span>
+  );
+}
+
+// 大螢幕「組別總覽」：每組現金、持有資產、月現金流、最近動作，方便老師逐組講解
+function TeamsOverview({ ranked, ended, currentTurnId }) {
   const medal = ['🥇', '🥈', '🥉'];
   return (
-    <div className="glass-dark rounded-2xl p-4 flex-1 min-h-0 overflow-auto shadow-lg">
-      <h2 className="text-xl font-bold mb-3">🏆 排行榜</h2>
-      <div className="space-y-1.5">
+    <div className="glass-dark rounded-2xl p-3 flex-1 min-h-0 overflow-auto shadow-lg">
+      <div className="flex items-baseline justify-between mb-2 px-1">
+        <h2 className="text-xl font-bold">🏆 組別總覽</h2>
+        <span className="text-xs text-white/45">現金 ‧ 持有資產 ‧ 月現金流</span>
+      </div>
+      <div className="space-y-2">
         {ranked.map((t, i) => {
-          const pct = t.expense > 0 ? Math.min(100, Math.round((t.passiveIncome / t.expense) * 100)) : 0;
-          if (t.bankrupt) {
-            return (
-              <div key={t.id} className="rounded-xl px-3 py-2 bg-red-900/30 ring-1 ring-red-500/40 opacity-70">
-                <div className="flex items-center gap-2">
-                  <span className="w-6 text-center">💀</span>
-                  <span className="text-xl grayscale">{t.professionEmoji}</span>
-                  <span className="flex-1 font-semibold truncate text-sm line-through text-white/60">{t.name}</span>
-                  <span className="text-sm font-bold text-red-400">已淘汰</span>
-                </div>
-              </div>
-            );
-          }
+          const cf = t.cashflow ?? 0;
+          const isCurrent = t.id === currentTurnId && !t.bankrupt;
+          const holdings = t.holdings || [];
+          const last = (t.recent || [])[0];
           return (
-            <div key={t.id} className={'rounded-xl px-3 py-2 ' + (t.free ? 'bg-green-500/20 ring-1 ring-green-400' : 'bg-white/10')}>
+            <div
+              key={t.id}
+              className={
+                'rounded-xl px-3 py-2 ' +
+                (t.bankrupt
+                  ? 'bg-red-900/30 ring-1 ring-red-500/40 opacity-75'
+                  : t.free
+                  ? 'bg-green-500/15 ring-1 ring-green-400/60'
+                  : isCurrent
+                  ? 'bg-zizi-gold/15 ring-1 ring-zizi-gold/70'
+                  : 'bg-white/8 ring-1 ring-white/10')
+              }
+            >
+              {/* 第一行：名次 / 職業 / 組名 / 淨資產 */}
               <div className="flex items-center gap-2">
-                <span className="w-6 text-center font-bold">{medal[i] || i + 1}</span>
-                <span className="text-xl">{t.professionEmoji}</span>
-                <span className="flex-1 font-semibold truncate text-sm">{t.name}</span>
-                {/* key 用淨資產：數字一變就重播彈跳動畫 */}
-                <span key={t.netWorth} className="num-pop text-sm font-bold text-zizi-gold tabular-nums">{formatMoney(t.netWorth)}</span>
-              </div>
-              <div className="mt-1 flex items-center gap-2">
-                <div className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden">
-                  <div className={'h-full ' + (t.free ? 'bg-green-400' : 'bg-zizi-gold')} style={{ width: pct + '%' }} />
+                <span className="w-6 text-center font-bold">{t.bankrupt ? '💀' : medal[i] || i + 1}</span>
+                <span className={'text-2xl ' + (t.bankrupt ? 'grayscale' : '')}>{t.professionEmoji}</span>
+                <div className="flex-1 min-w-0">
+                  <p className={'font-bold truncate leading-tight ' + (t.bankrupt ? 'line-through text-white/55' : '')}>
+                    {t.name}
+                    {t.free && <span className="ml-1 text-[0.65rem] align-middle bg-green-400/25 text-green-200 rounded px-1 py-0.5">已自由</span>}
+                    {isCurrent && <span className="ml-1 text-[0.65rem] align-middle bg-zizi-gold/30 text-zizi-gold rounded px-1 py-0.5">輪到中</span>}
+                  </p>
+                  <p className="text-[0.7rem] text-white/50 leading-tight truncate">{t.professionName} ‧ 薪 {formatMoney(t.salary)}</p>
                 </div>
-                <span className="text-[0.65rem] text-white/60 w-8 text-right">{pct}%</span>
+                <div className="text-right leading-tight shrink-0">
+                  <p className="text-[0.6rem] text-white/45">淨資產</p>
+                  <span key={t.netWorth} className="num-pop block text-base font-black text-zizi-gold tabular-nums">{formatMoney(t.netWorth)}</span>
+                </div>
               </div>
+
+              {t.bankrupt ? (
+                <p className="mt-1 text-sm font-bold text-red-300 text-center">已破產淘汰</p>
+              ) : (
+                <>
+                  {/* 第二行：現金 / 月現金流 / 被動收入 */}
+                  <div className="mt-1.5 grid grid-cols-3 gap-1.5 text-center">
+                    <div className="rounded-lg bg-black/20 py-1">
+                      <p className="text-[0.6rem] text-white/45">現金</p>
+                      <p className={'text-sm font-bold tabular-nums ' + (t.cash < 0 ? 'text-red-300' : 'text-white')}>{formatMoney(t.cash)}</p>
+                    </div>
+                    <div className="rounded-lg bg-black/20 py-1">
+                      <p className="text-[0.6rem] text-white/45">月現金流</p>
+                      <p className={'text-sm font-bold tabular-nums ' + (cf >= 0 ? 'text-green-300' : 'text-red-300')}>
+                        {cf >= 0 ? '+' : '−'}{formatMoney(Math.abs(cf))}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-black/20 py-1">
+                      <p className="text-[0.6rem] text-white/45">被動收入</p>
+                      <p className="text-sm font-bold tabular-nums text-zizi-gold">{formatMoney(t.passiveIncome)}</p>
+                    </div>
+                  </div>
+
+                  {/* 第三行：持有資產清單 */}
+                  <div className="mt-1.5">
+                    {holdings.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {holdings.map((h) => <HoldingChip key={h.uid} h={h} />)}
+                      </div>
+                    ) : (
+                      <p className="text-[0.7rem] text-white/35">尚無投資資產</p>
+                    )}
+                  </div>
+
+                  {/* 最近一筆動作 */}
+                  {last && (
+                    <p className="mt-1 text-[0.68rem] text-white/45 truncate">📝 {last.text}</p>
+                  )}
+                </>
+              )}
             </div>
           );
         })}
         {ranked.length === 0 && <p className="text-white/40">尚無組別</p>}
       </div>
       {ended && ranked[0] && (
-        <div className="mt-4 text-center bg-zizi-gold/20 rounded-2xl py-3">
+        <div className="mt-3 text-center bg-zizi-gold/20 rounded-2xl py-3">
           <p className="text-sm text-white/70">本場冠軍</p>
           <p className="text-2xl font-black text-zizi-gold">{ranked[0].professionEmoji} {ranked[0].name}</p>
         </div>
@@ -820,11 +908,11 @@ function Leaderboard({ ranked, ended }) {
 
 function FeedPanel({ feed }) {
   return (
-    <div className="glass-dark rounded-2xl p-4 h-56 shrink-0 flex flex-col shadow-lg">
-      <h2 className="text-lg font-bold mb-2">📢 最新動態</h2>
-      <div className="flex-1 overflow-auto space-y-1.5">
+    <div className="glass-dark rounded-2xl px-4 py-2.5 h-28 shrink-0 flex flex-col shadow-lg">
+      <h2 className="text-sm font-bold mb-1.5 shrink-0">📢 最新動態</h2>
+      <div className="flex-1 overflow-auto flex flex-wrap gap-1.5 content-start">
         {feed.map((f, i) => (
-          <div key={f.ts ?? i} className={'rounded-lg px-2.5 py-1.5 text-xs ' + (i === 0 ? 'feed-in bg-zizi-gold/20' : 'bg-white/10 text-white/80')}>
+          <div key={f.ts ?? i} className={'rounded-lg px-2.5 py-1 text-xs ' + (i === 0 ? 'feed-in bg-zizi-gold/20' : 'bg-white/10 text-white/80')}>
             {f.text}
           </div>
         ))}

@@ -578,6 +578,9 @@ function passiveBreakdown(team) {
 
 // 每月銀行貸款月付：餘額 × 月息。抵押貸款(房產連動)不計息、也不能還，只在賣出時清償。
 const BANK_RATE = 0.10; // 一般銀行貸款月息（好算；已取消高利貸）
+// 現金貸款額度上限：銀行最多借你「月薪 × 此倍數」（含尚未還清的舊貸款）。
+// 貼近現實——銀行依收入決定可貸額度，收入越高能借越多。
+const LOAN_SALARY_MULTIPLE = 10;
 // 直接變現折價：房地產/企業這類「不易脫手」的資產，自己賣只拿回帳面價的 75%（折價 25%）。
 // 想拿好價錢就等「收購卡」🤝（那條走原價/溢價、不折價）。股票/ETF/加密/定存屬流動資產，照市價賣、不折價。
 const LIQUIDATION_KEEP = 0.75;
@@ -585,6 +588,17 @@ const ILLIQUID_CATS = ['realestate', 'business'];
 function bankLoanPayment(team) {
   const l = team.personalLiabilities || {};
   return Math.round((l.bankLoan || 0) * BANK_RATE);
+}
+
+// 現金貸款上限：以「基準月薪 × LOAN_SALARY_MULTIPLE」計（用 baseSalary 避免浮動職業忽高忽低）。
+function loanLimitFor(team) {
+  const baseSalary = team.baseSalary || team.salary || 0;
+  return baseSalary * LOAN_SALARY_MULTIPLE;
+}
+// 目前還能再借的額度（上限扣掉已欠的銀行貸款，不會小於 0）。
+function loanRoomFor(team) {
+  const current = (team.personalLiabilities && team.personalLiabilities.bankLoan) || 0;
+  return Math.max(0, loanLimitFor(team) - current);
 }
 
 // 總支出 = 各項月支出 + 小孩支出×人數 + 銀行貸款月付（抵押貸款不計息）
@@ -623,6 +637,8 @@ function computeDerived(team) {
     liabilitiesTotal,
     netWorth: team.cash + assetsValue - liabilitiesTotal,
     free: passive.total >= totalExpense, // 非工資收入 ≥ 總支出 → 財富自由
+    loanLimit: loanLimitFor(team), // 現金貸款總額上限（月薪 × 倍數）
+    loanRoom: loanRoomFor(team), // 目前還能再借多少
   };
 }
 
@@ -631,19 +647,47 @@ function netWorth(team) {
 }
 
 // 對外公開的組別摘要（大螢幕排行榜 / 老師端用）
+// 大螢幕要讓老師「講解每一組」：附上現金、持有資產清單、薪水、貸款額度與最近動作。
 function publicTeam(team) {
   const d = computeDerived(team);
+  // 持有資產精簡清單（給大螢幕顯示：名稱/圖示/現值/月現金流/單位）
+  const holdings = (team.assets || []).map((a) => ({
+    uid: a.uid,
+    name: a.name,
+    emoji: a.emoji,
+    category: a.category,
+    value: a.value,
+    monthlyIncome: a.monthlyIncome || 0,
+    units: a.units != null ? a.units : null,
+    qty: a.qty || 1,
+  }));
+  // 最近幾筆動作（買賣/貸款/清倉等），給老師講解「他做了什麼」
+  const recent = (team.history || []).slice(0, 4).map((h) => ({
+    type: h.type, text: h.text, delta: h.delta || 0, round: h.round,
+  }));
   return {
     id: team.id,
     name: team.name,
     professionName: team.professionName,
     professionEmoji: team.professionEmoji,
     netWorth: d.netWorth,
+    cash: team.cash, // 目前現金
+    salary: team.salary, // 本月薪水
     passiveIncome: d.passiveTotal,
     passive: d.passive,
+    income: d.totalIncome,
     expense: d.totalExpense,
     cashflow: d.cashflow,
+    assetsValue: d.assetsValue,
+    liabilitiesTotal: d.liabilitiesTotal,
+    bankLoan: (team.personalLiabilities && team.personalLiabilities.bankLoan) || 0,
+    loanLimit: d.loanLimit,
+    loanRoom: d.loanRoom,
+    children: team.children || 0,
+    holdings, // 持有資產清單
+    recent, // 最近動作
     free: team.free, // 以鎖定的旗標為準（達成後即使數字變動仍維持）
+    freedRound: team.freedRound || null,
     bankrupt: !!team.bankrupt, // 是否破產淘汰
     position: team.position || 0, // 老鼠賽跑圈上的格子
     hasRolled: !!team.hasRolledThisRound, // 本回合是否已擲骰
@@ -840,26 +884,35 @@ function liquidateAsset(team, idx) {
   return { asset, proceeds: saleValue, illiquid, grossValue: asset.value };
 }
 
-// 現金 ≤ 0 時的處理（不強賣資產、不自動借大錢，把選擇權留給玩家）：
-//  - 真正資不抵債（淨資產<0：把資產都賣了也還不清負債）且又入不敷出（月現金流<0）→ 淘汰
-//  - 否則：允許現金暫時為負（紅字），提醒玩家「自己挑資產賣掉、或用借錢按鈕周轉」自救
+// 現金 ≤ 0（破產危機）時的處理——依規則「先清倉所有資產自救，全賣光仍補不回來才淘汰」：
+//  1. 手上還有資產 → 直接清倉（全部變賣：房產/企業折價、清掉抵押貸款），現金入帳。
+//  2. 清倉後現金 > 0 → 保住、不淘汰（但資產與被動收入歸零，得重新靠薪水翻身）。
+//  3. 沒有資產可賣、或全部賣光仍為負（資不抵債）→ 真正淘汰。
 function checkBankruptOrCover(team) {
   if (team.bankrupt || team.cash > 0) return;
-  const d = computeDerived(team); // netWorth = 現金(此時為負) + 資產現值 − 所有負債
-  if (d.netWorth < 0 && d.cashflow < 0) {
-    bankruptTeam(team); // 賣光也還不清、又持續失血 → 淘汰
+  const shortfall = -team.cash;
+  let totalProceeds = 0;
+  if ((team.assets || []).length > 0) {
+    // 由後往前賣，避免 splice 影響索引；清倉全部資產
+    for (let i = team.assets.length - 1; i >= 0; i--) {
+      const { proceeds } = liquidateAsset(team, i);
+      totalProceeds += proceeds;
+    }
+    addHistory(team, { round: state.round, type: 'liquidate', text: '破產危機：清倉所有資產自救', delta: totalProceeds });
+    addFeed(`🆘 ${team.name} 現金見底（缺 ${formatNT(shortfall)}），清倉所有資產變現 ${formatNT(totalProceeds)} 自救`);
+  }
+  if (team.cash > 0) {
+    // 清倉後現金轉正 → 撐住、不淘汰
+    emitEvent(team, {
+      emoji: '🆘',
+      title: '清倉自救成功！資產全部變賣',
+      text: `現金見底，系統已把你所有資產變賣（共 ${formatNT(totalProceeds)}）換回現金保住沒淘汰。但資產歸零、被動收入沒了——快重新靠薪水投資翻身！`,
+    });
+    emitTeam(team);
     return;
   }
-  const shortfall = -team.cash;
-  const hasAssets = (team.assets || []).length > 0;
-  addFeed(`⚠️ ${team.name} 現金見底（缺 ${formatNT(shortfall)}），需自行賣資產或借錢周轉`);
-  emitEvent(team, {
-    emoji: '🆘',
-    title: `現金見底，缺 ${formatNT(shortfall)}`,
-    text: hasAssets
-      ? '別急著淘汰！到「資產負債」頁挑你想賣的資產變現，或用「借錢」周轉，撐住現金流就能翻身。'
-      : '月現金流為負、又沒有資產可賣——快還掉高息負債或設法增加收入，否則會破產！',
-  });
+  // 沒有資產可賣、或全部賣光仍補不回來 → 資不抵債，淘汰
+  bankruptTeam(team);
 }
 
 // 破產淘汰：標記、移出擲骰輪流、廣播動畫
@@ -1480,6 +1533,17 @@ function loanMoney(teamId, amount) {
   amount = Math.floor(Number(amount) || 0);
   if (amount < 10000 || amount % 10000 !== 0) {
     return { ok: false, reason: '貸款金額需為 10,000 的倍數' };
+  }
+  // 額度上限：銀行依月薪決定可貸總額（含未還清的舊貸款）
+  const room = loanRoomFor(team);
+  if (amount > room) {
+    const limit = loanLimitFor(team);
+    return {
+      ok: false,
+      reason: room <= 0
+        ? `已達貸款上限（月薪 ${LOAN_SALARY_MULTIPLE} 倍＝${formatNT(limit)}），請先還款再借`
+        : `超過貸款額度：上限為月薪 ${LOAN_SALARY_MULTIPLE} 倍（${formatNT(limit)}），目前最多再借 ${formatNT(room)}`,
+    };
   }
   team.personalLiabilities.bankLoan += amount;
   team.cash += amount;

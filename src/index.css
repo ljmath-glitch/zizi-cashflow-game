@@ -231,6 +231,32 @@ button:active:not(:disabled) {
   animation: feed-in 0.35s ease-out;
 }
 
+/* ── 大螢幕老鼠圈代幣 ── */
+
+/* 代幣移動：邊滑邊上下彈跳，做出「走路」的明顯動感（移動中套用 0.8s） */
+@keyframes token-hop {
+  0% { transform: translate(-50%, -50%) translateY(0) scale(1); }
+  18% { transform: translate(-50%, -50%) translateY(-42%) scale(1.18); }
+  36% { transform: translate(-50%, -50%) translateY(0) scale(0.96); }
+  54% { transform: translate(-50%, -50%) translateY(-26%) scale(1.1); }
+  72% { transform: translate(-50%, -50%) translateY(0) scale(0.99); }
+  86% { transform: translate(-50%, -50%) translateY(-12%) scale(1.04); }
+  100% { transform: translate(-50%, -50%) translateY(0) scale(1); }
+}
+.token-hop {
+  animation: token-hop 0.8s ease-in-out;
+  z-index: 30;
+}
+
+/* 輪到的玩家：代幣持續輕輕呼吸跳動，提示「換你了」 */
+@keyframes token-idle {
+  0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+  50% { transform: translate(-50%, -50%) translateY(-14%); }
+}
+.token-idle {
+  animation: token-idle 1.1s ease-in-out infinite;
+}
+
 /* 學生端擲骰按鈕：搖骰中的晃動 */
 @keyframes roll-wiggle {
   0%, 100% { transform: rotate(0deg); }

@@ -9,11 +9,24 @@ export const SQUARE_META = {
   downsized: { label: '失業', emoji: '💼', color: 'bg-slate-500' },
 };
 
-// 24 格環狀跑道排在 7×7 格線的外圈，順時針從左上角開始
-export const GRID = 7;
+// 24 格環狀跑道排成「長方形」外圈（寬 9 × 高 5，周長 = 2×(9+5)−4 = 24）。
+// 改長方形是為了貼合 16:9 大螢幕、把格子放大、左右更寬。
+// 順時針：上排 → 右排 ↓ → 下排 ← → 左排 ↑。
+export const COLS = 9;
+export const ROWS = 5;
+// 保留舊名稱相容（學生端等若有引用 GRID 仍可用，取較大邊）
+export const GRID = COLS;
+
 export function cellOf(i) {
-  if (i <= 6) return { r: 0, c: i }; // 上排 0–6
-  if (i <= 12) return { r: i - 6, c: 6 }; // 右排 7–12
-  if (i <= 18) return { r: 6, c: 6 - (i - 12) }; // 下排 13–18
-  return { r: 6 - (i - 18), c: 0 }; // 左排 19–23
+  // 上排：c = 0..COLS-1（共 COLS 格）
+  if (i < COLS) return { r: 0, c: i };
+  i -= COLS;
+  // 右排：往下 r = 1..ROWS-1（共 ROWS-1 格）
+  if (i < ROWS - 1) return { r: i + 1, c: COLS - 1 };
+  i -= ROWS - 1;
+  // 下排：往左 c = COLS-2..0（共 COLS-1 格）
+  if (i < COLS - 1) return { r: ROWS - 1, c: COLS - 2 - i };
+  i -= COLS - 1;
+  // 左排：往上 r = ROWS-2..1（共 ROWS-2 格）
+  return { r: ROWS - 2 - i, c: 0 };
 }

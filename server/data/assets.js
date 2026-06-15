@@ -158,6 +158,7 @@ export const MARKET = [
   },
 
   // ── 加密貨幣（無現金流，只靠價差） ──
+  // 暫時只開放比特幣，其餘幣種（ETH／MEME）先關閉，避免新手選太多種類混亂。
   {
     id: 'crypto_btc',
     name: '比特幣 BTC',
@@ -166,24 +167,6 @@ export const MARKET = [
     kind: 'amount',
     risk: '高',
     desc: '不配息，價格暴漲暴跌；可投入任意金額',
-  },
-  {
-    id: 'crypto_eth',
-    name: '以太幣 ETH',
-    emoji: '💎',
-    category: 'crypto',
-    kind: 'amount',
-    risk: '高',
-    desc: '不配息，波動大；可投入任意金額',
-  },
-  {
-    id: 'crypto_meme',
-    name: '迷因幣 MEME',
-    emoji: '🐶',
-    category: 'crypto',
-    kind: 'amount',
-    risk: '極高',
-    desc: '不配息，暴漲暴跌最瘋狂，賭一把',
   },
 
   // ── 利息（定存 / 債券） ──
