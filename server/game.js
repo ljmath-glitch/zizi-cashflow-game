@@ -646,25 +646,10 @@ function netWorth(team) {
   return computeDerived(team).netWorth;
 }
 
-// 對外公開的組別摘要（大螢幕排行榜 / 老師端用）
-// 大螢幕要讓老師「講解每一組」：附上現金、持有資產清單、薪水、貸款額度與最近動作。
+// 對外公開的組別摘要（大螢幕「組別總覽」/ 老師端用）
+// 只放摘要欄位（現金、薪水、現金流等）；持有資產明細由老師「投影」細項（getTeamPayload）呈現。
 function publicTeam(team) {
   const d = computeDerived(team);
-  // 持有資產精簡清單（給大螢幕顯示：名稱/圖示/現值/月現金流/單位）
-  const holdings = (team.assets || []).map((a) => ({
-    uid: a.uid,
-    name: a.name,
-    emoji: a.emoji,
-    category: a.category,
-    value: a.value,
-    monthlyIncome: a.monthlyIncome || 0,
-    units: a.units != null ? a.units : null,
-    qty: a.qty || 1,
-  }));
-  // 最近幾筆動作（買賣/貸款/清倉等），給老師講解「他做了什麼」
-  const recent = (team.history || []).slice(0, 4).map((h) => ({
-    type: h.type, text: h.text, delta: h.delta || 0, round: h.round,
-  }));
   return {
     id: team.id,
     name: team.name,
@@ -684,8 +669,7 @@ function publicTeam(team) {
     loanLimit: d.loanLimit,
     loanRoom: d.loanRoom,
     children: team.children || 0,
-    holdings, // 持有資產清單
-    recent, // 最近動作
+    assetCount: (team.assets || []).length, // 持有資產筆數（明細在投影看）
     free: team.free, // 以鎖定的旗標為準（達成後即使數字變動仍維持）
     freedRound: team.freedRound || null,
     bankrupt: !!team.bankrupt, // 是否破產淘汰
