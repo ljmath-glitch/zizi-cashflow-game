@@ -17,7 +17,7 @@ import { toast } from '../util/toast.js';
 import ConnectionBadge from '../components/ConnectionBadge.jsx';
 import Sparkline from '../components/Sparkline.jsx';
 import Toaster from '../components/Toaster.jsx';
-import Avatar, { AVATAR_TYPES, AVATAR_COLORS, HAIR_COLORS, AVATAR_ACCESSORIES } from '../components/Avatar.jsx';
+import Avatar, { AVATAR_TYPES, HAIR_COLORS, AVATAR_ACCESSORIES } from '../components/Avatar.jsx';
 
 // 學生端（手機）— v2(M6)：完整損益表 + 資產負債表 + 市場（現代化資產）
 export default function Student() {
@@ -71,9 +71,8 @@ function JoinForm({ connected, join, resume, offerProfessions }) {
   const [options, setOptions] = useState(null); // 二選一的兩張職業卡
   const [hair, setHair] = useState(AVATAR_TYPES[0].id);
   const [hairColor, setHairColor] = useState(HAIR_COLORS[0].id);
-  const [outfit, setOutfit] = useState(AVATAR_COLORS[2].id);
   const [accessory, setAccessory] = useState(AVATAR_ACCESSORIES[0].id);
-  const avatar = { hair, hairColor, color: outfit, accessory };
+  const avatar = { hair, hairColor, accessory };
 
   // 第一步：送出隊名 → 抽兩張職業卡
   async function handleNext() {
@@ -127,21 +126,22 @@ function JoinForm({ connected, join, resume, offerProfessions }) {
           🎯 目標：讓<b className="text-zizi-ink">被動收入超過總支出</b>，跳出老鼠賽跑圈、達成財富自由！
         </p>
 
-        {/* 捏角色：髮型 / 髮色 / 服裝 / 配件（大螢幕劇場會用你的角色演喜怒哀樂） */}
+        {/* 捏臉：髮型 / 髮色 / 配件（服裝之後由你抽到的職業決定） */}
         <div className="w-full">
           <div className="flex items-center justify-center gap-3 mb-3">
             <div className="bg-zizi-gold/15 rounded-2xl px-3 pt-2 pb-1">
-              <Avatar hair={hair} hairColor={hairColor} color={outfit} accessory={accessory} mood="happy" size={64} walking />
+              <Avatar hair={hair} hairColor={hairColor} accessory={accessory} mood="happy" size={64} walking />
             </div>
             <div className="text-left">
               <p className="text-sm font-bold text-zizi-ink">捏一個角色</p>
-              <p className="text-xs text-slate-500">骰骰子時，它會在大螢幕演出喜怒哀樂！</p>
+              <p className="text-xs text-slate-500">骰骰子時它會在大螢幕演出喜怒哀樂！</p>
+              <p className="text-[0.65rem] text-slate-400">服裝會依你抽到的職業變裝 👔</p>
             </div>
           </div>
 
           {/* 髮型 */}
           <p className="text-xs text-slate-500 mb-1">髮型</p>
-          <div className="grid grid-cols-6 gap-1.5">
+          <div className="grid grid-cols-5 gap-1.5">
             {AVATAR_TYPES.map((a) => (
               <button
                 key={a.id}
@@ -149,7 +149,7 @@ function JoinForm({ connected, join, resume, offerProfessions }) {
                 className={'rounded-xl pt-1 flex items-end justify-center overflow-hidden h-12 transition ' + (hair === a.id ? 'bg-zizi-gold/25 ring-2 ring-zizi-gold' : 'bg-white/60 ring-1 ring-slate-200')}
                 title={a.name}
               >
-                <Avatar hair={a.id} hairColor={hairColor} color={outfit} accessory="none" mood="neutral" size={30} />
+                <Avatar hair={a.id} hairColor={hairColor} accessory="none" mood="neutral" size={30} />
               </button>
             ))}
           </div>
@@ -162,20 +162,6 @@ function JoinForm({ connected, join, resume, offerProfessions }) {
                 key={c.id}
                 onClick={() => setHairColor(c.id)}
                 className={'w-6 h-6 rounded-full transition ' + (hairColor === c.id ? 'ring-2 ring-offset-2 ring-zizi-gold scale-110' : 'ring-1 ring-slate-300')}
-                style={{ backgroundColor: c.body }}
-                title={c.name}
-              />
-            ))}
-          </div>
-
-          {/* 服裝色 */}
-          <p className="text-xs text-slate-500 mt-2 mb-1">服裝</p>
-          <div className="flex flex-wrap justify-center gap-1.5">
-            {AVATAR_COLORS.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => setOutfit(c.id)}
-                className={'w-6 h-6 rounded-full transition ' + (outfit === c.id ? 'ring-2 ring-offset-2 ring-zizi-gold scale-110' : 'ring-1 ring-slate-300')}
                 style={{ backgroundColor: c.body }}
                 title={c.name}
               />

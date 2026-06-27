@@ -533,17 +533,16 @@ function professionPair() {
 }
 
 // 角色合法值（與前端 src/components/Avatar.jsx 對應；存前先過濾，避免亂值）
-const HAIR_IDS = ['short', 'bob', 'twin', 'spiky', 'long', 'buzz'];
+// 臉部自訂（服裝改由職業決定，不再存 outfit 色）
+const HAIR_IDS = ['short', 'bob', 'long', 'wavy', 'twin', 'ponytail', 'bun', 'braid', 'spiky', 'buzz'];
 const HAIRCOLOR_IDS = ['brown', 'black', 'blonde', 'ginger', 'silver', 'pink', 'blue', 'mintH'];
-const OUTFIT_IDS = ['gold', 'rose', 'sky', 'mint', 'violet', 'orange', 'crimson', 'ink'];
-const ACC_IDS = ['none', 'glasses', 'bow', 'hat'];
-const DEFAULT_AVATAR = { hair: 'short', hairColor: 'brown', color: 'gold', accessory: 'none' };
+const ACC_IDS = ['none', 'glasses', 'bow', 'flower'];
+const DEFAULT_AVATAR = { hair: 'short', hairColor: 'brown', accessory: 'none' };
 function sanitizeAvatar(a) {
   a = a || {};
   return {
     hair: HAIR_IDS.includes(a.hair) ? a.hair : 'short',
     hairColor: HAIRCOLOR_IDS.includes(a.hairColor) ? a.hairColor : 'brown',
-    color: OUTFIT_IDS.includes(a.color) ? a.color : 'gold',
     accessory: ACC_IDS.includes(a.accessory) ? a.accessory : 'none',
   };
 }
@@ -670,9 +669,10 @@ function publicTeam(team) {
   return {
     id: team.id,
     name: team.name,
+    professionId: team.professionId, // 決定服裝外型
     professionName: team.professionName,
     professionEmoji: team.professionEmoji,
-    avatar: team.avatar || DEFAULT_AVATAR, // 自選角色（舊存檔給預設）
+    avatar: team.avatar || DEFAULT_AVATAR, // 自選臉（服裝由職業決定）
     netWorth: d.netWorth,
     cash: team.cash, // 目前現金
     salary: team.salary, // 本月薪水
