@@ -17,7 +17,7 @@ import { toast } from '../util/toast.js';
 import ConnectionBadge from '../components/ConnectionBadge.jsx';
 import Sparkline from '../components/Sparkline.jsx';
 import Toaster from '../components/Toaster.jsx';
-import Avatar, { AVATAR_TYPES, AVATAR_COLORS } from '../components/Avatar.jsx';
+import Avatar, { AVATAR_TYPES, AVATAR_COLORS, HAIR_COLORS, AVATAR_ACCESSORIES } from '../components/Avatar.jsx';
 
 // 學生端（手機）— v2(M6)：完整損益表 + 資產負債表 + 市場（現代化資產）
 export default function Student() {
@@ -69,9 +69,11 @@ function JoinForm({ connected, join, resume, offerProfessions }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [options, setOptions] = useState(null); // 二選一的兩張職業卡
-  const [avatarType, setAvatarType] = useState(AVATAR_TYPES[0].id);
-  const [avatarColor, setAvatarColor] = useState(AVATAR_COLORS[0].id);
-  const avatar = { type: avatarType, color: avatarColor };
+  const [hair, setHair] = useState(AVATAR_TYPES[0].id);
+  const [hairColor, setHairColor] = useState(HAIR_COLORS[0].id);
+  const [outfit, setOutfit] = useState(AVATAR_COLORS[2].id);
+  const [accessory, setAccessory] = useState(AVATAR_ACCESSORIES[0].id);
+  const avatar = { hair, hairColor, color: outfit, accessory };
 
   // 第一步：送出隊名 → 抽兩張職業卡
   async function handleNext() {
@@ -125,38 +127,72 @@ function JoinForm({ connected, join, resume, offerProfessions }) {
           🎯 目標：讓<b className="text-zizi-ink">被動收入超過總支出</b>，跳出老鼠賽跑圈、達成財富自由！
         </p>
 
-        {/* 選角色 + 顏色（大螢幕劇場會用你的角色演喜怒哀樂） */}
+        {/* 捏角色：髮型 / 髮色 / 服裝 / 配件（大螢幕劇場會用你的角色演喜怒哀樂） */}
         <div className="w-full">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <div className="bg-zizi-gold/15 rounded-2xl p-2">
-              <Avatar type={avatarType} color={avatarColor} mood="happy" size={64} walking />
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <div className="bg-zizi-gold/15 rounded-2xl px-3 pt-2 pb-1">
+              <Avatar hair={hair} hairColor={hairColor} color={outfit} accessory={accessory} mood="happy" size={64} walking />
             </div>
             <div className="text-left">
-              <p className="text-sm font-bold text-zizi-ink">選一個角色</p>
-              <p className="text-xs text-slate-500">骰骰子時，它會在大螢幕演出！</p>
+              <p className="text-sm font-bold text-zizi-ink">捏一個角色</p>
+              <p className="text-xs text-slate-500">骰骰子時，它會在大螢幕演出喜怒哀樂！</p>
             </div>
           </div>
+
+          {/* 髮型 */}
+          <p className="text-xs text-slate-500 mb-1">髮型</p>
           <div className="grid grid-cols-6 gap-1.5">
             {AVATAR_TYPES.map((a) => (
               <button
                 key={a.id}
-                onClick={() => setAvatarType(a.id)}
-                className={'rounded-xl py-1 flex items-center justify-center transition ' + (avatarType === a.id ? 'bg-zizi-gold/25 ring-2 ring-zizi-gold' : 'bg-white/60 ring-1 ring-slate-200')}
+                onClick={() => setHair(a.id)}
+                className={'rounded-xl pt-1 flex items-end justify-center overflow-hidden h-12 transition ' + (hair === a.id ? 'bg-zizi-gold/25 ring-2 ring-zizi-gold' : 'bg-white/60 ring-1 ring-slate-200')}
                 title={a.name}
               >
-                <Avatar type={a.id} color={avatarColor} mood="neutral" size={30} />
+                <Avatar hair={a.id} hairColor={hairColor} color={outfit} accessory="none" mood="neutral" size={30} />
               </button>
             ))}
           </div>
-          <div className="mt-2 flex flex-wrap justify-center gap-1.5">
-            {AVATAR_COLORS.map((c) => (
+
+          {/* 髮色 */}
+          <p className="text-xs text-slate-500 mt-2 mb-1">髮色</p>
+          <div className="flex flex-wrap justify-center gap-1.5">
+            {HAIR_COLORS.map((c) => (
               <button
                 key={c.id}
-                onClick={() => setAvatarColor(c.id)}
-                className={'w-6 h-6 rounded-full transition ' + (avatarColor === c.id ? 'ring-2 ring-offset-2 ring-zizi-gold scale-110' : 'ring-1 ring-slate-300')}
+                onClick={() => setHairColor(c.id)}
+                className={'w-6 h-6 rounded-full transition ' + (hairColor === c.id ? 'ring-2 ring-offset-2 ring-zizi-gold scale-110' : 'ring-1 ring-slate-300')}
                 style={{ backgroundColor: c.body }}
                 title={c.name}
               />
+            ))}
+          </div>
+
+          {/* 服裝色 */}
+          <p className="text-xs text-slate-500 mt-2 mb-1">服裝</p>
+          <div className="flex flex-wrap justify-center gap-1.5">
+            {AVATAR_COLORS.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setOutfit(c.id)}
+                className={'w-6 h-6 rounded-full transition ' + (outfit === c.id ? 'ring-2 ring-offset-2 ring-zizi-gold scale-110' : 'ring-1 ring-slate-300')}
+                style={{ backgroundColor: c.body }}
+                title={c.name}
+              />
+            ))}
+          </div>
+
+          {/* 配件 */}
+          <p className="text-xs text-slate-500 mt-2 mb-1">配件</p>
+          <div className="grid grid-cols-4 gap-1.5">
+            {AVATAR_ACCESSORIES.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => setAccessory(a.id)}
+                className={'rounded-lg py-1 text-xs font-medium transition ' + (accessory === a.id ? 'bg-zizi-gold/25 ring-2 ring-zizi-gold text-zizi-ink' : 'bg-white/60 ring-1 ring-slate-200 text-slate-500')}
+              >
+                {a.name}
+              </button>
             ))}
           </div>
         </div>

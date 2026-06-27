@@ -652,7 +652,7 @@ function LobbyView({ studentUrl, teams }) {
             {teams.map((t) => (
               <div key={t.id} className="bg-white/10 rounded-xl px-3 py-2 flex items-center gap-2">
                 {t.avatar
-                  ? <Avatar type={t.avatar.type} color={t.avatar.color} size={34} mood="happy" walking />
+                  ? <Avatar {...t.avatar} size={34} mood="happy" walking />
                   : <span className="text-2xl">{t.professionEmoji}</span>}
                 <span className="truncate">
                   <span className="block font-semibold leading-tight">{t.name}</span>
@@ -826,7 +826,7 @@ function Board({ board, teams, round, timeLeft, phase, currentTurnId, movingId }
             )}
             <div className={'relative rounded-full w-11 h-11 flex items-center justify-center text-2xl shadow-xl ring-2 ' + (t.bankrupt ? 'bg-slate-600 ring-slate-400' : t.free ? 'bg-green-400 ring-white' : isCurrent ? 'bg-zizi-gold ring-white' : 'bg-white ring-zizi-gold')}>
               {t.avatar ? (
-                <Avatar type={t.avatar.type} color={t.avatar.color} size={34} mood={t.bankrupt ? 'faint' : moving ? 'excited' : isCurrent ? 'happy' : 'neutral'} />
+                <Avatar {...t.avatar} size={34} mood={t.bankrupt ? 'faint' : moving ? 'excited' : isCurrent ? 'happy' : 'neutral'} />
               ) : (
                 t.bankrupt ? '💀' : t.professionEmoji
               )}
@@ -870,7 +870,7 @@ function TeamsOverview({ ranked, ended, currentTurnId }) {
               <div className="flex items-center gap-2">
                 <span className="w-6 text-center font-bold">{t.bankrupt ? '💀' : medal[i] || i + 1}</span>
                 {t.avatar
-                  ? <Avatar type={t.avatar.type} color={t.avatar.color} size={32} mood={t.bankrupt ? 'faint' : t.free ? 'happy' : 'neutral'} />
+                  ? <Avatar {...t.avatar} size={32} mood={t.bankrupt ? 'faint' : t.free ? 'happy' : 'neutral'} />
                   : <span className={'text-2xl ' + (t.bankrupt ? 'grayscale' : '')}>{t.professionEmoji}</span>}
                 <div className="flex-1 min-w-0">
                   <p className={'font-bold truncate leading-tight ' + (t.bankrupt ? 'line-through text-white/55' : '')}>

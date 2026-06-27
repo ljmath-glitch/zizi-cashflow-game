@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import Student from './pages/Student.jsx';
 import Screen from './pages/Screen.jsx';
 import Teacher from './pages/Teacher.jsx';
+import AvatarGallery from './pages/AvatarGallery.jsx';
 import RoomGuard from './components/RoomGuard.jsx';
 
 // 首頁：老師建立房間 → 拿到房號與三個連結；或輸入房號加入別人的房間
@@ -111,6 +112,7 @@ export default function App() {
       <Route path="/student" element={<RoomGuard><Student /></RoomGuard>} />
       <Route path="/screen" element={<RoomGuard><Screen /></RoomGuard>} />
       <Route path="/teacher" element={<RoomGuard><Teacher /></RoomGuard>} />
+      <Route path="/avatars" element={<AvatarGallery />} />
     </Routes>
   );
 }
