@@ -51,10 +51,10 @@ export function useMyTeam() {
     });
   }, []);
 
-  // 加入遊戲（建立組別，使用選定的職業）
-  const join = useCallback((name, professionId) => {
+  // 加入遊戲（建立組別，使用選定的職業 + 自選角色）
+  const join = useCallback((name, professionId, avatar) => {
     return new Promise((resolve) => {
-      socket.emit('student:join', { name, professionId }, (res) => {
+      socket.emit('student:join', { name, professionId, avatar }, (res) => {
         if (res?.ok) {
           localStorage.setItem(STORE_KEY, res.team.id);
           setTeam(res.team);

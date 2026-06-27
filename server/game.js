@@ -532,8 +532,17 @@ function professionPair() {
   return [professionPublic(a), professionPublic(b)];
 }
 
-// 學生加入：建立組別。professionId 有給且有效就用，否則隨機
-function createTeam(name, professionId) {
+// 角色頭像合法值（與前端 src/components/Avatar.jsx 對應；存前先過濾，避免亂值）
+const AVATAR_TYPE_IDS = ['mouse', 'cat', 'bear', 'bunny', 'frog', 'robot'];
+const AVATAR_COLOR_IDS = ['gold', 'rose', 'sky', 'mint', 'violet', 'orange', 'slate', 'cream'];
+function sanitizeAvatar(a) {
+  const type = a && AVATAR_TYPE_IDS.includes(a.type) ? a.type : 'mouse';
+  const color = a && AVATAR_COLOR_IDS.includes(a.color) ? a.color : 'gold';
+  return { type, color };
+}
+
+// 學生加入：建立組別。professionId 有給且有效就用，否則隨機。avatar 為自選角色。
+function createTeam(name, professionId, avatar) {
   const prof = (professionId && getProfession(professionId)) || randomProfession();
   teamSeq += 1;
   // teamId 同時作為「重連代號」（如 T3-4829），學生斷線後可用它還原
@@ -545,6 +554,7 @@ function createTeam(name, professionId) {
     professionName: prof.name,
     professionEmoji: prof.emoji,
     professionPerk: prof.perk,
+    avatar: sanitizeAvatar(avatar), // 自選角色 { type, color }
     variableIncome: prof.variableIncome || null, // 浮動收入範圍（YouTuber）
   };
   resetTeamFinances(team);
@@ -655,6 +665,7 @@ function publicTeam(team) {
     name: team.name,
     professionName: team.professionName,
     professionEmoji: team.professionEmoji,
+    avatar: team.avatar || { type: 'mouse', color: 'gold' }, // 自選角色（舊存檔給預設）
     netWorth: d.netWorth,
     cash: team.cash, // 目前現金
     salary: team.salary, // 本月薪水

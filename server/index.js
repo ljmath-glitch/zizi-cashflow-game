@@ -115,10 +115,10 @@ io.on('connection', (socket) => {
     const r = roomOf(socket);
     ack?.(r ? { ok: true, options: r.professionPair() } : { ok: false });
   });
-  socket.on('student:join', ({ name, professionId } = {}, ack) => {
+  socket.on('student:join', ({ name, professionId, avatar } = {}, ack) => {
     const r = roomOf(socket);
     if (!r) return ack?.({ ok: false, reason: '房間不存在' });
-    const team = r.createTeam(name, professionId);
+    const team = r.createTeam(name, professionId, avatar);
     socket.join(socket.data.code + '|team:' + team.id);
     const payload = r.getTeamPayload(team.id);
     socket.emit('student:team', payload);

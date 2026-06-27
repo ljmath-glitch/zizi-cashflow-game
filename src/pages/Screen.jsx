@@ -9,6 +9,7 @@ import { formatTime, formatMoney } from '../util/format.js';
 import { SQUARE_META, COLS, ROWS, cellOf } from '../util/board.js';
 import ConnectionBadge from '../components/ConnectionBadge.jsx';
 import Sparkline from '../components/Sparkline.jsx';
+import Avatar from '../components/Avatar.jsx';
 
 // 難度標示（與 server/game.js 的 DIFFICULTY 對應）
 const DIFF_META = {
@@ -650,7 +651,9 @@ function LobbyView({ studentUrl, teams }) {
           <div className="grid grid-cols-2 gap-2">
             {teams.map((t) => (
               <div key={t.id} className="bg-white/10 rounded-xl px-3 py-2 flex items-center gap-2">
-                <span className="text-2xl">{t.professionEmoji}</span>
+                {t.avatar
+                  ? <Avatar type={t.avatar.type} color={t.avatar.color} size={34} mood="happy" walking />
+                  : <span className="text-2xl">{t.professionEmoji}</span>}
                 <span className="truncate">
                   <span className="block font-semibold leading-tight">{t.name}</span>
                   <span className="block text-xs text-white/60">{t.professionName}</span>
@@ -821,8 +824,12 @@ function Board({ board, teams, round, timeLeft, phase, currentTurnId, movingId }
                 {t.name}
               </span>
             )}
-            <div className={'relative rounded-full w-10 h-10 flex items-center justify-center text-2xl shadow-xl ring-2 ' + (t.bankrupt ? 'bg-slate-600 ring-slate-400' : t.free ? 'bg-green-400 ring-white' : isCurrent ? 'bg-zizi-gold ring-white' : 'bg-white ring-zizi-gold')}>
-              {t.bankrupt ? '💀' : t.professionEmoji}
+            <div className={'relative rounded-full w-11 h-11 flex items-center justify-center text-2xl shadow-xl ring-2 ' + (t.bankrupt ? 'bg-slate-600 ring-slate-400' : t.free ? 'bg-green-400 ring-white' : isCurrent ? 'bg-zizi-gold ring-white' : 'bg-white ring-zizi-gold')}>
+              {t.avatar ? (
+                <Avatar type={t.avatar.type} color={t.avatar.color} size={34} mood={t.bankrupt ? 'faint' : moving ? 'excited' : isCurrent ? 'happy' : 'neutral'} />
+              ) : (
+                t.bankrupt ? '💀' : t.professionEmoji
+              )}
             </div>
           </div>
         );
@@ -862,7 +869,9 @@ function TeamsOverview({ ranked, ended, currentTurnId }) {
               {/* 第一行：名次 / 職業 / 組名 / 淨資產 */}
               <div className="flex items-center gap-2">
                 <span className="w-6 text-center font-bold">{t.bankrupt ? '💀' : medal[i] || i + 1}</span>
-                <span className={'text-2xl ' + (t.bankrupt ? 'grayscale' : '')}>{t.professionEmoji}</span>
+                {t.avatar
+                  ? <Avatar type={t.avatar.type} color={t.avatar.color} size={32} mood={t.bankrupt ? 'faint' : t.free ? 'happy' : 'neutral'} />
+                  : <span className={'text-2xl ' + (t.bankrupt ? 'grayscale' : '')}>{t.professionEmoji}</span>}
                 <div className="flex-1 min-w-0">
                   <p className={'font-bold truncate leading-tight ' + (t.bankrupt ? 'line-through text-white/55' : '')}>
                     {t.name}

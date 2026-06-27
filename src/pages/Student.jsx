@@ -17,6 +17,7 @@ import { toast } from '../util/toast.js';
 import ConnectionBadge from '../components/ConnectionBadge.jsx';
 import Sparkline from '../components/Sparkline.jsx';
 import Toaster from '../components/Toaster.jsx';
+import Avatar, { AVATAR_TYPES, AVATAR_COLORS } from '../components/Avatar.jsx';
 
 // 學生端（手機）— v2(M6)：完整損益表 + 資產負債表 + 市場（現代化資產）
 export default function Student() {
@@ -68,6 +69,9 @@ function JoinForm({ connected, join, resume, offerProfessions }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const [options, setOptions] = useState(null); // 二選一的兩張職業卡
+  const [avatarType, setAvatarType] = useState(AVATAR_TYPES[0].id);
+  const [avatarColor, setAvatarColor] = useState(AVATAR_COLORS[0].id);
+  const avatar = { type: avatarType, color: avatarColor };
 
   // 第一步：送出隊名 → 抽兩張職業卡
   async function handleNext() {
@@ -78,11 +82,11 @@ function JoinForm({ connected, join, resume, offerProfessions }) {
     setBusy(false);
   }
 
-  // 第二步：選定職業 → 正式加入
+  // 第二步：選定職業 → 正式加入（帶上自選角色）
   async function pick(professionId) {
     if (busy) return;
     setBusy(true);
-    await join(teamName, professionId);
+    await join(teamName, professionId, avatar);
     setBusy(false);
   }
 
@@ -120,6 +124,43 @@ function JoinForm({ connected, join, resume, offerProfessions }) {
         <p className="text-center text-xs text-slate-500 -mt-3">
           🎯 目標：讓<b className="text-zizi-ink">被動收入超過總支出</b>，跳出老鼠賽跑圈、達成財富自由！
         </p>
+
+        {/* 選角色 + 顏色（大螢幕劇場會用你的角色演喜怒哀樂） */}
+        <div className="w-full">
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <div className="bg-zizi-gold/15 rounded-2xl p-2">
+              <Avatar type={avatarType} color={avatarColor} mood="happy" size={64} walking />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-bold text-zizi-ink">選一個角色</p>
+              <p className="text-xs text-slate-500">骰骰子時，它會在大螢幕演出！</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-6 gap-1.5">
+            {AVATAR_TYPES.map((a) => (
+              <button
+                key={a.id}
+                onClick={() => setAvatarType(a.id)}
+                className={'rounded-xl py-1 flex items-center justify-center transition ' + (avatarType === a.id ? 'bg-zizi-gold/25 ring-2 ring-zizi-gold' : 'bg-white/60 ring-1 ring-slate-200')}
+                title={a.name}
+              >
+                <Avatar type={a.id} color={avatarColor} mood="neutral" size={30} />
+              </button>
+            ))}
+          </div>
+          <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+            {AVATAR_COLORS.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setAvatarColor(c.id)}
+                className={'w-6 h-6 rounded-full transition ' + (avatarColor === c.id ? 'ring-2 ring-offset-2 ring-zizi-gold scale-110' : 'ring-1 ring-slate-300')}
+                style={{ backgroundColor: c.body }}
+                title={c.name}
+              />
+            ))}
+          </div>
+        </div>
+
         <div className="w-full space-y-3">
           <label className="block">
             <span className="text-sm text-slate-600">隊名</span>
