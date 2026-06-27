@@ -10,6 +10,7 @@ import { SQUARE_META, COLS, ROWS, cellOf } from '../util/board.js';
 import ConnectionBadge from '../components/ConnectionBadge.jsx';
 import Sparkline from '../components/Sparkline.jsx';
 import Avatar from '../components/Avatar.jsx';
+import { SFX, playEventSound, setSoundEnabled, resumeAudio } from '../util/sound.js';
 
 // 難度標示（與 server/game.js 的 DIFFICULTY 對應）
 const DIFF_META = {
@@ -33,6 +34,14 @@ export default function Screen() {
   const [deal, setDeal] = useState(null); // 買賣直播（機會卡選擇→思考→決定）
   const [dice, setDice] = useState(null); // 擲骰結果橫幅
   const [movingId, setMovingId] = useState(null); // 正在走動的代幣（套用跳動動畫）
+  const [soundOn, setSoundOn] = useState(true); // 大螢幕音效開關
+
+  // 瀏覽器自動播放政策：第一次點畫面就解鎖音效
+  useEffect(() => {
+    const unlock = () => resumeAudio();
+    window.addEventListener('pointerdown', unlock, { once: true });
+    return () => window.removeEventListener('pointerdown', unlock);
+  }, []);
 
   useEffect(() => {
     fetch('/api/server-info').then((r) => r.json()).then(setServerInfo).catch(() => {});
@@ -52,7 +61,10 @@ export default function Screen() {
     function onDeal(payload) {
       clearTimeout(dealTimer);
       setDeal(payload || null);
-      if (payload?.stage === 'decided') dealTimer = setTimeout(() => setDeal(null), 8000);
+      if (payload?.stage === 'decided') {
+        if (payload.accept) SFX.cha();
+        dealTimer = setTimeout(() => setDeal(null), 8000);
+      }
     }
     // 擲骰橫幅：顯示骰面與停留格，幾秒後淡出；同時讓該組代幣跳一段「走路」動畫
     function onMove(payload) {
@@ -62,9 +74,13 @@ export default function Screen() {
       setMovingId(payload.teamId);
       clearTimeout(hopTimer);
       hopTimer = setTimeout(() => setMovingId(null), 900);
+      // 音效：先搖骰聲，角色登場時再放事件音效
+      SFX.roll();
+      setTimeout(() => playEventSound(payload.square, payload.paydays), 300);
     }
     function onFreed(payload) {
       setCelebrate(payload);
+      SFX.freed();
       clearTimeout(freedTimer);
       freedTimer = setTimeout(() => setCelebrate(null), 7000);
     }
@@ -76,6 +92,7 @@ export default function Screen() {
     }
     function onBankrupt(payload) {
       setBankrupt(payload);
+      SFX.bankrupt();
       clearTimeout(bankruptTimer);
       bankruptTimer = setTimeout(() => setBankrupt(null), 6000);
     }
@@ -151,6 +168,13 @@ export default function Screen() {
               {phase === 'paused' && <span className="ml-2 text-base text-zizi-gold">(暫停)</span>}
             </span>
           )}
+          <button
+            onClick={() => { const v = !soundOn; setSoundOn(v); setSoundEnabled(v); resumeAudio(); }}
+            className="text-xl bg-white/10 hover:bg-white/20 ring-1 ring-white/20 rounded-full w-9 h-9 flex items-center justify-center"
+            title={soundOn ? '音效開（點一下靜音）' : '音效關（點一下開啟）'}
+          >
+            {soundOn ? '🔊' : '🔇'}
+          </button>
           <ConnectionBadge connected={connected} />
         </div>
       </header>
