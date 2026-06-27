@@ -174,7 +174,7 @@ export default function Screen() {
         )}
       </main>
 
-      {dice && phase === 'running' && <DiceBanner payload={dice} />}
+      {dice && phase === 'running' && <DiceBanner payload={dice} team={teams.find((t) => t.id === dice.teamId)} />}
       {game?.spotlight && <Spotlight team={game.spotlight} />}
       {game?.showTutorial && <Tutorial />}
       {report && !game?.showTutorial && <MonthReport report={report} onClose={() => setReport(null)} />}
@@ -182,8 +182,8 @@ export default function Screen() {
         <DealLiveOverlay deal={deal} onClose={() => setDeal(null)} />
       )}
       {drawn && !deal && <CardOverlay payload={drawn} onClose={() => setDrawn(null)} />}
-      {celebrate && <Celebration name={celebrate.name} onClose={() => setCelebrate(null)} />}
-      {bankrupt && <BankruptOverlay payload={bankrupt} onClose={() => setBankrupt(null)} />}
+      {celebrate && <Celebration payload={celebrate} team={teams.find((t) => t.id === celebrate.teamId)} onClose={() => setCelebrate(null)} />}
+      {bankrupt && <BankruptOverlay payload={bankrupt} team={teams.find((t) => t.id === bankrupt.teamId)} onClose={() => setBankrupt(null)} />}
     </div>
   );
 }
@@ -386,8 +386,9 @@ function MonthReport({ report, onClose }) {
   );
 }
 
-// 跳出老鼠賽跑圈大慶祝（煙火 + 彩帶 + 隊名）
-function Celebration({ name, onClose }) {
+// 跳出老鼠賽跑圈大慶祝（煙火 + 彩帶 + 角色歡呼）
+function Celebration({ payload, team, onClose }) {
+  const name = payload?.name;
   const confetti = Array.from({ length: 40 });
   const emojis = ['🎉', '✨', '🏆', '💰', '🎊', '⭐'];
   return (
@@ -405,9 +406,11 @@ function Celebration({ name, onClose }) {
           {emojis[i % emojis.length]}
         </span>
       ))}
-      <div className="text-center card-pop relative z-10">
-        <div className="text-8xl mb-4">🏆</div>
-        <p className="text-3xl text-white/90">恭喜</p>
+      <div className="text-center card-pop relative z-10 flex flex-col items-center">
+        {team?.avatar
+          ? <Avatar {...team.avatar} profession={team.professionId} mood="excited" size={150} />
+          : <div className="text-8xl mb-4">🏆</div>}
+        <p className="text-3xl text-white/90 mt-2">恭喜</p>
         <p className="text-6xl font-black text-zizi-gold my-3 drop-shadow-lg">{name}</p>
         <p className="text-4xl font-bold text-white">跳出老鼠賽跑圈！</p>
         <p className="text-2xl text-white/80 mt-3">達成財富自由 🎉</p>
@@ -416,12 +419,14 @@ function Celebration({ name, onClose }) {
   );
 }
 
-// 破產淘汰動畫
-function BankruptOverlay({ payload, onClose }) {
+// 破產淘汰動畫（角色暈倒）
+function BankruptOverlay({ payload, team, onClose }) {
   return (
     <div onClick={onClose} className="fixed inset-0 z-50 flex items-center justify-center bg-zizi-ink/85 backdrop-blur-sm cursor-pointer">
-      <div className="text-center card-pop">
-        <div className="text-8xl mb-4">💀</div>
+      <div className="text-center card-pop flex flex-col items-center">
+        {team?.avatar
+          ? <Avatar {...team.avatar} profession={team.professionId} mood="faint" size={140} />
+          : <div className="text-8xl mb-4">💀</div>}
         <p className="text-6xl font-black text-red-500 my-3 drop-shadow-lg">
           {payload.professionEmoji} {payload.name}
         </p>
@@ -432,26 +437,55 @@ function BankruptOverlay({ payload, onClose }) {
   );
 }
 
-// 擲骰結果橫幅（頂部滑入：骰面 + 誰擲的 + 停在哪格）
+// 事件 → 角色情緒 + 標題 + 特效（大螢幕劇場）
+function reactionTheme(square, paydays) {
+  switch (square) {
+    case 'payday': return { mood: 'happy', emoji: '💰', title: '發薪日', sub: `領了 ${paydays || 1} 次薪水！`, fx: 'coins' };
+    case 'opportunity': return { mood: 'excited', emoji: '🎲', title: '機會', sub: '投資機會來了！', fx: 'spark' };
+    case 'market': return { mood: 'surprised', emoji: '📈', title: '市場', sub: '行情變動，盯緊一點！', fx: 'spark' };
+    case 'doodad': return { mood: 'sad', emoji: '💸', title: '額外支出', sub: '臨時花費，嗚嗚…', fx: 'none' };
+    case 'charity': return { mood: 'love', emoji: '❤️', title: '慈善', sub: '行善積德，好人有好報！', fx: 'none' };
+    case 'baby': return { mood: 'surprised', emoji: '👶', title: '生小孩', sub: '家裡多一張嘴！', fx: 'spark' };
+    case 'downsized': return { mood: 'angry', emoji: '💼', title: '失業', sub: '被裁員了…下回合輪空', fx: 'none' };
+    default: return { mood: paydays > 0 ? 'happy' : 'neutral', emoji: '🎲', title: '前進', sub: paydays > 0 ? `領了 ${paydays} 次薪水！` : '', fx: paydays > 0 ? 'coins' : 'none' };
+  }
+}
+
+// 灑金幣 / 閃亮特效
+function Coins() {
+  return Array.from({ length: 8 }).map((_, i) => (
+    <span key={i} className="coin-fall absolute text-xl" style={{ left: `${5 + i * 11}%`, animationDelay: `${(i % 4) * 0.22}s` }}>🪙</span>
+  ));
+}
+function Sparks() {
+  const pos = [[6, 18], [82, 12], [14, 74], [88, 70], [48, 4]];
+  return pos.map(([l, t], i) => (
+    <span key={i} className="spark-pop absolute text-lg" style={{ left: `${l}%`, top: `${t}%`, animationDelay: `${i * 0.18}s` }}>✨</span>
+  ));
+}
+
+// 擲骰結果橫幅（頂部滑入）：骰面 + 玩家角色「依事件演喜怒哀樂」+ 特效
 const DICE_FACES = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
-function DiceBanner({ payload }) {
-  const { rolls = [], steps, teamName, professionEmoji, squareEmoji, squareLabel, paydays } = payload;
+function DiceBanner({ payload, team }) {
+  const { rolls = [], steps, teamName, professionEmoji, squareEmoji, squareLabel, square, paydays } = payload;
+  const th = reactionTheme(square, paydays);
   return (
-    <div className="fixed top-16 inset-x-0 z-30 flex justify-center pointer-events-none">
-      <div className="toast-pop glass-dark rounded-2xl px-6 py-3 flex items-center gap-4 shadow-2xl">
-        <span className="dice-shake text-5xl leading-none">
-          {rolls.map((r, i) => (
-            <span key={i}>{DICE_FACES[r] || '🎲'}</span>
-          ))}
+    <div className="fixed top-14 inset-x-0 z-30 flex justify-center pointer-events-none">
+      <div className="toast-pop glass-dark rounded-3xl px-6 py-3 flex items-center gap-4 shadow-2xl relative overflow-visible">
+        {th.fx === 'coins' && <Coins />}
+        {th.fx === 'spark' && <Sparks />}
+        <span className="dice-shake text-4xl leading-none">
+          {rolls.map((r, i) => (<span key={i}>{DICE_FACES[r] || '🎲'}</span>))}
         </span>
+        <div className="relative w-[64px] flex justify-center shrink-0">
+          {team?.avatar
+            ? <Avatar {...team.avatar} profession={team.professionId} mood={th.mood} size={60} />
+            : <span className="text-5xl">{professionEmoji}</span>}
+        </div>
         <div className="leading-tight">
-          <p className="font-bold text-xl">
-            {professionEmoji} {teamName} 擲出 <span className="text-zizi-gold text-2xl">{steps}</span>
-          </p>
-          <p className="text-white/75 text-sm">
-            停在 {squareEmoji} {squareLabel}
-            {paydays > 0 && <span className="ml-2 text-green-300 font-semibold">💰 經過發薪日 ×{paydays}</span>}
-          </p>
+          <p className="text-sm text-white/65">{professionEmoji} {teamName} 擲出 <span className="text-zizi-gold font-bold text-base">{steps}</span></p>
+          <p className="text-2xl font-black text-zizi-gold leading-tight">{th.emoji} {th.title}</p>
+          <p className="text-white/85 text-sm">{th.sub || `停在 ${squareEmoji} ${squareLabel}`}</p>
         </div>
       </div>
     </div>

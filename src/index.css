@@ -321,6 +321,20 @@ button:active:not(:disabled) {
   .av-pop, .av-bob, .av-faint, .av-tear, .av-heart, .av-anger { animation: none !important; }
 }
 
+/* 大螢幕事件劇場：灑金幣 / 閃亮特效 */
+.coin-fall { top: -8px; animation: coin-fall 1.4s linear infinite; }
+@keyframes coin-fall {
+  0% { transform: translateY(-26px) rotate(0deg); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateY(74px) rotate(220deg); opacity: 0; }
+}
+.spark-pop { animation: spark-pop 1s ease-in-out infinite; }
+@keyframes spark-pop {
+  0% { transform: scale(0); opacity: 0; }
+  40% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.6); opacity: 0; }
+}
+
 /* 學生端擲骰按鈕：搖骰中的晃動 */
 @keyframes roll-wiggle {
   0%, 100% { transform: rotate(0deg); }
