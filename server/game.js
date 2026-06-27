@@ -1021,6 +1021,7 @@ function announceCard(deck, card, team) {
     io.to(code).emit('card:drawn', {
       deck,
       card,
+      teamId: team.id,
       teamName: team.name,
       professionName: team.professionName,
       professionEmoji: team.professionEmoji,

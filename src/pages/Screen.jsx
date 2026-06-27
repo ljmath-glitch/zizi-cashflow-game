@@ -198,14 +198,17 @@ export default function Screen() {
         )}
       </main>
 
-      {dice && phase === 'running' && <DiceBanner payload={dice} team={teams.find((t) => t.id === dice.teamId)} />}
+      {/* 抽卡事件(機會/市場/額外支出)的角色反應改由全螢幕卡片場景呈現，這裡的頂部橫幅只給非抽卡事件 */}
+      {dice && phase === 'running' && !['opportunity', 'market', 'doodad'].includes(dice.square) && (
+        <DiceBanner payload={dice} team={teams.find((t) => t.id === dice.teamId)} />
+      )}
       {game?.spotlight && <Spotlight team={game.spotlight} />}
       {game?.showTutorial && <Tutorial />}
       {report && !game?.showTutorial && <MonthReport report={report} onClose={() => setReport(null)} />}
       {deal && !game?.showTutorial && !game?.spotlight && (
-        <DealLiveOverlay deal={deal} onClose={() => setDeal(null)} />
+        <DealLiveOverlay deal={deal} teamFull={teams.find((t) => t.id === deal.team?.teamId)} onClose={() => setDeal(null)} />
       )}
-      {drawn && !deal && <CardOverlay payload={drawn} onClose={() => setDrawn(null)} />}
+      {drawn && !deal && <CardOverlay payload={drawn} teamFull={teams.find((t) => t.id === drawn.teamId)} onClose={() => setDrawn(null)} />}
       {celebrate && <Celebration payload={celebrate} team={teams.find((t) => t.id === celebrate.teamId)} onClose={() => setCelebrate(null)} />}
       {bankrupt && <BankruptOverlay payload={bankrupt} team={teams.find((t) => t.id === bankrupt.teamId)} onClose={() => setBankrupt(null)} />}
     </div>
@@ -361,14 +364,31 @@ function Tutorial() {
   );
 }
 
-// 月初彈窗：回顧上個月 + 公布本月突發事件
+// 數字從 0 跑上去的動畫
+function CountUp({ value, duration = 700 }) {
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    let raf, start;
+    const step = (ts) => {
+      if (start == null) start = ts;
+      const p = Math.min(1, (ts - start) / duration);
+      setV(Math.round(value * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value, duration]);
+  return <>{v}</>;
+}
+
+// 月初彈窗：回顧上個月 + 公布本月突發事件（含動畫）
 function MonthReport({ report, onClose }) {
   const { round, prevEvent, thisEvent, moves, scale, rumor } = report;
-  const moveRow = (label, emoji, pct) => (
-    <div className="flex items-center justify-between px-4 py-1.5">
+  const moveRow = (label, emoji, pct, i) => (
+    <div className="flex items-center justify-between px-4 py-1.5 fade-in" style={{ animationDelay: `${0.15 + i * 0.12}s`, animationFillMode: 'backwards' }}>
       <span className="text-white/70">{emoji} {label}</span>
       <span className={'font-bold tabular-nums ' + (pct >= 0 ? 'text-green-400' : 'text-red-400')}>
-        {pct >= 0 ? '▲' : '▼'}{Math.abs(pct)}%
+        <span className="report-arrow">{pct >= 0 ? '▲' : '▼'}</span><CountUp value={Math.abs(pct)} />%
       </span>
     </div>
   );
@@ -383,21 +403,27 @@ function MonthReport({ report, onClose }) {
             <p className="text-sm text-white/50 mb-1">上回合行情回顧</p>
             <p className="text-lg font-bold">{prevEvent.emoji} {prevEvent.title}</p>
             <div className="mt-2 divide-y divide-white/10 text-sm">
-              {moveRow('股票 / ETF', '📈', moves.stock)}
-              {moveRow('加密貨幣', '🪙', moves.crypto)}
-              {moves.commodity != null && moveRow('原物料', '🥇', moves.commodity)}
-              {moveRow('房地產', '🏠', moves.realestate)}
+              {moveRow('股票 / ETF', '📈', moves.stock, 0)}
+              {moveRow('加密貨幣', '🪙', moves.crypto, 1)}
+              {moves.commodity != null && moveRow('原物料', '🥇', moves.commodity, 2)}
+              {moveRow('房地產', '🏠', moves.realestate, 3)}
             </div>
           </div>
         ) : (
           <p className="mt-3 text-center text-white/60">遊戲開始！祝大家投資順利 🍀</p>
         )}
 
-        <div className={'mt-4 rounded-2xl p-4 text-center ' + (scale === 'big' ? 'bg-zizi-gold/20 ring-2 ring-zizi-gold' : 'bg-white/5')}>
-          <p className="text-sm text-zizi-gold mb-1">{scale === 'big' ? '🔥 本回合大事件' : '📢 本回合市場'}</p>
-          <p className="text-3xl mb-1">{thisEvent.emoji}</p>
-          <p className="text-2xl font-black text-zizi-gold">{thisEvent.title}</p>
-          <p className="text-white/70 mt-1">{thisEvent.desc}</p>
+        <div className={'mt-4 rounded-2xl p-4 text-center relative overflow-hidden ' + (scale === 'big' ? 'bg-zizi-gold/20 ring-2 ring-zizi-gold' : 'bg-white/5')}>
+          {/* 大事件：飄出同款 emoji 分身 */}
+          {scale === 'big' && Array.from({ length: 6 }).map((_, i) => (
+            <span key={i} className="report-drift absolute text-2xl opacity-50" style={{ left: `${8 + i * 15}%`, animationDelay: `${i * 0.45}s` }}>{thisEvent.emoji}</span>
+          ))}
+          <p className="text-sm text-zizi-gold mb-1 relative">{scale === 'big' ? '🔥 本回合大事件' : '📢 本回合市場'}</p>
+          <div className="report-float relative inline-block">
+            <span className="report-emoji text-6xl inline-block drop-shadow-lg">{thisEvent.emoji}</span>
+          </div>
+          <p className="text-2xl font-black text-zizi-gold relative">{thisEvent.title}</p>
+          <p className="text-white/70 mt-1 relative">{thisEvent.desc}</p>
         </div>
 
         {rumor && (
@@ -518,7 +544,22 @@ function DiceBanner({ payload, team }) {
 
 // 買賣直播：玩家停在機會格後，全班一起看他「選牌庫 → 看卡思考 → 做決定」
 // stage: choosing（選小生意/大買賣）→ deciding（看完整卡面思考）→ decided（蓋章公布結果）
-function DealLiveOverlay({ deal, onClose }) {
+// 全螢幕事件「角色面板」：大角色依事件演表情 + 事件標題 + 組名（與卡片並排結合）
+function CharacterPanel({ team, professionEmoji, name, mood, badge, title, sub }) {
+  return (
+    <div className="flex flex-col items-center text-center w-60 shrink-0">
+      {team?.avatar
+        ? <Avatar {...team.avatar} profession={team.professionId} mood={mood} size={168} />
+        : <span className="text-8xl">{professionEmoji}</span>}
+      <p className="mt-3 text-3xl font-black text-zizi-gold drop-shadow leading-tight">{badge} {title}</p>
+      {sub && <p className="text-white/85 text-lg mt-1">{sub}</p>}
+      <p className="text-white/55 text-sm mt-2">{professionEmoji} {name}</p>
+    </div>
+  );
+}
+
+// 買賣直播（機會）：左邊角色演出 + 右邊卡片，全螢幕結合為一體
+function DealLiveOverlay({ deal, teamFull, onClose }) {
   const { stage, deck, card, team, offer, accept, loanAmount } = deal;
   const DECK_META = {
     small: { label: '機會 ‧ 小生意', color: 'bg-emerald-500' },
@@ -532,12 +573,11 @@ function DealLiveOverlay({ deal, onClose }) {
   // 還在選小生意/大買賣
   if (stage === 'choosing') {
     return (
-      <div onClick={onClose} className="fixed inset-0 z-40 flex items-center justify-center bg-zizi-ink/55 backdrop-blur-sm cursor-pointer">
-        <div className="card-pop glass-dark rounded-3xl p-8 w-[30rem] max-w-[92vw] text-center text-white shadow-2xl">
-          <p className="text-lg text-white/70">🎲 停在機會格</p>
-          <p className="text-3xl font-black text-zizi-gold mt-1">{team.professionEmoji} {team.teamName}</p>
-          <p className="text-white/60 text-sm">{team.professionName} ‧ 現金 {formatMoney(team.cash)}</p>
-          <div className="mt-5 grid grid-cols-2 gap-4">
+      <div onClick={onClose} className="fixed inset-0 z-40 flex items-center justify-center gap-8 px-6 bg-zizi-ink/60 backdrop-blur-sm cursor-pointer">
+        <CharacterPanel team={teamFull} professionEmoji={team.professionEmoji} name={team.teamName} mood="excited" badge="🎲" title="機會" sub="抽哪一疊好呢？" />
+        <div className="card-pop glass-dark rounded-3xl p-8 w-[30rem] max-w-[46vw] text-center text-white shadow-2xl">
+          <p className="text-white/60 text-sm">現金 {formatMoney(team.cash)}</p>
+          <div className="mt-4 grid grid-cols-2 gap-4">
             <div className="rounded-2xl bg-emerald-500/20 ring-1 ring-emerald-400/50 py-5 animate-pulse">
               <p className="text-3xl">🟢</p>
               <p className="font-bold text-lg mt-1">小生意</p>
@@ -564,11 +604,13 @@ function DealLiveOverlay({ deal, onClose }) {
     ? accept ? '🤝 成交賣出！' : '🙅 不賣！'
     : accept ? (loanAmount > 0 ? '💳 貸款買下！' : '✅ 買下！') : '🙅 放棄！';
   const stampTone = decided && accept ? 'text-emerald-600 ring-emerald-500' : 'text-rose-600 ring-rose-500';
+  const panelMood = decided ? (accept ? 'happy' : 'sad') : 'excited';
 
   return (
-    <div onClick={onClose} className="fixed inset-0 z-40 flex items-center justify-center bg-zizi-ink/55 backdrop-blur-sm cursor-pointer">
+    <div onClick={onClose} className="fixed inset-0 z-40 flex items-center justify-center gap-8 px-6 bg-zizi-ink/60 backdrop-blur-sm cursor-pointer">
       {decided && <span className="absolute bottom-6 inset-x-0 text-center text-white/55 text-sm">👆 點畫面任一處關閉</span>}
-      <div className="card-pop relative bg-white rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] w-[26rem] max-w-[92vw] overflow-hidden">
+      <CharacterPanel team={teamFull} professionEmoji={team.professionEmoji} name={team.teamName} mood={panelMood} badge="🎲" title={isAcquire ? '收購要約' : '機會'} sub={!decided ? '思考中…' : (accept ? '成交！' : '放棄')} />
+      <div className="card-pop relative bg-white rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] w-[26rem] max-w-[46vw] overflow-hidden">
         <div className={'py-2 text-center text-white font-bold ' + m.color}>{m.label}</div>
         <div className="px-6 pt-4 pb-6 text-center">
           <p className="text-sm font-semibold text-slate-500">
@@ -643,21 +685,22 @@ function DealLiveOverlay({ deal, onClose }) {
   );
 }
 
-// 抽牌翻牌動畫（覆蓋全螢幕中央）
-function CardOverlay({ payload, onClose }) {
-  const { deck, card, teamName, professionName, professionEmoji } = payload;
+// 抽牌（市場風雲 / 額外支出）：左邊角色演出 + 右邊卡片，全螢幕結合
+function CardOverlay({ payload, teamFull, onClose }) {
+  const { deck, card, teamName, professionEmoji } = payload;
   const META = {
-    small: { label: '機會・小生意', color: 'bg-emerald-500' },
-    big: { label: '機會・大買賣', color: 'bg-amber-600' },
-    market: { label: '市場風雲', color: 'bg-amber-500' },
-    doodad: { label: '額外支出', color: 'bg-rose-500' },
-    acquire: { label: '房產收購要約', color: 'bg-teal-600' },
+    small: { label: '機會・小生意', color: 'bg-emerald-500', mood: 'excited', badge: '🎲', title: '機會' },
+    big: { label: '機會・大買賣', color: 'bg-amber-600', mood: 'excited', badge: '🎲', title: '機會' },
+    market: { label: '市場風雲', color: 'bg-amber-500', mood: 'surprised', badge: '📈', title: '市場風雲' },
+    doodad: { label: '額外支出', color: 'bg-rose-500', mood: 'sad', badge: '💸', title: '額外支出' },
+    acquire: { label: '房產收購要約', color: 'bg-teal-600', mood: 'excited', badge: '🤝', title: '收購' },
   };
-  const m = META[deck] || { label: '事件', color: 'bg-slate-500' };
+  const m = META[deck] || { label: '事件', color: 'bg-slate-500', mood: 'surprised', badge: '🎲', title: '事件' };
   return (
-    <div onClick={onClose} className="fixed inset-0 z-40 flex items-center justify-center bg-zizi-ink/45 backdrop-blur-sm cursor-pointer">
+    <div onClick={onClose} className="fixed inset-0 z-40 flex items-center justify-center gap-8 px-6 bg-zizi-ink/55 backdrop-blur-sm cursor-pointer">
       <span className="absolute bottom-6 inset-x-0 text-center text-white/55 text-sm">👆 點畫面任一處關閉</span>
-      <div className="card-pop bg-white rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] ring-1 ring-black/5 w-80 overflow-hidden">
+      <CharacterPanel team={teamFull} professionEmoji={professionEmoji} name={teamName} mood={m.mood} badge={m.badge} title={m.title} sub={deck === 'doodad' ? '又要花錢了…' : '行情來囉！'} />
+      <div className="card-pop bg-white rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] ring-1 ring-black/5 w-80 max-w-[46vw] overflow-hidden">
         <div className={'py-2 text-center text-white font-bold ' + m.color}>{m.label}</div>
         <div className="p-6 text-center">
           <div className="text-7xl mb-3">{card.emoji}</div>
@@ -665,13 +708,6 @@ function CardOverlay({ payload, onClose }) {
           {card.desc && <p className="text-slate-500 mt-2">{card.desc}</p>}
           {card.amount != null && deck === 'doodad' && (
             <p className="mt-3 text-rose-500 font-bold text-xl">-{formatMoney(card.amount)}{card.recurring ? ' / 月' : ''}</p>
-          )}
-          {teamName && (
-            <p className="mt-4 text-base font-semibold text-slate-600">
-              {professionEmoji} {teamName}
-              {professionName && <span className="text-slate-400 font-normal">（{professionName}）</span>}
-              <span className="text-slate-400 font-normal"> 骰到</span>
-            </p>
           )}
         </div>
       </div>
