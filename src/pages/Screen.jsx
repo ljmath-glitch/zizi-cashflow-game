@@ -715,34 +715,99 @@ function CardOverlay({ payload, teamFull, onClose }) {
   );
 }
 
+// 飄浮金幣：象徵被動收入源源不絕，取代通用場景中的螢火蟲
+const LOBBY_COINS = [
+  { top: '55%', left: '8%', delay: '0s', dur: '7.5s' },
+  { top: '62%', left: '90%', delay: '2s', dur: '9s' },
+  { top: '58%', left: '46%', delay: '3.4s', dur: '8s' },
+  { top: '68%', left: '22%', delay: '5s', dur: '8.6s' },
+  { top: '52%', left: '70%', delay: '1s', dur: '7s' },
+  { top: '66%', left: '80%', delay: '4.2s', dur: '9.4s' },
+];
+
+// 天際線剪影：財富自由的城市大樓 + 亮燈窗，呼應「跳出老鼠圈」目標，取代通用場景的草地山丘
+const SKYLINE_BACK = [
+  { x: 0, w: 30, h: 38 }, { x: 34, w: 22, h: 50 }, { x: 60, w: 26, h: 30 },
+  { x: 90, w: 20, h: 46 }, { x: 114, w: 34, h: 34 }, { x: 152, w: 24, h: 55 },
+  { x: 180, w: 30, h: 32 }, { x: 214, w: 22, h: 48 }, { x: 240, w: 28, h: 36 },
+  { x: 272, w: 24, h: 52 }, { x: 300, w: 30, h: 30 }, { x: 334, w: 22, h: 44 }, { x: 360, w: 40, h: 34 },
+];
+const SKYLINE_FRONT = [
+  { x: 10, w: 36, h: 42 }, { x: 50, w: 24, h: 30 }, { x: 78, w: 30, h: 50 },
+  { x: 112, w: 22, h: 34 }, { x: 138, w: 34, h: 46 }, { x: 176, w: 26, h: 32 },
+  { x: 206, w: 30, h: 52 }, { x: 240, w: 22, h: 38 }, { x: 266, w: 36, h: 46 },
+  { x: 306, w: 24, h: 34 }, { x: 334, w: 30, h: 44 }, { x: 368, w: 28, h: 30 },
+];
+
+function LobbyHills() {
+  return (
+    <svg className="lobby-hills" viewBox="0 0 400 100" preserveAspectRatio="none" aria-hidden="true">
+      <g fill="#3d2350" opacity="0.85">
+        {SKYLINE_BACK.map((b, i) => <rect key={i} x={b.x} y={100 - b.h} width={b.w} height={b.h} />)}
+      </g>
+      <g fill="#1c1030">
+        {SKYLINE_FRONT.map((b, i) => <rect key={i} x={b.x} y={100 - b.h} width={b.w} height={b.h} />)}
+      </g>
+      <g fill="#fde68a">
+        {SKYLINE_FRONT.map((b, i) => (
+          Array.from({ length: Math.max(1, Math.floor(b.h / 13)) }).map((_, j) => (
+            <rect
+              key={`${i}-${j}`}
+              className="lobby-window"
+              x={b.x + b.w * 0.32}
+              y={100 - b.h + 7 + j * 12}
+              width={2.6}
+              height={4}
+              style={{ animationDelay: `${((i * 0.35 + j * 0.5) % 3.6).toFixed(2)}s` }}
+            />
+          ))
+        ))}
+      </g>
+    </svg>
+  );
+}
+
 function LobbyView({ studentUrl, teams }) {
   return (
-    <div className="h-full flex flex-col items-center justify-center gap-6">
+    <div className="lobby-stage h-full flex flex-col items-center justify-between gap-4 py-6 px-8">
+      <div className="lobby-stars" />
+      {LOBBY_COINS.map((c, i) => (
+        <span key={i} className="lobby-coin" style={{ top: c.top, left: c.left, animationDelay: c.delay, animationDuration: c.dur }}>🪙</span>
+      ))}
+      <LobbyHills />
+
       {/* 故事 / 規則開場 */}
-      <div className="max-w-4xl text-center">
-        <h2 className="text-3xl font-black text-zizi-gold mb-2">🐭 你正在「老鼠賽跑」</h2>
-        <p className="text-lg text-white/80 leading-relaxed">
+      <div className="relative max-w-4xl text-center">
+        <h1 className="lobby-title text-4xl font-black mb-1 tracking-wide">茲茲財富自由挑戰賽</h1>
+        <h2 className="text-xl font-bold text-white/90 mb-2">🐭 你正在「老鼠賽跑」</h2>
+        <p className="text-base text-white/75 leading-relaxed">
           多數人每天為錢工作：薪水一進帳，馬上被房貸、車貸、帳單吃光，像老鼠在滾輪上拼命跑卻原地打轉。
         </p>
-        <p className="text-2xl font-bold text-white mt-3">
-          🎯 目標：讓你的<span className="text-zizi-gold">被動收入</span>（房租、股利、企業現金流）
+        <p className="text-xl font-bold text-white mt-2">
+          🎯 讓你的<span className="text-zizi-gold">被動收入</span>
           <span className="text-zizi-gold">超過總支出</span>，就能<span className="text-zizi-gold">跳出老鼠圈、財富自由！</span>
         </p>
       </div>
 
-      <div className="flex items-center justify-center gap-12 flex-wrap">
-        <div className="flex flex-col items-center gap-2">
-          <p className="text-lg text-white/80">掃描 QR Code 加入遊戲</p>
-          <div className="bg-white p-4 rounded-2xl">
-            <QRCodeSVG value={studentUrl} size={200} />
+      {/* 站在草地上的角色 */}
+      <div className="relative flex flex-col items-center">
+        <Avatar hair="short" hairColor="brown" accessory="none" mood="neutral" size={92} />
+        <div className="lobby-char-shadow" />
+      </div>
+
+      <div className="relative flex items-center justify-center gap-10 flex-wrap">
+        <div className="flex flex-col items-center gap-2 bg-white/8 backdrop-blur-sm ring-1 ring-white/15 rounded-2xl px-6 py-5">
+          <p className="text-base text-white/80">▸ 掃描 QR Code 加入遊戲</p>
+          <div className="bg-white p-3 rounded-xl">
+            <QRCodeSVG value={studentUrl} size={170} />
           </div>
-          <p className="text-sm font-mono text-zizi-gold">{studentUrl}</p>
+          <p className="text-xs font-mono text-zizi-gold">{studentUrl}</p>
         </div>
-        <div className="min-w-[18rem]">
-          <p className="text-xl mb-3">
-            已加入 <span className="text-zizi-gold font-bold">{teams.length}</span> 組
+        <div className="min-w-[18rem] bg-white/8 backdrop-blur-sm ring-1 ring-white/15 rounded-2xl px-5 py-4">
+          <p className="text-lg mb-3">
+            ▸ 已加入 <span className="text-zizi-gold font-bold">{teams.length}</span> 組
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
             {teams.map((t) => (
               <div key={t.id} className="bg-white/10 rounded-xl px-3 py-2 flex items-center gap-2">
                 {t.avatar
@@ -758,6 +823,10 @@ function LobbyView({ studentUrl, teams }) {
           </div>
         </div>
       </div>
+
+      <span className="lobby-badge-float relative text-sm font-semibold bg-white/10 ring-1 ring-white/20 rounded-full px-4 py-1.5 text-white/85">
+        🏆 財商教育 · 現金流挑戰
+      </span>
     </div>
   );
 }
