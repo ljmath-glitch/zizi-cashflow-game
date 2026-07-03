@@ -203,9 +203,9 @@ export const MARKET = [
     price: 200000, // 頭期款
     fullValue: 800000, // 帳面價值
     mortgage: 600000, // 房貸（負債）
-    monthlyIncome: 13500, // 租金 18,000 − 房貸月繳 4,500
+    monthlyIncome: 5000, // 淨租金（年化約 30%，槓桿優勢仍優於股票但不過誇張）
     risk: '中',
-    desc: '士林套房出租，頭期 20 萬、月淨租金 +13,500',
+    desc: '士林套房出租，頭期 20 萬、月淨租金 +5,000',
   },
   {
     id: 're_1r_tianmu',
@@ -218,9 +218,9 @@ export const MARKET = [
     price: 300000,
     fullValue: 1200000,
     mortgage: 900000,
-    monthlyIncome: 18000,
+    monthlyIncome: 7500, // 淨租金（年化約 30%）
     risk: '中',
-    desc: '天母一房一廳，頭期 30 萬、月淨租金 +18,000',
+    desc: '天母一房一廳，頭期 30 萬、月淨租金 +7,500',
   },
   {
     id: 're_2r_shilin',
@@ -233,9 +233,9 @@ export const MARKET = [
     price: 450000,
     fullValue: 1800000,
     mortgage: 1350000,
-    monthlyIncome: 26000,
+    monthlyIncome: 11000, // 淨租金（年化約 29%）
     risk: '中',
-    desc: '士林兩房一廳，頭期 45 萬、月淨租金 +26,000',
+    desc: '士林兩房一廳，頭期 45 萬、月淨租金 +11,000',
   },
 
   // ── 企業 / 副業（現代商業模式） ──
@@ -247,9 +247,9 @@ export const MARKET = [
     kind: 'fixed',
     price: 150000,
     fullValue: 150000,
-    monthlyIncome: 6000,
+    monthlyIncome: 3750, // 年化約 30%
     risk: '中',
-    desc: '一次性投入 15 萬，月收 6,000，幾乎被動',
+    desc: '一次性投入 15 萬，月收 3,750，幾乎被動',
   },
   {
     id: 'biz_course',
@@ -259,9 +259,9 @@ export const MARKET = [
     kind: 'fixed',
     price: 80000,
     fullValue: 80000,
-    monthlyIncome: 5000,
+    monthlyIncome: 2000, // 年化約 30%
     risk: '中',
-    desc: '錄一次賣很久，投入 8 萬、月收 5,000',
+    desc: '錄一次賣很久，投入 8 萬、月收 2,000',
   },
 ];
 

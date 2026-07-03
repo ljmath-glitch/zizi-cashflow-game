@@ -6,52 +6,52 @@
 // 欄位：cost 現金頭期；fullValue 帳面價值；mortgage 連動貸款；monthlyIncome 每月淨現金流（可為負）
 //   realestate 另有 priceLow/priceHigh＝賣出/收購的售價範圍（增值潛力）；story 情境故事
 export const SMALL_DEALS = [
-  // 房地產（小）
-  { id: 'sd_foreclosed', name: '法拍套房 ‧ 士林', emoji: '🏠', category: 'realestate', location: '士林', roomType: '套房', cost: 50000, fullValue: 400000, mortgage: 350000, monthlyIncome: 2800, priceLow: 380000, priceHigh: 540000, story: '士林捷運站旁的法拍套房，屋況普通但地點好，租給學生穩穩收租。' },
-  { id: 'sd_rooftop', name: '頂樓加蓋套房 ‧ 士林', emoji: '🏠', category: 'realestate', location: '士林', roomType: '套房', cost: 40000, fullValue: 300000, mortgage: 260000, monthlyIncome: 2200, priceLow: 270000, priceHigh: 380000, story: '頂樓加蓋分租套房，租金報酬不錯，但頂加有被報拆的風險。' },
+  // 房地產（小）── 淨月收皆調降至年化約 40%（比市場架上房地產約 30% 略高，保留「機會卡撿到便宜」的手感，但不再誇張）
+  { id: 'sd_foreclosed', name: '法拍套房 ‧ 士林', emoji: '🏠', category: 'realestate', location: '士林', roomType: '套房', cost: 50000, fullValue: 400000, mortgage: 350000, monthlyIncome: 1700, priceLow: 380000, priceHigh: 540000, story: '士林捷運站旁的法拍套房，屋況普通但地點好，租給學生穩穩收租。' },
+  { id: 'sd_rooftop', name: '頂樓加蓋套房 ‧ 士林', emoji: '🏠', category: 'realestate', location: '士林', roomType: '套房', cost: 40000, fullValue: 300000, mortgage: 260000, monthlyIncome: 1300, priceLow: 270000, priceHigh: 380000, story: '頂樓加蓋分租套房，租金報酬不錯，但頂加有被報拆的風險。' },
   { id: 'sd_parking_re', name: '車位出租 ‧ 天母', emoji: '🅿️', category: 'realestate', location: '天母', roomType: '車位', cost: 80000, fullValue: 80000, monthlyIncome: 1500, priceLow: 70000, priceHigh: 120000, story: '天母精華區的產權車位，無貸款、好出租，未來也保值。' },
-  { id: 'sd_oldflat', name: '老公寓分租 ‧ 士林', emoji: '🏠', category: 'realestate', location: '士林', roomType: '一房一廳', cost: 90000, fullValue: 700000, mortgage: 610000, monthlyIncome: 4500, priceLow: 650000, priceHigh: 1100000, story: '老公寓隔成雅房分租，現金流佳，且位在傳聞要都更的區域。' },
+  { id: 'sd_oldflat', name: '老公寓分租 ‧ 士林', emoji: '🏠', category: 'realestate', location: '士林', roomType: '一房一廳', cost: 90000, fullValue: 700000, mortgage: 610000, monthlyIncome: 3000, priceLow: 650000, priceHigh: 1100000, story: '老公寓隔成雅房分租，現金流佳，且位在傳聞要都更的區域。' },
   { id: 'sd_landlot', name: '重劃區小套房 ‧ 士林（養房）', emoji: '🏚️', category: 'realestate', location: '士林', roomType: '套房', cost: 30000, fullValue: 350000, mortgage: 320000, monthlyIncome: -500, priceLow: 350000, priceHigh: 700000, story: '位在重劃區邊緣，現在每月還要倒貼一點，但一旦重劃通過，價格可能翻倍！' },
   // 事業（小）
-  { id: 'sd_vending', name: '二手販賣機一台', emoji: '🥤', category: 'business', cost: 60000, fullValue: 60000, monthlyIncome: 2500, story: '頂讓一台二手飲料販賣機，擺在補習班樓下，幾乎被動收入。' },
-  { id: 'sd_claw', name: '路邊夾娃娃機台', emoji: '🎰', category: 'business', cost: 40000, fullValue: 40000, monthlyIncome: 1800, story: '夜市旁的夾娃娃機台，補貨擺台就有收入。' },
-  { id: 'sd_laundry', name: '自助洗衣店一台', emoji: '🧺', category: 'business', cost: 80000, fullValue: 80000, monthlyIncome: 3500, story: '社區自助洗衣，投幣式經營、幾乎不用顧店。' },
-  { id: 'sd_bubble_share', name: '朋友手搖飲小股', emoji: '🧋', category: 'business', cost: 30000, fullValue: 30000, monthlyIncome: 1500, story: '同學開手搖飲店缺資金，找你入股分潤。' },
-  { id: 'sd_podcast', name: 'Podcast 廣告分潤', emoji: '🎙️', category: 'business', cost: 25000, fullValue: 25000, monthlyIncome: 1200, story: '人氣 Podcast 開放廣告分潤入股，內容紅就有錢分。' },
-  { id: 'sd_petgroom', name: '寵物美容工作室小股', emoji: '✂️', category: 'business', cost: 45000, fullValue: 45000, monthlyIncome: 2000, story: '寵物商機正夯，朋友的寵物美容工作室找你合夥。' },
-  { id: 'sd_ecom', name: '學弟的電商代購', emoji: '📦', category: 'business', cost: 35000, fullValue: 35000, monthlyIncome: 1800, story: '學弟做日韓代購生意，找你出資擴大進貨。' },
-  { id: 'sd_solar', name: '小型太陽能板（售電）', emoji: '🔆', category: 'business', cost: 70000, fullValue: 70000, monthlyIncome: 2800, story: '在自家頂樓裝太陽能板賣電給台電，穩定領售電金。' },
-  { id: 'sd_aiart', name: 'AI 繪圖接案工作室', emoji: '🎨', category: 'business', cost: 30000, fullValue: 30000, monthlyIncome: 1500, story: '用 AI 工具接設計案，投入設備後接案賺錢。' },
-  { id: 'sd_breakfast', name: '早餐店頂讓 ‧ 士林', emoji: '🥪', category: 'business', cost: 100000, fullValue: 100000, monthlyIncome: 4000, story: '老闆要退休，頂讓生意穩定的社區早餐店。' },
-  { id: 'sd_chicken', name: '雞排攤一攤', emoji: '🍗', category: 'business', cost: 50000, fullValue: 50000, monthlyIncome: 2500, story: '夜市排隊雞排攤要找人加盟，現金生意。' },
+  { id: 'sd_vending', name: '二手販賣機一台', emoji: '🥤', category: 'business', cost: 60000, fullValue: 60000, monthlyIncome: 2000, story: '頂讓一台二手飲料販賣機，擺在補習班樓下，幾乎被動收入。' },
+  { id: 'sd_claw', name: '路邊夾娃娃機台', emoji: '🎰', category: 'business', cost: 40000, fullValue: 40000, monthlyIncome: 1300, story: '夜市旁的夾娃娃機台，補貨擺台就有收入。' },
+  { id: 'sd_laundry', name: '自助洗衣店一台', emoji: '🧺', category: 'business', cost: 80000, fullValue: 80000, monthlyIncome: 2700, story: '社區自助洗衣，投幣式經營、幾乎不用顧店。' },
+  { id: 'sd_bubble_share', name: '朋友手搖飲小股', emoji: '🧋', category: 'business', cost: 30000, fullValue: 30000, monthlyIncome: 1000, story: '同學開手搖飲店缺資金，找你入股分潤。' },
+  { id: 'sd_podcast', name: 'Podcast 廣告分潤', emoji: '🎙️', category: 'business', cost: 25000, fullValue: 25000, monthlyIncome: 800, story: '人氣 Podcast 開放廣告分潤入股，內容紅就有錢分。' },
+  { id: 'sd_petgroom', name: '寵物美容工作室小股', emoji: '✂️', category: 'business', cost: 45000, fullValue: 45000, monthlyIncome: 1500, story: '寵物商機正夯，朋友的寵物美容工作室找你合夥。' },
+  { id: 'sd_ecom', name: '學弟的電商代購', emoji: '📦', category: 'business', cost: 35000, fullValue: 35000, monthlyIncome: 1200, story: '學弟做日韓代購生意，找你出資擴大進貨。' },
+  { id: 'sd_solar', name: '小型太陽能板（售電）', emoji: '🔆', category: 'business', cost: 70000, fullValue: 70000, monthlyIncome: 2300, story: '在自家頂樓裝太陽能板賣電給台電，穩定領售電金。' },
+  { id: 'sd_aiart', name: 'AI 繪圖接案工作室', emoji: '🎨', category: 'business', cost: 30000, fullValue: 30000, monthlyIncome: 1000, story: '用 AI 工具接設計案，投入設備後接案賺錢。' },
+  { id: 'sd_breakfast', name: '早餐店頂讓 ‧ 士林', emoji: '🥪', category: 'business', cost: 100000, fullValue: 100000, monthlyIncome: 3300, story: '老闆要退休，頂讓生意穩定的社區早餐店。' },
+  { id: 'sd_chicken', name: '雞排攤一攤', emoji: '🍗', category: 'business', cost: 50000, fullValue: 50000, monthlyIncome: 1700, story: '夜市排隊雞排攤要找人加盟，現金生意。' },
   { id: 'sd_charger', name: '電動車充電樁', emoji: '🔌', category: 'business', cost: 120000, fullValue: 120000, monthlyIncome: 3500, story: '電動車越來越多，設一支充電樁開始收充電費。' },
-  { id: 'sd_bookstore', name: '二手書店小股', emoji: '📚', category: 'business', cost: 30000, fullValue: 30000, monthlyIncome: 1200, story: '巷弄裡的文青二手書店找你入股分潤。' },
+  { id: 'sd_bookstore', name: '二手書店小股', emoji: '📚', category: 'business', cost: 30000, fullValue: 30000, monthlyIncome: 1000, story: '巷弄裡的文青二手書店找你入股分潤。' },
 ];
 
 // ── 機會卡：大額機會（昂貴、現金多才玩得起） ──
 export const BIG_DEALS = [
-  // 房地產（大）
-  { id: 'bd_apartment', name: '整棟公寓 ‧ 天母', emoji: '🏢', category: 'realestate', location: '天母', roomType: '整棟公寓', cost: 150000, fullValue: 1200000, mortgage: 1050000, monthlyIncome: 9000, priceLow: 1100000, priceHigh: 1700000, story: '天母整棟 12 戶出租公寓，滿租中，金流穩、增值空間大。' },
-  { id: 'bd_office', name: '辦公室 ‧ 士林', emoji: '🏬', category: 'realestate', location: '士林', roomType: '辦公室', cost: 250000, fullValue: 2000000, mortgage: 1750000, monthlyIncome: 15000, priceLow: 1800000, priceHigh: 2800000, story: '士林整層商辦，租給新創公司，景氣好時很搶手。' },
-  { id: 'bd_4r_tianmu', name: '四房一廳豪宅 ‧ 天母', emoji: '🏯', category: 'realestate', location: '天母', roomType: '四房一廳', cost: 300000, fullValue: 2500000, mortgage: 2200000, monthlyIncome: 18000, priceLow: 2300000, priceHigh: 3600000, story: '天母明星學區豪宅，租金高、抗跌保值。' },
-  { id: 'bd_bnb', name: '三房一廳民宿 ‧ 天母', emoji: '🏡', category: 'realestate', location: '天母', roomType: '三房一廳', cost: 200000, fullValue: 1500000, mortgage: 1300000, monthlyIncome: 12000, priceLow: 1400000, priceHigh: 2100000, story: '改成合法民宿經營，觀光旺季收入可觀。' },
-  { id: 'bd_storefront', name: '店面 ‧ 士林夜市旁', emoji: '🏪', category: 'realestate', location: '士林', roomType: '店面', cost: 400000, fullValue: 3500000, mortgage: 3100000, monthlyIncome: 26000, priceLow: 3200000, priceHigh: 5200000, story: '士林夜市黃金店面，人潮就是錢潮，店面增值想像空間大。' },
+  // 房地產（大）── 淨月收皆調降至年化約 40%
+  { id: 'bd_apartment', name: '整棟公寓 ‧ 天母', emoji: '🏢', category: 'realestate', location: '天母', roomType: '整棟公寓', cost: 150000, fullValue: 1200000, mortgage: 1050000, monthlyIncome: 5000, priceLow: 1100000, priceHigh: 1700000, story: '天母整棟 12 戶出租公寓，滿租中，金流穩、增值空間大。' },
+  { id: 'bd_office', name: '辦公室 ‧ 士林', emoji: '🏬', category: 'realestate', location: '士林', roomType: '辦公室', cost: 250000, fullValue: 2000000, mortgage: 1750000, monthlyIncome: 8300, priceLow: 1800000, priceHigh: 2800000, story: '士林整層商辦，租給新創公司，景氣好時很搶手。' },
+  { id: 'bd_4r_tianmu', name: '四房一廳豪宅 ‧ 天母', emoji: '🏯', category: 'realestate', location: '天母', roomType: '四房一廳', cost: 300000, fullValue: 2500000, mortgage: 2200000, monthlyIncome: 10000, priceLow: 2300000, priceHigh: 3600000, story: '天母明星學區豪宅，租金高、抗跌保值。' },
+  { id: 'bd_bnb', name: '三房一廳民宿 ‧ 天母', emoji: '🏡', category: 'realestate', location: '天母', roomType: '三房一廳', cost: 200000, fullValue: 1500000, mortgage: 1300000, monthlyIncome: 6700, priceLow: 1400000, priceHigh: 2100000, story: '改成合法民宿經營，觀光旺季收入可觀。' },
+  { id: 'bd_storefront', name: '店面 ‧ 士林夜市旁', emoji: '🏪', category: 'realestate', location: '士林', roomType: '店面', cost: 400000, fullValue: 3500000, mortgage: 3100000, monthlyIncome: 13300, priceLow: 3200000, priceHigh: 5200000, story: '士林夜市黃金店面，人潮就是錢潮，店面增值想像空間大。' },
   { id: 'bd_renewal', name: '都更老屋 ‧ 士林（等都更）', emoji: '🏚️', category: 'realestate', location: '士林', roomType: '三房一廳', cost: 300000, fullValue: 2600000, mortgage: 2400000, monthlyIncome: 1500, priceLow: 2600000, priceHigh: 5000000, story: '老屋租金不高、每月只小賺，但已納入都更計畫，一旦通過分回新屋，價值可能近翻倍！' },
-  { id: 'bd_warehouse', name: '辦公室（整層）‧ 天母', emoji: '🏬', category: 'realestate', location: '天母', roomType: '辦公室', cost: 350000, fullValue: 3000000, mortgage: 2650000, monthlyIncome: 20000, priceLow: 2800000, priceHigh: 4300000, story: '天母整層辦公室，企業長約承租，金流穩定。' },
+  { id: 'bd_warehouse', name: '辦公室（整層）‧ 天母', emoji: '🏬', category: 'realestate', location: '天母', roomType: '辦公室', cost: 350000, fullValue: 3000000, mortgage: 2650000, monthlyIncome: 11700, priceLow: 2800000, priceHigh: 4300000, story: '天母整層辦公室，企業長約承租，金流穩定。' },
   // 事業（大）
-  { id: 'bd_bubble', name: '加盟連鎖手搖飲', emoji: '🧋', category: 'business', cost: 300000, fullValue: 300000, monthlyIncome: 25000, story: '加盟知名手搖飲品牌，展店就有穩定權利金收入。' },
-  { id: 'bd_youtube', name: '收購經營中的 YouTube 頻道', emoji: '🎬', category: 'business', cost: 500000, fullValue: 500000, monthlyIncome: 30000, story: '買下一個百萬訂閱頻道，接手後持續領廣告分潤。' },
-  { id: 'bd_saas', name: 'AI SaaS 訂閱公司股權', emoji: '🤖', category: 'business', cost: 400000, fullValue: 400000, monthlyIncome: 28000, story: '入股一家 AI 訂閱軟體公司，每月收訂閱費分潤。' },
-  { id: 'bd_cvs', name: '連鎖超商加盟店', emoji: '🏪', category: 'business', cost: 600000, fullValue: 600000, monthlyIncome: 35000, story: '加盟一間 24 小時超商，地點好、客流穩。' },
-  { id: 'bd_parking_biz', name: '停車場經營權', emoji: '🅿️', category: 'business', cost: 450000, fullValue: 450000, monthlyIncome: 26000, story: '標下市區停車場經營權，車位天天有人停。' },
-  { id: 'bd_gym', name: '連鎖健身房股權', emoji: '🏋️', category: 'business', cost: 350000, fullValue: 350000, monthlyIncome: 22000, story: '入股連鎖健身房，會員月費就是穩定金流。' },
-  { id: 'bd_carwash', name: '連鎖洗車場', emoji: '🚗', category: 'business', cost: 400000, fullValue: 400000, monthlyIncome: 24000, story: '自動洗車連鎖店，設備投入後幾乎自動營運。' },
-  { id: 'bd_kitchen', name: '餐飲品牌中央廚房', emoji: '🍱', category: 'business', cost: 700000, fullValue: 700000, monthlyIncome: 40000, story: '供應多家餐廳的中央廚房，規模化後利潤豐厚。' },
-  { id: 'bd_unmanned', name: '無人商店連鎖', emoji: '🛒', category: 'business', cost: 380000, fullValue: 380000, monthlyIncome: 24000, story: '24 小時無人商店，省人力、自動結帳。' },
-  { id: 'bd_livestream', name: '直播帶貨團隊', emoji: '📡', category: 'business', cost: 320000, fullValue: 320000, monthlyIncome: 23000, story: '投資一支直播帶貨團隊，銷售抽成月月入帳。' },
-  { id: 'bd_pethotel', name: '寵物旅館', emoji: '🐾', category: 'business', cost: 350000, fullValue: 350000, monthlyIncome: 21000, story: '寵物寄宿旅館，連假一位難求。' },
-  { id: 'bd_cowork', name: '共享辦公室', emoji: '💼', category: 'business', cost: 500000, fullValue: 500000, monthlyIncome: 30000, story: '經營共享辦公空間，收會員月租。' },
-  { id: 'bd_solarfarm', name: '農地種電場', emoji: '🌾', category: 'business', cost: 600000, fullValue: 600000, monthlyIncome: 33000, story: '在農地架設大型太陽能電場，長期售電給台電。' },
+  { id: 'bd_bubble', name: '加盟連鎖手搖飲', emoji: '🧋', category: 'business', cost: 300000, fullValue: 300000, monthlyIncome: 10000, story: '加盟知名手搖飲品牌，展店就有穩定權利金收入。' },
+  { id: 'bd_youtube', name: '收購經營中的 YouTube 頻道', emoji: '🎬', category: 'business', cost: 500000, fullValue: 500000, monthlyIncome: 16700, story: '買下一個百萬訂閱頻道，接手後持續領廣告分潤。' },
+  { id: 'bd_saas', name: 'AI SaaS 訂閱公司股權', emoji: '🤖', category: 'business', cost: 400000, fullValue: 400000, monthlyIncome: 13300, story: '入股一家 AI 訂閱軟體公司，每月收訂閱費分潤。' },
+  { id: 'bd_cvs', name: '連鎖超商加盟店', emoji: '🏪', category: 'business', cost: 600000, fullValue: 600000, monthlyIncome: 20000, story: '加盟一間 24 小時超商，地點好、客流穩。' },
+  { id: 'bd_parking_biz', name: '停車場經營權', emoji: '🅿️', category: 'business', cost: 450000, fullValue: 450000, monthlyIncome: 15000, story: '標下市區停車場經營權，車位天天有人停。' },
+  { id: 'bd_gym', name: '連鎖健身房股權', emoji: '🏋️', category: 'business', cost: 350000, fullValue: 350000, monthlyIncome: 11700, story: '入股連鎖健身房，會員月費就是穩定金流。' },
+  { id: 'bd_carwash', name: '連鎖洗車場', emoji: '🚗', category: 'business', cost: 400000, fullValue: 400000, monthlyIncome: 13300, story: '自動洗車連鎖店，設備投入後幾乎自動營運。' },
+  { id: 'bd_kitchen', name: '餐飲品牌中央廚房', emoji: '🍱', category: 'business', cost: 700000, fullValue: 700000, monthlyIncome: 23300, story: '供應多家餐廳的中央廚房，規模化後利潤豐厚。' },
+  { id: 'bd_unmanned', name: '無人商店連鎖', emoji: '🛒', category: 'business', cost: 380000, fullValue: 380000, monthlyIncome: 12700, story: '24 小時無人商店，省人力、自動結帳。' },
+  { id: 'bd_livestream', name: '直播帶貨團隊', emoji: '📡', category: 'business', cost: 320000, fullValue: 320000, monthlyIncome: 10700, story: '投資一支直播帶貨團隊，銷售抽成月月入帳。' },
+  { id: 'bd_pethotel', name: '寵物旅館', emoji: '🐾', category: 'business', cost: 350000, fullValue: 350000, monthlyIncome: 11700, story: '寵物寄宿旅館，連假一位難求。' },
+  { id: 'bd_cowork', name: '共享辦公室', emoji: '💼', category: 'business', cost: 500000, fullValue: 500000, monthlyIncome: 16700, story: '經營共享辦公空間，收會員月租。' },
+  { id: 'bd_solarfarm', name: '農地種電場', emoji: '🌾', category: 'business', cost: 600000, fullValue: 600000, monthlyIncome: 20000, story: '在農地架設大型太陽能電場，長期售電給台電。' },
 ];
 
 // ── 市場風雲卡（影響全班） ──
