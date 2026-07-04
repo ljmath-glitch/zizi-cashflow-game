@@ -102,12 +102,12 @@ button:active:not(:disabled) {
   animation-iteration-count: infinite;
 }
 
-/* App 背景：薰衣草白 + 淡淡的金與紫光暈（學生端/老師端） */
+/* App 背景：奶油白 + 淡淡的金與咖啡光暈（學生端/老師端） */
 .app-bg {
   background:
     radial-gradient(1100px 560px at 100% -8%, rgba(245, 158, 11, 0.10), transparent 60%),
-    radial-gradient(900px 480px at -12% 112%, rgba(91, 58, 142, 0.12), transparent 55%),
-    #faf8fd;
+    radial-gradient(900px 480px at -12% 112%, rgba(122, 92, 69, 0.14), transparent 55%),
+    #faf6f0;
 }
 
 /* 玻璃擬態卡片（半透明 + 模糊） */
@@ -125,12 +125,12 @@ button:active:not(:disabled) {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* 大螢幕深色背景：黃昏紫夜空漸層 + 一抹金色餘暉（延續等待室世界觀，低彩度耐久看） */
+/* 大螢幕深色背景：拿鐵咖啡漸層 + 奶油光暈（暖色低彩度，投影久看不累） */
 .screen-bg {
   background:
-    radial-gradient(1200px 700px at 85% -10%, rgba(253, 224, 71, 0.12), transparent 55%),
-    radial-gradient(1000px 700px at 0% 110%, rgba(91, 58, 142, 0.35), transparent 55%),
-    linear-gradient(160deg, #170c38 0%, #2a1550 55%, #3a1f5d 100%);
+    radial-gradient(1200px 700px at 85% -10%, rgba(255, 232, 190, 0.16), transparent 55%),
+    radial-gradient(1000px 700px at 0% 110%, rgba(122, 92, 69, 0.40), transparent 55%),
+    linear-gradient(160deg, #33241a 0%, #4e3827 55%, #6b5138 100%);
 }
 
 /* 分頁滑動指示器：膠囊在底層平滑滑動 */
@@ -364,14 +364,14 @@ button:active:not(:disabled) {
   animation: roll-wiggle 0.35s ease-in-out infinite;
 }
 
-/* ── 大螢幕｜等待室氛圍場景：黃昏星空 + 飄浮金幣 + 財富自由天際線 ── */
+/* ── 大螢幕｜等待室氛圍場景：暖暮星空 + 飄浮金幣 + 財富自由天際線 ── */
 .lobby-stage {
   position: relative;
   overflow: hidden;
   border-radius: 1.75rem;
   background:
     radial-gradient(1300px 520px at 50% -4%, rgba(255, 214, 150, 0.28), transparent 62%),
-    linear-gradient(180deg, #170c38 0%, #3a1f5d 26%, #7a3b5e 52%, #c9683f 76%, #f0a75a 100%);
+    linear-gradient(180deg, #2a1b10 0%, #4e3827 30%, #8a5a35 58%, #c9863f 80%, #f0b45a 100%);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 

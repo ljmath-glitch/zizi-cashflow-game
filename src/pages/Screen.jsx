@@ -742,10 +742,10 @@ const SKYLINE_FRONT = [
 function LobbyHills() {
   return (
     <svg className="lobby-hills" viewBox="0 0 400 100" preserveAspectRatio="none" aria-hidden="true">
-      <g fill="#3d2350" opacity="0.85">
+      <g fill="#4a3322" opacity="0.85">
         {SKYLINE_BACK.map((b, i) => <rect key={i} x={b.x} y={100 - b.h} width={b.w} height={b.h} />)}
       </g>
-      <g fill="#1c1030">
+      <g fill="#241811">
         {SKYLINE_FRONT.map((b, i) => <rect key={i} x={b.x} y={100 - b.h} width={b.w} height={b.h} />)}
       </g>
       <g fill="#fde68a">
