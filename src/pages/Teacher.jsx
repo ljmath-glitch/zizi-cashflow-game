@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { socket } from '../socket.js';
+import { socket, ROOM } from '../socket.js';
 import { useConnection } from '../hooks/useConnection.js';
 import { useGameState } from '../hooks/useGameState.js';
 import { useTeams } from '../hooks/useTeams.js';
@@ -54,7 +54,17 @@ export default function Teacher() {
         <h1 className="font-bold flex items-center gap-1.5 drop-shadow-md">
           <span className="drop-shadow">🎛️</span>老師控制台
         </h1>
-        <ConnectionBadge connected={connected} />
+        <div className="flex items-center gap-2">
+          <a
+            href={`/screen?room=${ROOM}`}
+            target="_blank"
+            rel="noopener"
+            className="text-xs font-semibold bg-white/15 hover:bg-white/25 ring-1 ring-white/25 rounded-full px-3 py-1.5"
+          >
+            📺 開大螢幕
+          </a>
+          <ConnectionBadge connected={connected} />
+        </div>
       </header>
 
       <main className="flex-1 p-5 space-y-5 max-w-md w-full mx-auto">

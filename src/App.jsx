@@ -36,7 +36,12 @@ function Home() {
       setErr('找不到房號 ' + c);
       return;
     }
-    window.location.href = `/${role}?room=${c}`;
+    // 大螢幕/學生開新分頁（保留這頁，才能繼續進老師端）；老師端才在本頁跳轉
+    if (role === 'teacher') {
+      window.location.href = `/${role}?room=${c}`;
+    } else {
+      window.open(`/${role}?room=${c}`, '_blank');
+    }
   }
 
   const origin = window.location.origin;
