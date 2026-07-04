@@ -128,9 +128,9 @@ button:active:not(:disabled) {
 /* 大螢幕深色背景：拿鐵咖啡漸層 + 奶油光暈（暖色低彩度，投影久看不累） */
 .screen-bg {
   background:
-    radial-gradient(1200px 700px at 85% -10%, rgba(255, 232, 190, 0.16), transparent 55%),
-    radial-gradient(1000px 700px at 0% 110%, rgba(122, 92, 69, 0.40), transparent 55%),
-    linear-gradient(160deg, #33241a 0%, #4e3827 55%, #6b5138 100%);
+    radial-gradient(1200px 700px at 85% -10%, rgba(255, 232, 190, 0.20), transparent 55%),
+    radial-gradient(1000px 700px at 0% 110%, rgba(160, 126, 96, 0.42), transparent 55%),
+    linear-gradient(160deg, #4e3a29 0%, #6b5138 55%, #8a6c50 100%);
 }
 
 /* 分頁滑動指示器：膠囊在底層平滑滑動 */
@@ -371,7 +371,7 @@ button:active:not(:disabled) {
   border-radius: 1.75rem;
   background:
     radial-gradient(1300px 520px at 50% -4%, rgba(255, 214, 150, 0.28), transparent 62%),
-    linear-gradient(180deg, #2a1b10 0%, #4e3827 30%, #8a5a35 58%, #c9863f 80%, #f0b45a 100%);
+    linear-gradient(180deg, #3a2a1d 0%, #5e4735 30%, #9a6a40 58%, #d4954a 80%, #f2bc66 100%);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
