@@ -49,8 +49,8 @@ export default function Teacher() {
 
   return (
     <div className="min-h-full app-bg flex flex-col">
-      <header className="relative bg-gradient-to-r from-amber-500 via-zizi-gold to-amber-500 text-white px-4 py-3 flex items-center justify-between shadow-lg overflow-hidden">
-        <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+      <header className="relative bg-gradient-to-r from-zizi-dusk via-zizi-plum to-zizi-dusk text-white px-4 py-3 flex items-center justify-between shadow-lg overflow-hidden">
+        <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-zizi-amber to-transparent" />
         <h1 className="font-bold flex items-center gap-1.5 drop-shadow-md">
           <span className="drop-shadow">🎛️</span>老師控制台
         </h1>

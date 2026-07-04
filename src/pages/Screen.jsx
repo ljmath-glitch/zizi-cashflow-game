@@ -395,7 +395,7 @@ function MonthReport({ report, onClose }) {
   return (
     <div onClick={onClose} className="fixed inset-0 z-40 flex items-center justify-center bg-zizi-ink/70 backdrop-blur-sm cursor-pointer">
       <span className="absolute bottom-6 inset-x-0 text-center text-white/55 text-sm">👆 點畫面任一處關閉</span>
-      <div className="card-pop bg-gradient-to-b from-amber-800 to-amber-950 border-2 border-zizi-gold rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] w-[34rem] max-w-[92vw] p-7 text-white">
+      <div className="card-pop bg-gradient-to-b from-zizi-dusk to-zizi-night border-2 border-zizi-gold rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] w-[34rem] max-w-[92vw] p-7 text-white">
         <p className="text-center text-white/60">— 第 {round} 回合 —</p>
 
         {prevEvent ? (
@@ -914,7 +914,7 @@ function Board({ board, teams, round, timeLeft, phase, currentTurnId, movingId }
             className="absolute p-1.5"
             style={{ left: `${c * csx}%`, top: `${r * csy}%`, width: `${csx}%`, height: `${csy}%` }}
           >
-            <div className={'w-full h-full rounded-xl flex flex-col text-white shadow-md ring-1 ring-white/15 ' + align + ' ' + (meta.color || 'bg-slate-500')}>
+            <div className={'w-full h-full rounded-xl flex flex-col text-white shadow-md ring-1 backdrop-blur-[2px] ' + align + ' ' + (meta.screenColor || 'bg-slate-500/30 ring-white/15')}>
               <span className="text-4xl leading-none drop-shadow">{meta.emoji}</span>
               <span className="text-sm font-bold mt-1 leading-none">{meta.label}</span>
             </div>

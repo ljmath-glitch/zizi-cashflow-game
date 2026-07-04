@@ -1,12 +1,13 @@
 // 老鼠賽跑圈格子的顯示資料 + 環狀座標計算（學生端與大螢幕共用）
+// screenColor＝大螢幕（深紫夜空底）用的半透明玻璃色塊；color＝學生端等淺色底用的實色
 export const SQUARE_META = {
-  opportunity: { label: '機會', emoji: '🎲', color: 'bg-emerald-500' },
-  doodad: { label: '額外支出', emoji: '💸', color: 'bg-rose-500' },
-  charity: { label: '慈善', emoji: '❤️', color: 'bg-pink-500' },
-  payday: { label: '發薪', emoji: '💰', color: 'bg-amber-500' },
-  market: { label: '市場', emoji: '📈', color: 'bg-teal-500' },
-  baby: { label: '生小孩', emoji: '👶', color: 'bg-violet-500' },
-  downsized: { label: '失業', emoji: '💼', color: 'bg-slate-500' },
+  opportunity: { label: '機會', emoji: '🎲', color: 'bg-emerald-500', screenColor: 'bg-emerald-500/25 ring-emerald-300/40' },
+  doodad: { label: '額外支出', emoji: '💸', color: 'bg-rose-500', screenColor: 'bg-rose-500/25 ring-rose-300/40' },
+  charity: { label: '慈善', emoji: '❤️', color: 'bg-pink-500', screenColor: 'bg-pink-500/25 ring-pink-300/40' },
+  payday: { label: '發薪', emoji: '💰', color: 'bg-amber-500', screenColor: 'bg-amber-400/30 ring-amber-300/60' },
+  market: { label: '市場', emoji: '📈', color: 'bg-teal-500', screenColor: 'bg-teal-500/25 ring-teal-300/40' },
+  baby: { label: '生小孩', emoji: '👶', color: 'bg-violet-500', screenColor: 'bg-violet-500/30 ring-violet-300/40' },
+  downsized: { label: '失業', emoji: '💼', color: 'bg-slate-500', screenColor: 'bg-slate-500/30 ring-slate-300/40' },
 };
 
 // 24 格環狀跑道排成「長方形」外圈（寬 9 × 高 5，周長 = 2×(9+5)−4 = 24）。

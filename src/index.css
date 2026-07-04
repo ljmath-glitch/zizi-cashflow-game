@@ -102,12 +102,12 @@ button:active:not(:disabled) {
   animation-iteration-count: infinite;
 }
 
-/* App 背景：奶油白 + 極淡的金色光暈 */
+/* App 背景：薰衣草白 + 淡淡的金與紫光暈（學生端/老師端） */
 .app-bg {
   background:
-    radial-gradient(1100px 560px at 100% -8%, rgba(245, 158, 11, 0.16), transparent 60%),
-    radial-gradient(900px 480px at -12% 112%, rgba(200, 169, 106, 0.18), transparent 55%),
-    #fbf8f1;
+    radial-gradient(1100px 560px at 100% -8%, rgba(245, 158, 11, 0.10), transparent 60%),
+    radial-gradient(900px 480px at -12% 112%, rgba(91, 58, 142, 0.12), transparent 55%),
+    #faf8fd;
 }
 
 /* 玻璃擬態卡片（半透明 + 模糊） */
@@ -125,12 +125,12 @@ button:active:not(:disabled) {
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* 大螢幕深色背景：暖金 → 焦糖漸層 + 金色光暈，營造空間層次 */
+/* 大螢幕深色背景：黃昏紫夜空漸層 + 一抹金色餘暉（延續等待室世界觀，低彩度耐久看） */
 .screen-bg {
   background:
-    radial-gradient(1200px 700px at 85% -10%, rgba(253, 224, 71, 0.22), transparent 55%),
-    radial-gradient(1000px 700px at 0% 110%, rgba(180, 83, 9, 0.30), transparent 55%),
-    linear-gradient(160deg, #c2841b 0%, #8a4f12 55%, #5a300c 100%);
+    radial-gradient(1200px 700px at 85% -10%, rgba(253, 224, 71, 0.12), transparent 55%),
+    radial-gradient(1000px 700px at 0% 110%, rgba(91, 58, 142, 0.35), transparent 55%),
+    linear-gradient(160deg, #170c38 0%, #2a1550 55%, #3a1f5d 100%);
 }
 
 /* 分頁滑動指示器：膠囊在底層平滑滑動 */
