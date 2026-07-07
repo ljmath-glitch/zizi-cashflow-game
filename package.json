@@ -10,7 +10,8 @@
     "dev:client": "vite",
     "build": "vite build",
     "start": "cross-env NODE_ENV=production node server/index.js",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "export:course": "node scripts/export-to-course-system.mjs"
   },
   "dependencies": {
     "express": "^4.19.2",
