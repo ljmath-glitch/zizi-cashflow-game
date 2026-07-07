@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { socket, ROOM } from '../socket.js';
+import { BASE } from '../base.js';
 
 // 房號守門：沒有房號或房號無效時，擋下並引導回首頁
 export default function RoomGuard({ children }) {
@@ -20,7 +21,7 @@ export default function RoomGuard({ children }) {
         <p className="text-white/70 mb-6">
           {ROOM ? `房號 ${ROOM} 不存在或已結束` : '這個網址沒有帶房號'}
         </p>
-        <a href="/" className="rounded-xl bg-zizi-gold text-white font-bold px-6 py-3">
+        <a href={BASE} className="rounded-xl bg-zizi-gold text-white font-bold px-6 py-3">
           回首頁建立 / 輸入房號
         </a>
       </div>

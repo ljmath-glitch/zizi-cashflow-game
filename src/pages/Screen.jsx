@@ -11,6 +11,7 @@ import ConnectionBadge from '../components/ConnectionBadge.jsx';
 import Sparkline from '../components/Sparkline.jsx';
 import Avatar from '../components/Avatar.jsx';
 import { SFX, playEventSound, setSoundEnabled, resumeAudio } from '../util/sound.js';
+import { api, page } from '../base.js';
 
 // 難度標示（與 server/game.js 的 DIFFICULTY 對應）
 const DIFF_META = {
@@ -44,8 +45,8 @@ export default function Screen() {
   }, []);
 
   useEffect(() => {
-    fetch('/api/server-info').then((r) => r.json()).then(setServerInfo).catch(() => {});
-    fetch('/api/board').then((r) => r.json()).then(setBoard).catch(() => {});
+    fetch(api('api/server-info')).then((r) => r.json()).then(setServerInfo).catch(() => {});
+    fetch(api('api/board')).then((r) => r.json()).then(setBoard).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -126,8 +127,8 @@ export default function Screen() {
   const isLocalHost = host === 'localhost' || host === '127.0.0.1' || /^\d+\.\d+\.\d+\.\d+$/.test(host);
   const roomQ = ROOM ? `?room=${ROOM}` : '';
   const studentUrl = isLocalHost && serverInfo?.lanIp
-    ? `http://${serverInfo.lanIp}:${window.location.port || serverInfo.port || '3000'}/student${roomQ}`
-    : `${window.location.origin}/student${roomQ}`;
+    ? `http://${serverInfo.lanIp}:${window.location.port || serverInfo.port || '3000'}${page('student')}${roomQ}`
+    : `${window.location.origin}${page('student')}${roomQ}`;
 
   const phase = game?.phase ?? 'lobby';
   const round = game?.round ?? 0;

@@ -14,6 +14,7 @@ import {
 } from '../util/finance.js';
 import { SQUARE_META } from '../util/board.js';
 import { toast } from '../util/toast.js';
+import { api } from '../base.js';
 import ConnectionBadge from '../components/ConnectionBadge.jsx';
 import Sparkline from '../components/Sparkline.jsx';
 import Toaster from '../components/Toaster.jsx';
@@ -1163,7 +1164,7 @@ function MarketTab({ team, phase }) {
   const [market, setMarket] = useState([]);
 
   useEffect(() => {
-    fetch('/api/market').then((r) => r.json()).then(setMarket).catch(() => setMarket([]));
+    fetch(api('api/market')).then((r) => r.json()).then(setMarket).catch(() => setMarket([]));
   }, []);
 
   function buy(payload, item) {

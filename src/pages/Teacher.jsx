@@ -4,6 +4,7 @@ import { useConnection } from '../hooks/useConnection.js';
 import { useGameState } from '../hooks/useGameState.js';
 import { useTeams } from '../hooks/useTeams.js';
 import { formatTime, PHASE_LABEL } from '../util/format.js';
+import { page } from '../base.js';
 import ConnectionBadge from '../components/ConnectionBadge.jsx';
 
 // 難度選項（需與 server/game.js 的 DIFFICULTY 一致）
@@ -56,7 +57,7 @@ export default function Teacher() {
         </h1>
         <div className="flex items-center gap-2">
           <a
-            href={`/screen?room=${ROOM}`}
+            href={page(`screen?room=${ROOM}`)}
             target="_blank"
             rel="noopener"
             className="text-xs font-semibold bg-white/15 hover:bg-white/25 ring-1 ring-white/25 rounded-full px-3 py-1.5"

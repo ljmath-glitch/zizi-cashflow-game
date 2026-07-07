@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { api, page } from './base.js';
 import Student from './pages/Student.jsx';
 import Screen from './pages/Screen.jsx';
 import Teacher from './pages/Teacher.jsx';
@@ -18,7 +19,7 @@ function Home() {
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch('/api/rooms', { method: 'POST' });
+      const res = await fetch(api('api/rooms'), { method: 'POST' });
       const data = await res.json();
       setCode(data.code);
     } catch {
@@ -30,7 +31,7 @@ function Home() {
   async function joinAs(role) {
     const c = joinCode.trim().toUpperCase();
     if (!c) return;
-    const res = await fetch('/api/room-exists?code=' + encodeURIComponent(c));
+    const res = await fetch(api('api/room-exists?code=' + encodeURIComponent(c)));
     const { exists } = await res.json();
     if (!exists) {
       setErr('找不到房號 ' + c);
@@ -38,9 +39,9 @@ function Home() {
     }
     // 大螢幕/學生開新分頁（保留這頁，才能繼續進老師端）；老師端才在本頁跳轉
     if (role === 'teacher') {
-      window.location.href = `/${role}?room=${c}`;
+      window.location.href = page(`${role}?room=${c}`);
     } else {
-      window.open(`/${role}?room=${c}`, '_blank');
+      window.open(page(`${role}?room=${c}`), '_blank');
     }
   }
 
@@ -93,15 +94,15 @@ function Home() {
           <p className="text-sm text-white/60 mb-1">把房號或下面連結分享給學生即可加入</p>
           <p className="text-xs text-white/40 mb-4">💡 記住房號 <b className="text-zizi-gold">{code}</b>，之後回首頁輸入它就能再進老師端</p>
           <div className="space-y-2 text-left">
-            <a href={`/teacher?room=${code}`} className="block bg-zizi-gold text-white rounded-xl px-4 py-3 font-bold text-center">
+            <a href={page(`teacher?room=${code}`)} className="block bg-zizi-gold text-white rounded-xl px-4 py-3 font-bold text-center">
               🎛️ 進入老師端
             </a>
-            <a href={`/screen?room=${code}`} target="_blank" rel="noopener" className="block bg-white/15 hover:bg-white/25 rounded-xl px-4 py-2.5 text-center">
+            <a href={page(`screen?room=${code}`)} target="_blank" rel="noopener" className="block bg-white/15 hover:bg-white/25 rounded-xl px-4 py-2.5 text-center">
               📺 大螢幕端（投影用）<span className="text-xs text-white/50">↗ 開新分頁</span>
             </a>
             <div className="bg-white/10 rounded-xl px-4 py-2.5">
               <p className="text-xs text-white/50">學生連結</p>
-              <p className="font-mono text-sm break-all text-zizi-gold">{origin}/student?room={code}</p>
+              <p className="font-mono text-sm break-all text-zizi-gold">{origin}{page(`student?room=${code}`)}</p>
             </div>
           </div>
         </div>
