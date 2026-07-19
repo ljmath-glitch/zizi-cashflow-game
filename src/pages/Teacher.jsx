@@ -7,6 +7,10 @@ import { formatTime, PHASE_LABEL } from '../util/format.js';
 import { page } from '../base.js';
 import ConnectionBadge from '../components/ConnectionBadge.jsx';
 
+// 測試工具開關：正式上課請保持 false（隱藏「🧪 測試自由」按鈕）；
+// 之後想在本機測試人生成就流程時，改成 true 重新打包即可。
+const TEST_TOOLS = false;
+
 // 難度選項（需與 server/game.js 的 DIFFICULTY 一致）
 const DIFFICULTIES = [
   { key: 'easy', emoji: '🌱', label: '輕鬆', desc: '起始存款×2、機會卡現金流×1.5、額外支出7折 — 適合第一次玩' },
@@ -139,7 +143,7 @@ export default function Teacher() {
                 <div key={t.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-1.5">
                   <span className="text-sm">{t.professionEmoji} {t.name}{t.bankrupt ? ' 💀' : ''}{t.free ? ' 👑' : ''}</span>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    {!t.free && !t.bankrupt && (
+                    {TEST_TOOLS && !t.free && !t.bankrupt && (
                       <button
                         onClick={() => {
                           socket.timeout(3000).emit('teacher:grantFreedom', { teamId: t.id }, (err, res) => {
