@@ -350,11 +350,7 @@ function FinancePanel({ team, phase }) {
         </div>
       )}
 
-      {free && !team.bankrupt && (
-        <div className="bg-green-500 text-white text-center py-2 font-bold">
-          🏆 已達成財富自由！
-        </div>
-      )}
+      {free && !team.bankrupt && <AchievementPanel team={team} phase={phase} />}
 
       {!team.bankrupt && (team.personalLiabilities?.bankLoan || 0) > 0 && (
         <div className="bg-red-500 text-white text-center py-1.5 text-sm font-medium">
@@ -1153,6 +1149,127 @@ function LoanPanel({ team, phase }) {
           還款
         </button>
       </div>
+    </div>
+  );
+}
+
+// 星星列（達成幾顆就亮幾顆）
+function Stars({ n }) {
+  return <span className="text-amber-500 tracking-tight">{'★'.repeat(n)}</span>;
+}
+
+// 人生成就面板（財富自由後出現）：選夢想 → 看「還差多少」→ 現金夠就完成 → 換下一個
+function AchievementPanel({ team, phase }) {
+  const [catalog, setCatalog] = useState([]);
+  const [showChooser, setShowChooser] = useState(false);
+  const d = team.derived || {};
+  const goal = d.goal; // 目前追求的夢想（含 affordable / keepsFree）
+  const done = d.achievementsDone || [];
+  const stars = d.achievementStars || 0;
+  const doneIds = new Set(done.map((a) => a.id));
+
+  useEffect(() => {
+    fetch(api('api/achievements')).then((r) => r.json()).then(setCatalog).catch(() => setCatalog([]));
+  }, []);
+
+  const canBuy = phase === 'running';
+
+  function choose(a) {
+    socket.emit('student:chooseGoal', { teamId: team.id, achievementId: a.id }, (res) => {
+      if (res?.ok) { setShowChooser(false); toast({ emoji: a.emoji, title: `目標鎖定：${a.name}`, text: '存夠現金就能完成，衝吧！', tone: 'good' }); }
+      else toast({ emoji: '⚠️', title: res?.reason || '選擇失敗', tone: 'bad' });
+    });
+  }
+
+  function buy() {
+    socket.emit('student:buyAchievement', { teamId: team.id }, (res) => {
+      if (res?.ok) toast({ emoji: '🏆', title: '達成人生成就！', text: `目前累積 ${res.totalStars} ⭐，再選下一個夢想！`, tone: 'good' });
+      else toast({ emoji: '⚠️', title: res?.reason || '尚未達成', tone: 'bad' });
+    });
+  }
+
+  const remain = goal ? Math.max(0, goal.cost - team.cash) : 0;
+  const pct = goal ? Math.min(100, Math.round((team.cash / goal.cost) * 100)) : 0;
+
+  return (
+    <div className="bg-gradient-to-b from-emerald-600 to-emerald-700 text-white px-4 py-3">
+      <div className="flex items-center justify-between">
+        <p className="font-bold flex items-center gap-1.5">👑 財富自由！人生成就</p>
+        <p className="text-sm">{stars > 0 ? <><Stars n={stars} /> <span className="text-white/80">{stars}⭐</span></> : <span className="text-white/70">尚無星星</span>}</p>
+      </div>
+
+      {/* 目前目標 + 進度 */}
+      {goal ? (
+        <div className="mt-2 bg-white/15 ring-1 ring-white/25 rounded-2xl p-3">
+          <div className="flex items-center gap-2">
+            <span className="text-3xl">{goal.emoji}</span>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold leading-tight">{goal.name} <Stars n={goal.stars} /></p>
+              <p className="text-xs text-white/75">價格 {formatMoney(goal.cost)}{goal.upkeep > 0 && ` ‧ 每月開銷 +${formatMoney(goal.upkeep)}`}</p>
+            </div>
+            <button onClick={() => setShowChooser((v) => !v)} className="text-xs underline text-white/80 shrink-0">換夢想</button>
+          </div>
+          {/* 進度條 */}
+          <div className="mt-2 h-2.5 rounded-full bg-black/25 overflow-hidden">
+            <div className="h-full bg-zizi-gold transition-all duration-500" style={{ width: `${pct}%` }} />
+          </div>
+          <p className="mt-1 text-sm">
+            {remain > 0
+              ? <>距離目標還差 <span className="font-bold text-zizi-gold tabular-nums">{formatMoney(remain)}</span></>
+              : <span className="font-bold text-zizi-gold">現金已足夠！</span>}
+          </p>
+          {/* 完成按鈕 / 阻擋原因 */}
+          {!goal.keepsFree ? (
+            <p className="mt-2 text-xs bg-black/25 rounded-lg px-2 py-1.5">⚠️ 買了會讓你不再財富自由（每月開銷變高），先把被動收入養更高再來！</p>
+          ) : (
+            <button
+              onClick={buy}
+              disabled={!canBuy || !goal.affordable}
+              className={'mt-2 w-full py-2 rounded-xl font-bold shadow-glow ' + (canBuy && goal.affordable ? 'bg-gradient-to-r from-zizi-gold to-amber-500 text-zizi-ink' : 'bg-white/20 text-white/50')}
+            >
+              {goal.affordable ? '🏆 完成這個成就！' : '現金還不夠'}
+            </button>
+          )}
+        </div>
+      ) : (
+        <button onClick={() => setShowChooser(true)} className="mt-2 w-full py-2.5 rounded-xl font-bold bg-white/20 ring-1 ring-white/30">
+          🎯 選一個人生夢想當目標
+        </button>
+      )}
+
+      {/* 夢想選單 */}
+      {showChooser && (
+        <div className="mt-2 bg-white rounded-2xl p-2 max-h-72 overflow-auto text-zizi-ink">
+          <p className="text-xs text-slate-500 px-1 py-1">選一個夢想當目標（越貴星星越多）：</p>
+          <div className="space-y-1.5">
+            {catalog.filter((a) => !doneIds.has(a.id)).map((a) => (
+              <button
+                key={a.id}
+                onClick={() => choose(a)}
+                className="w-full flex items-center gap-2 p-2 rounded-xl bg-slate-50 hover:bg-amber-50 ring-1 ring-slate-200 text-left"
+              >
+                <span className="text-2xl shrink-0">{a.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm leading-tight">{a.name} <Stars n={a.stars} /></p>
+                  <p className="text-[0.7rem] text-slate-500 truncate">{a.story}</p>
+                </div>
+                <span className="text-xs font-bold tabular-nums text-zizi-caramel shrink-0">{formatMoney(a.cost)}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 已完成的成就 */}
+      {done.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {done.map((a, i) => (
+            <span key={i} className="text-xs bg-black/25 rounded-full px-2 py-1 flex items-center gap-1">
+              {a.emoji} {a.name} <Stars n={a.stars} />
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -13,6 +13,8 @@ const PROFESSIONS = [
   ['youtuber', '🎬 YouTuber'], ['restaurant', '🍜 餐廳老闆'], ['police', '👮 警察'], ['sales', '💼 業務員'],
   ['lawyer', '⚖️ 律師'], ['pilot', '✈️ 機師'], ['manager', '👔 經理'], ['flightattendant', '🧳 空服員'],
   ['civilservant', '🏛️ 公務員'], ['chef', '👨‍🍳 廚師'], ['ecommerce', '🛍️ 電商'], ['clerk', '🏪 店員'],
+  ['firefighter', '🚒 消防員'], ['vet', '🐾 獸醫'], ['streamer', '🎮 遊戲實況主'], ['barista', '☕ 咖啡廳店長'],
+  ['hairstylist', '💇 髮型設計師'], ['security', '🛡️ 保全'],
 ];
 
 function Cell({ label, children }) {

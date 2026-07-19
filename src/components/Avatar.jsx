@@ -68,6 +68,12 @@ const PROFESSION_OUTFIT = {
   chef: { tmpl: 'chef', shirt: '#f4f1ea', dark: '#cfc8b8', head: 'chefhat' },
   ecommerce: { tmpl: 'casual', shirt: '#f7a05c', dark: '#c97a36' },
   clerk: { tmpl: 'vest', shirt: '#7bd6a6', dark: '#46a173', head: 'storecap' },
+  firefighter: { tmpl: 'uniform', shirt: '#c0392b', dark: '#8a2820', extra: 'badge' },
+  vet: { tmpl: 'coat', shirt: '#4aa96c', dark: '#357a4e', extra: 'stetho' },
+  streamer: { tmpl: 'hoodie', shirt: '#6c5ce7', dark: '#4b3fb0', head: 'headphones' },
+  barista: { tmpl: 'apron', shirt: '#6f4e37', dark: '#4a3323', head: 'bandana' },
+  hairstylist: { tmpl: 'apron', shirt: '#8a5b9a', dark: '#603f6e' },
+  security: { tmpl: 'uniform', shirt: '#4b5563', dark: '#333a44', extra: 'badge' },
 };
 const DEFAULT_OUTFIT = { tmpl: 'casual', shirt: '#9aa3b0', dark: '#6b7280' };
 

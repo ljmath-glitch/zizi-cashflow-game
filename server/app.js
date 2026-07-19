@@ -11,7 +11,8 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { getLanIp } from './lan.js';
 import { initGame, createRoom, getRoom, roomExists } from './game.js';
-import { MARKET } from './data/assets.js';
+import { activeMarket } from './data/assets.js';
+import { ACHIEVEMENTS } from './data/achievements.js';
 import { BOARD } from './data/board.js';
 import { ensureSavesDir, saveToFile, loadFromFile, listSaves, timestampName } from './storage.js';
 
@@ -32,7 +33,8 @@ export function mountCashflow(app, httpServer, { base = '', serveStatic = true, 
 
   // ── HTTP API ──
   app.get(b + '/api/server-info', (req, res) => res.json({ lanIp, port: port || undefined }));
-  app.get(b + '/api/market', (req, res) => res.json(MARKET));
+  app.get(b + '/api/market', (req, res) => res.json(activeMarket()));
+  app.get(b + '/api/achievements', (req, res) => res.json(ACHIEVEMENTS));
   app.get(b + '/api/board', (req, res) => res.json(BOARD));
   app.post(b + '/api/rooms', (req, res) => {
     const code = createRoom();
@@ -78,6 +80,7 @@ export function mountCashflow(app, httpServer, { base = '', serveStatic = true, 
     socket.on('teacher:skipTurn', () => roomOf(socket)?.skipTurn());
     socket.on('teacher:tutorial', ({ show } = {}) => roomOf(socket)?.toggleTutorial(show));
     socket.on('teacher:spotlight', ({ teamId } = {}) => roomOf(socket)?.setSpotlight(teamId));
+    socket.on('teacher:grantFreedom', ({ teamId } = {}, ack) => { ack?.(roomOf(socket)?.grantFreedom(teamId) || { ok: false }); }); // 測試用
     socket.on('teacher:reset', () => roomOf(socket)?.resetGame());
     socket.on('teacher:clear', () => roomOf(socket)?.clearGame());
     socket.on('teacher:setConfig', (cfg) => roomOf(socket)?.setConfig(cfg || {}));
@@ -138,6 +141,8 @@ export function mountCashflow(app, httpServer, { base = '', serveStatic = true, 
     socket.on('student:dealDecision', ({ teamId, accept, withLoan } = {}, ack) => { ensureTeamRoom(socket, teamId); ack?.(roomOf(socket)?.dealDecision(teamId, accept, withLoan) || { ok: false }); });
     socket.on('student:charityDecision', ({ teamId, donate } = {}, ack) => { ensureTeamRoom(socket, teamId); ack?.(roomOf(socket)?.charityDecision(teamId, donate) || { ok: false }); });
     socket.on('student:acquireDecision', ({ teamId, accept } = {}, ack) => { ensureTeamRoom(socket, teamId); ack?.(roomOf(socket)?.acquireDecision(teamId, accept) || { ok: false }); });
+    socket.on('student:chooseGoal', ({ teamId, achievementId } = {}, ack) => { ensureTeamRoom(socket, teamId); ack?.(roomOf(socket)?.chooseGoal(teamId, achievementId) || { ok: false }); });
+    socket.on('student:buyAchievement', ({ teamId } = {}, ack) => { ensureTeamRoom(socket, teamId); ack?.(roomOf(socket)?.buyAchievement(teamId) || { ok: false }); });
 
     socket.on('disconnect', () => {});
   });

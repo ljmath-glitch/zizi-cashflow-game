@@ -137,13 +137,29 @@ export default function Teacher() {
               const on = game?.spotlight?.id === t.id;
               return (
                 <div key={t.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-1.5">
-                  <span className="text-sm">{t.professionEmoji} {t.name}{t.bankrupt ? ' 💀' : ''}</span>
-                  <button
-                    onClick={() => socket.emit('teacher:spotlight', { teamId: t.id })}
-                    className={'text-xs font-medium rounded-lg px-3 py-1 ' + (on ? 'bg-zizi-gold text-white' : 'bg-white text-zizi-ink border border-zizi-gold/40')}
-                  >
-                    {on ? '投影中 ✕' : '📽️ 投影'}
-                  </button>
+                  <span className="text-sm">{t.professionEmoji} {t.name}{t.bankrupt ? ' 💀' : ''}{t.free ? ' 👑' : ''}</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {!t.free && !t.bankrupt && (
+                      <button
+                        onClick={() => {
+                          socket.timeout(3000).emit('teacher:grantFreedom', { teamId: t.id }, (err, res) => {
+                            if (err) alert('❌ 沒收到伺服器回應（可能未連線或房間不符），請重新整理頁面');
+                            else if (!res?.ok) alert('❌ 測試自由失敗：' + (res?.reason || '未知原因'));
+                          });
+                        }}
+                        className="text-xs font-medium rounded-lg px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-300"
+                        title="測試用：讓這組直接財富自由＋給 300 萬現金"
+                      >
+                        🧪 測試自由
+                      </button>
+                    )}
+                    <button
+                      onClick={() => socket.emit('teacher:spotlight', { teamId: t.id })}
+                      className={'text-xs font-medium rounded-lg px-3 py-1 ' + (on ? 'bg-zizi-gold text-white' : 'bg-white text-zizi-ink border border-zizi-gold/40')}
+                    >
+                      {on ? '投影中 ✕' : '📽️ 投影'}
+                    </button>
+                  </div>
                 </div>
               );
             })}

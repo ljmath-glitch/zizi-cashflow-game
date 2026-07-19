@@ -77,6 +77,10 @@ export const MARKET_CARDS = [
   { id: 'mk_pandemic', kind: 'windfall', name: '疫情衝擊', emoji: '🦠', desc: '每人 -8,000', amount: -8000 },
   { id: 'mk_oil', kind: 'windfall', name: '油價大漲', emoji: '⛽', desc: '每人 -5,000', amount: -5000 },
   { id: 'mk_power', kind: 'windfall', name: '電費調漲', emoji: '💡', desc: '每人 -3,000', amount: -3000 },
+  { id: 'mk_scratch', kind: 'windfall', name: '刮刮樂大放送', emoji: '🎟️', desc: '每人 +8,000', amount: 8000 },
+  { id: 'mk_yearend', kind: 'windfall', name: '尾牙抽中大獎', emoji: '🎉', desc: '每人 +5,000', amount: 5000 },
+  { id: 'mk_wedding', kind: 'windfall', name: '朋友結婚包紅包', emoji: '💒', desc: '每人 -3,600', amount: -3600 },
+  { id: 'mk_scam', kind: 'windfall', name: '網購被詐騙', emoji: '🚨', desc: '每人 -6,000', amount: -6000 },
 ];
 
 // ── 額外支出卡（強制消費，不得違抗） ──
@@ -109,6 +113,12 @@ export const DOODAD_CARDS = [
   { id: 'dd_dog', name: '養了一隻狗', emoji: '🐶', amount: 2000, recurring: true },
   { id: 'dd_cat', name: '認養貓咪', emoji: '🐱', amount: 1500, recurring: true },
   { id: 'dd_gym', name: '辦健身房會員', emoji: '🏋️', amount: 1800, recurring: true },
+  // 一般（搞笑款）
+  { id: 'dd_gacha', name: '手遊課金抽不到', emoji: '🎰', amount: 9000, story: '為了抽限定角色課金了一整晚，結果還是沒中，錢包哭哭。' },
+  { id: 'dd_return', name: '網購踩雷退貨運費', emoji: '📮', amount: 4000, story: '一次買了十件衣服全部不合身，退貨運費自己吸收。' },
+  { id: 'dd_merch', name: '演唱會周邊噴錢', emoji: '🎀', amount: 9000, story: '應援手燈、毛巾、寫真集全包，理智線當場斷掉。' },
+  { id: 'dd_snacks', name: '追劇囤零食飲料', emoji: '🍿', amount: 5000, story: '為了追新番囤了一整櫃零食跟手搖飲，體重與帳單一起上升。' },
+  { id: 'dd_scooter', name: '機車拋錨大修', emoji: '🛵', amount: 16000, story: '通勤機車半路熄火，牽去保養廠一次噴掉一筆。' },
 ];
 
 const DECKS = { small: SMALL_DEALS, big: BIG_DEALS, market: MARKET_CARDS, doodad: DOODAD_CARDS };

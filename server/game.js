@@ -3,7 +3,8 @@
 // 模組 3：各組登入 + 抽職業卡 + 財務資料
 // 模組 4：買賣資產 + 每回合發薪/被動收入結算 + 即時動態
 import { PROFESSIONS, randomProfession, getProfession } from './data/professions.js';
-import { MARKET, getMarketItem, INSTRUMENT_VOL } from './data/assets.js';
+import { activeMarket, getMarketItem, INSTRUMENT_VOL } from './data/assets.js';
+import { getAchievement, starsOf } from './data/achievements.js';
 import { BOARD } from './data/board.js';
 import { drawCard } from './data/cards.js';
 import { pickEvent, randomRumor } from './data/events.js';
@@ -75,6 +76,7 @@ const state = {
   market: freshMarket(), // 三大類市場指數（會浮動）
   monthlyEvent: null, // 本回合市場事件
   lastCatId: null, // 上一個災難型大事件 id（避免連續災難）
+  roundsSinceBig: 0, // 已連續幾回合沒出大事件（保底機制用，避免整場都沒大事件）
   pendingRumor: null, // 待兌現的股市情報
   showTutorial: false, // 大螢幕是否顯示新手教學
   spotlightTeamId: null, // 老師投影到大螢幕教學的組別（平常不公開）
@@ -89,7 +91,7 @@ function diffCfg() {
 // 市場初始化：每支股票/ETF/加密貨幣各自一條價格序列；房地產用分類指數
 function freshMarket() {
   const instruments = {};
-  for (const item of MARKET) {
+  for (const item of activeMarket()) {
     if (item.category === 'dividend' || item.category === 'crypto' || item.category === 'commodity') {
       // 加密以 100 為名目價（當作指數）；股票/ETF/原物料以牌價為起點
       const base = item.category === 'crypto' ? 100 : item.price;
@@ -236,8 +238,12 @@ function enterNewRound(roundNumber) {
 
 // 每回合開場：抽事件（多為小事件、偶爾大事件），更新每支商品價格與房地產指數
 function applyMonthlyEvent() {
-  const evt = pickEvent(state.lastCatId);
+  // 保底：連續 BIG_EVENT_PITY 回合沒出大事件，本回合強制來一個大事件（不讓整場靜悄悄）
+  const BIG_EVENT_PITY = 4;
+  const forceBig = (state.roundsSinceBig || 0) >= BIG_EVENT_PITY;
+  const evt = pickEvent(state.lastCatId, forceBig);
   state.lastCatId = evt.catastrophe ? evt.id : null; // 記錄災難，避免連續
+  state.roundsSinceBig = evt.scale === 'big' ? 0 : (state.roundsSinceBig || 0) + 1;
   const prevEvent = state.monthlyEvent;
   const before = {};
   for (const id in state.market.instruments) before[id] = state.market.instruments[id].price;
@@ -337,6 +343,23 @@ function applyMonthlyEvent() {
 
   addFeed(`${evt.emoji} ${evt.scale === 'big' ? '【大事件】' : ''}${evt.title}（${evt.desc || ''}）`);
 
+  // 全班共同「搞笑賺賠」：事件帶 cashRange（隨機）或 cash（固定）時，非破產各組現金一次性 +/−
+  // （同一回合全班同額；emitTeam 由 enterNewRound 收尾推播）
+  let cashAmt = 0;
+  if (evt.cashRange) {
+    const [lo, hi] = evt.cashRange;
+    cashAmt = Math.round((lo + Math.random() * (hi - lo)) / 500) * 500; // 取整到 500
+  } else if (evt.cash) {
+    cashAmt = evt.cash;
+  }
+  if (cashAmt) {
+    for (const team of Object.values(state.teams)) {
+      if (team.bankrupt) continue;
+      team.cash += cashAmt;
+    }
+    addFeed(`${cashAmt > 0 ? '💰' : '💸'} ${evt.title}：全班每組 ${cashAmt > 0 ? '+' : '−'}${Math.abs(cashAmt).toLocaleString()}`);
+  }
+
   // 釋出新情報（約 25% 機率），暗示下回合可能行情
   let rumor = null;
   if (Math.random() < 0.25) {
@@ -350,9 +373,10 @@ function applyMonthlyEvent() {
     io.to(code).emit('month:report', {
       round: state.round,
       prevEvent: prevEvent ? { emoji: prevEvent.emoji, title: prevEvent.title } : null,
-      thisEvent: { emoji: evt.emoji, title: evt.title, desc: evt.desc || '' },
+      thisEvent: { emoji: evt.emoji, title: evt.title, desc: evt.desc || '', fx: evt.fx || null },
       moves,
       scale: evt.scale,
+      cash: cashAmt, // 全班共同賺賠金額（0＝無；已解析 cashRange 隨機值）
       rumor,
     });
   }
@@ -492,6 +516,9 @@ function resetTeamFinances(team) {
   team.history = [];
   team.free = false;
   team.freedRound = null;
+  team.achievements = []; // 已完成的人生成就 id（財富自由後才能追求）
+  team.currentGoalId = null; // 目前選定要達成的成就 id
+  team.achievementUpkeep = 0; // 成就帶來的每月額外開銷加總（如夢想之家管理費）
   team.bankrupt = false; // 是否已破產淘汰
   team.bankruptRound = null;
 }
@@ -622,7 +649,7 @@ function computeTotalExpense(team) {
   const e = team.expenses || {};
   const base = (e.tax || 0) + (e.homeMortgage || 0) + (e.carLoan || 0) +
     (e.schoolLoan || 0) + (e.creditCard || 0) + (e.other || 0);
-  return base + (team.perChild || 0) * (team.children || 0) + bankLoanPayment(team);
+  return base + (team.perChild || 0) * (team.children || 0) + bankLoanPayment(team) + (team.achievementUpkeep || 0);
 }
 
 // 負債總額（計入淨資產）
@@ -642,6 +669,24 @@ function computeDerived(team) {
   const cashflow = totalIncome - totalExpense; // 月現金流
   const assetsValue = (team.assets || []).reduce((s, a) => s + (a.value || 0), 0);
   const liabilitiesTotal = computeLiabilitiesTotal(team);
+
+  // 人生成就：已完成星數＋目前目標的達成條件（現金夠不夠、買了會不會破壞財富自由）
+  const doneIds = team.achievements || [];
+  const goalDef = team.currentGoalId ? getAchievement(team.currentGoalId) : null;
+  const goal = goalDef
+    ? {
+        id: goalDef.id,
+        name: goalDef.name,
+        emoji: goalDef.emoji,
+        cost: goalDef.cost,
+        upkeep: goalDef.upkeep || 0,
+        stars: goalDef.stars,
+        story: goalDef.story,
+        affordable: team.cash >= goalDef.cost, // 現金是否夠
+        keepsFree: passive.total >= totalExpense + (goalDef.upkeep || 0), // 買了是否仍維持財富自由
+      }
+    : null;
+
   return {
     passive,
     passiveTotal: passive.total,
@@ -655,6 +700,12 @@ function computeDerived(team) {
     free: passive.total >= totalExpense, // 非工資收入 ≥ 總支出 → 財富自由
     loanLimit: loanLimitFor(team), // 現金貸款總額上限（月薪 × 倍數）
     loanRoom: loanRoomFor(team), // 目前還能再借多少
+    achievementStars: starsOf(doneIds), // 已完成成就總星數
+    achievementsDone: doneIds.map((id) => {
+      const a = getAchievement(id);
+      return a ? { id: a.id, name: a.name, emoji: a.emoji, stars: a.stars } : null;
+    }).filter(Boolean),
+    goal, // 目前選定的人生成就目標（含達成條件），沒選則 null
   };
 }
 
@@ -690,6 +741,9 @@ function publicTeam(team) {
     assetCount: (team.assets || []).length, // 持有資產筆數（明細在投影看）
     free: team.free, // 以鎖定的旗標為準（達成後即使數字變動仍維持）
     freedRound: team.freedRound || null,
+    achievementStars: d.achievementStars, // 已完成人生成就總星數（大螢幕排名用）
+    achievementsDone: d.achievementsDone, // 已完成成就 [{emoji,name,stars}]
+    currentGoal: d.goal ? { emoji: d.goal.emoji, name: d.goal.name, cost: d.goal.cost, stars: d.goal.stars } : null, // 目前追求的夢想（含價格）
     bankrupt: !!team.bankrupt, // 是否破產淘汰
     position: team.position || 0, // 老鼠賽跑圈上的格子
     hasRolled: !!team.hasRolledThisRound, // 本回合是否已擲骰
@@ -746,6 +800,7 @@ function getSnapshot() {
     currentTurnIndex: state.currentTurnIndex,
     market: state.market,
     monthlyEvent: state.monthlyEvent,
+    roundsSinceBig: state.roundsSinceBig,
     difficulty: state.difficulty,
     teamSeq,
     uidSeq,
@@ -765,6 +820,7 @@ function loadSnapshot(data) {
   state.teams = data.teams && typeof data.teams === 'object' ? data.teams : {};
   state.market = data.market && data.market.instruments ? data.market : freshMarket();
   state.monthlyEvent = data.monthlyEvent ?? null;
+  state.roundsSinceBig = Number.isFinite(data.roundsSinceBig) ? data.roundsSinceBig : 0;
   state.difficulty = DIFFICULTY[data.difficulty] ? data.difficulty : 'normal';
   state.turnOrder = Array.isArray(data.turnOrder) ? data.turnOrder : Object.keys(state.teams);
   state.currentTurnIndex = Number.isFinite(data.currentTurnIndex) ? data.currentTurnIndex : 0;
@@ -1665,6 +1721,72 @@ function sellAsset(teamId, payload = {}) {
   return { ok: true, proceeds, illiquid, grossValue };
 }
 
+// ── 人生成就（跳出老鼠圈後的玩法）──
 
-  return { getPublicState, startGame, pauseGame, skipTurn, nextRound, resetGame, clearGame, toggleTutorial, setSpotlight, professionPair, createTeam, getTeam, getTeamPayload, listPublicTeams, broadcastTeams, setConfig, getSnapshot, loadSnapshot, getFeed, rollDice, acquireDecision, chooseDeck, dealDecision, charityDecision, buyAsset, loanMoney, repayLoan, repayDebt, sellAsset, netWorth, publicTeam };
+// 選定要追求的人生成就目標（只有已達成財富自由、且尚未完成該成就者可選）
+function chooseGoal(teamId, achievementId) {
+  const team = getTeam(teamId);
+  if (!team) return { ok: false, reason: '找不到組別' };
+  if (!computeDerived(team).free) return { ok: false, reason: '要先達成財富自由，才能追求人生夢想' };
+  const ach = getAchievement(achievementId);
+  if (!ach) return { ok: false, reason: '查無此成就' };
+  if ((team.achievements || []).includes(ach.id)) return { ok: false, reason: '這個成就已經完成囉' };
+  team.currentGoalId = ach.id;
+  emitTeam(team);
+  broadcastTeams();
+  return { ok: true, goal: ach.id };
+}
+
+// 買下（完成）目前選定的人生成就：需現金足夠，且買完仍維持財富自由
+function buyAchievement(teamId) {
+  if (state.phase !== 'running') return { ok: false, reason: '目前不是操作時間' };
+  const team = getTeam(teamId);
+  if (!team) return { ok: false, reason: '找不到組別' };
+  const ach = team.currentGoalId ? getAchievement(team.currentGoalId) : null;
+  if (!ach) return { ok: false, reason: '還沒選定人生夢想' };
+  if ((team.achievements || []).includes(ach.id)) return { ok: false, reason: '這個成就已經完成囉' };
+
+  const passive = passiveBreakdown(team).total;
+  const upkeep = ach.upkeep || 0;
+  // 維持財富自由：買完（含新增每月開銷）後，被動收入仍需 ≥ 總支出
+  if (passive < computeTotalExpense(team) + upkeep) {
+    return { ok: false, reason: '買了會讓你不再財富自由！先把被動收入養更高再來 💪' };
+  }
+  if (team.cash < ach.cost) {
+    return { ok: false, reason: `現金不足（需 ${formatNT(ach.cost)}），繼續累積或擴大投資收入吧！` };
+  }
+
+  team.cash -= ach.cost;
+  team.achievementUpkeep = (team.achievementUpkeep || 0) + upkeep;
+  team.achievements = [...(team.achievements || []), ach.id];
+  team.currentGoalId = null; // 完成後清空，讓玩家挑下一個夢想
+  const totalStars = starsOf(team.achievements);
+  addHistory(team, { round: state.round, type: 'achievement', text: `達成人生成就 ${ach.emoji} ${ach.name}`, delta: -ach.cost });
+  addFeed(`${ach.emoji}🏆 ${team.name} 達成人生成就「${ach.name}」！（累積 ${totalStars} ⭐）`);
+  if (io) io.to(code).emit('game:achievement', { teamId: team.id, name: team.name, achievement: { name: ach.name, emoji: ach.emoji, stars: ach.stars }, totalStars });
+  emitTeam(team);
+  broadcastTeams();
+  return { ok: true, achievement: ach.id, totalStars };
+}
+
+// 【測試用】直接讓某組達成財富自由＋給足現金，方便驗證人生成就流程（正式上課別亂按）
+function grantFreedom(teamId) {
+  const team = getTeam(teamId);
+  if (!team) return { ok: false, reason: '找不到組別' };
+  if (team.bankrupt) return { ok: false, reason: '已破產淘汰' };
+  const d = computeDerived(team);
+  // 補一筆「測試被動收入」，讓被動收入超過總支出（多留 3 萬緩衝給成就的每月開銷）
+  const need = Math.max(0, d.totalExpense - d.passiveTotal) + 30000;
+  team.assets = team.assets || [];
+  team.assets.push({ uid: nextUid(), category: 'business', name: '測試被動收入', emoji: '🧪', value: 0, monthlyIncome: need });
+  team.cash += 3000000; // 給足現金以便測試購買成就
+  checkFreedom(team); // 觸發財富自由旗標＋大螢幕慶祝
+  addFeed(`🧪 ${team.name}（測試）直接達成財富自由`);
+  emitTeam(team);
+  broadcastTeams();
+  return { ok: true };
+}
+
+
+  return { getPublicState, startGame, pauseGame, skipTurn, nextRound, resetGame, clearGame, toggleTutorial, setSpotlight, professionPair, createTeam, getTeam, getTeamPayload, listPublicTeams, broadcastTeams, setConfig, getSnapshot, loadSnapshot, getFeed, rollDice, acquireDecision, chooseDeck, dealDecision, charityDecision, buyAsset, loanMoney, repayLoan, repayDebt, sellAsset, chooseGoal, buyAchievement, grantFreedom, netWorth, publicTeam };
 }

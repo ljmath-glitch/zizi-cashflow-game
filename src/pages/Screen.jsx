@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { socket, ROOM } from '../socket.js';
 import { useConnection } from '../hooks/useConnection.js';
@@ -193,6 +193,7 @@ export default function Screen() {
               <FeedPanel feed={feed} />
             </div>
             <div className="w-[26rem] shrink-0 flex flex-col gap-3 min-h-0">
+              <JoinQR studentUrl={studentUrl} />
               <TeamsOverview ranked={ranked} ended={phase === 'ended'} currentTurnId={game?.currentTurnId} />
             </div>
           </div>
@@ -382,9 +383,60 @@ function CountUp({ value, duration = 700 }) {
   return <>{v}</>;
 }
 
+// 大事件專屬動畫劇場：依 fx 主題，在月初報告彈窗背後疊一層全螢幕特效
+// motion＝粒子動線；tint＝色調覆蓋層；n＝粒子數；dur＝每顆動畫秒數區間
+const FX_THEME = {
+  circuit:  { emojis: ['⚡', '🤖', '💡', '🔷'], motion: 'bigfx-twinkle', tint: 'bigfx-tint bigfx-tint-blue', n: 16, dur: [0.8, 1.6] },
+  boom:     { emojis: ['📈', '🚀', '💹', '🟢'], motion: 'bigfx-rise', tint: 'bigfx-tint bigfx-tint-green', n: 16, dur: [1.6, 3] },
+  coinrain: { emojis: ['🪙', '₿', '💰', '🟡'], motion: 'bigfx-fall', tint: 'bigfx-tint bigfx-tint-gold', n: 20, dur: [1.6, 3] },
+  gold:     { emojis: ['✨', '🥇', '🌟', '💛'], motion: 'bigfx-twinkle', tint: 'bigfx-tint bigfx-tint-gold', n: 18, dur: [0.9, 1.8] },
+  siren:    { emojis: ['🚨', '😱', '⚠️', '❗'], motion: 'bigfx-twinkle', tint: 'bigfx-siren', n: 14, dur: [0.7, 1.4] },
+  storm:    { emojis: ['🌀', '🌧️', '💨', '☔'], motion: 'bigfx-blow', tint: 'bigfx-tint bigfx-tint-storm', n: 16, dur: [1.2, 2.4] },
+  confetti: { emojis: ['🧧', '💰', '🎉', '🎊'], motion: 'bigfx-fall', tint: 'bigfx-tint bigfx-tint-festive', n: 22, dur: [1.8, 3.4] },
+  crash:    { emojis: ['📉', '🔻', '💸', '🔴'], motion: 'bigfx-fall', tint: 'bigfx-tint bigfx-tint-red', n: 18, dur: [0.9, 1.7] },
+};
+function BigEventFx({ type }) {
+  const theme = FX_THEME[type];
+  const parts = useMemo(() => {
+    if (!theme) return [];
+    return Array.from({ length: theme.n }).map((_, i) => ({
+      emoji: theme.emojis[i % theme.emojis.length],
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      delay: Math.random() * 2,
+      dur: theme.dur[0] + Math.random() * (theme.dur[1] - theme.dur[0]),
+      size: 1.4 + Math.random() * 1.8,
+    }));
+  }, [type]);
+  if (!theme) return null;
+  const usesTop = theme.motion === 'bigfx-twinkle' || theme.motion === 'bigfx-blow';
+  const isBlow = theme.motion === 'bigfx-blow';
+  return (
+    <div className="bigfx-layer">
+      <div className={theme.tint} />
+      {parts.map((p, i) => (
+        <span
+          key={i}
+          className={'bigfx-p ' + theme.motion}
+          style={{
+            left: isBlow ? 0 : `${p.left}%`,
+            ...(usesTop ? { top: `${p.top}%` } : {}),
+            fontSize: `${p.size}rem`,
+            animationDelay: `${p.delay}s`,
+            animationDuration: `${p.dur}s`,
+          }}
+        >
+          {p.emoji}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // 月初彈窗：回顧上個月 + 公布本月突發事件（含動畫）
 function MonthReport({ report, onClose }) {
-  const { round, prevEvent, thisEvent, moves, scale, rumor } = report;
+  const { round, prevEvent, thisEvent, moves, scale, cash, rumor } = report;
+  const fx = scale === 'big' ? thisEvent.fx : null;
   const moveRow = (label, emoji, pct, i) => (
     <div className="flex items-center justify-between px-4 py-1.5 fade-in" style={{ animationDelay: `${0.15 + i * 0.12}s`, animationFillMode: 'backwards' }}>
       <span className="text-white/70">{emoji} {label}</span>
@@ -394,9 +446,10 @@ function MonthReport({ report, onClose }) {
     </div>
   );
   return (
-    <div onClick={onClose} className="fixed inset-0 z-40 flex items-center justify-center bg-zizi-ink/70 backdrop-blur-sm cursor-pointer">
-      <span className="absolute bottom-6 inset-x-0 text-center text-white/55 text-sm">👆 點畫面任一處關閉</span>
-      <div className="card-pop bg-gradient-to-b from-zizi-dusk to-zizi-night border-2 border-zizi-gold rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] w-[34rem] max-w-[92vw] p-7 text-white">
+    <div onClick={onClose} className="fixed inset-0 z-40 flex items-center justify-center bg-zizi-ink/70 backdrop-blur-sm cursor-pointer overflow-hidden">
+      {fx && <BigEventFx type={fx} />}
+      <span className="absolute bottom-6 inset-x-0 text-center text-white/55 text-sm z-10">👆 點畫面任一處關閉</span>
+      <div className={'card-pop relative z-10 bg-gradient-to-b from-zizi-dusk to-zizi-night border-2 border-zizi-gold rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.7)] w-[34rem] max-w-[92vw] p-7 text-white' + (fx === 'storm' ? ' bigfx-shake' : '')}>
         <p className="text-center text-white/60">— 第 {round} 回合 —</p>
 
         {prevEvent ? (
@@ -426,6 +479,20 @@ function MonthReport({ report, onClose }) {
           <p className="text-2xl font-black text-zizi-gold relative">{thisEvent.title}</p>
           <p className="text-white/70 mt-1 relative">{thisEvent.desc}</p>
         </div>
+
+        {/* 全班共同「搞笑賺賠」：飄錢／飄鈔動畫 + 大數字 */}
+        {cash ? (
+          <div className={'mt-3 rounded-2xl p-3 text-center relative overflow-hidden ' + (cash > 0 ? 'bg-emerald-500/15 ring-2 ring-emerald-400/60' : 'bg-rose-500/15 ring-2 ring-rose-400/60')}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <span key={i} className="report-drift absolute text-2xl opacity-60" style={{ left: `${6 + i * 15}%`, animationDelay: `${i * 0.3}s` }}>{cash > 0 ? '🪙' : '💸'}</span>
+            ))}
+            <p className="relative text-sm text-white/60">{cash > 0 ? '💰 全班共同進帳' : '😱 全班共同損失'}</p>
+            <p className={'relative text-4xl font-black tabular-nums drop-shadow ' + (cash > 0 ? 'text-emerald-300' : 'text-rose-300')}>
+              {cash > 0 ? '+' : '−'}<CountUp value={Math.abs(cash)} />
+            </p>
+            <p className="relative text-xs text-white/45">每組現金{cash > 0 ? '增加' : '減少'}</p>
+          </div>
+        ) : null}
 
         {rumor && (
           <div className="mt-3 bg-white/5 rounded-xl px-4 py-2 text-sm text-amber-200">
@@ -768,6 +835,22 @@ function LobbyHills() {
   );
 }
 
+// 遊戲進行中常駐的「掃碼加入 / 回到遊戲」小卡（放右欄頂端，讓中途退出的人隨時掃回來）
+function JoinQR({ studentUrl }) {
+  return (
+    <div className="glass-dark rounded-2xl p-3 shrink-0 shadow-lg flex items-center gap-3">
+      <div className="bg-white rounded-xl p-1.5 shrink-0">
+        <QRCodeSVG value={studentUrl} size={82} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-bold text-zizi-gold">📱 掃我加入 ‧ 回到遊戲</p>
+        <p className="text-xs text-white/65 leading-snug mt-0.5">不小心退出了？用手機重新掃碼就會自動回到原本的組別；若沒有，輸入你的組別代號即可。</p>
+        <p className="text-[0.7rem] font-mono text-white/40 truncate mt-0.5">{studentUrl}</p>
+      </div>
+    </div>
+  );
+}
+
 function LobbyView({ studentUrl, teams }) {
   return (
     <div className="lobby-stage h-full flex flex-col items-center justify-between gap-4 py-6 px-8">
@@ -982,6 +1065,10 @@ function Board({ board, teams, round, timeLeft, phase, currentTurnId, movingId }
             {isCurrent && (
               <span className="absolute inset-0 -m-1 rounded-full ring-4 ring-zizi-gold animate-ping" />
             )}
+            {/* 財富自由玩家：頭上戴皇冠，一眼看出與眾不同 */}
+            {t.free && !t.bankrupt && (
+              <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 text-lg leading-none z-20 drop-shadow">👑</span>
+            )}
             {/* 名牌：只在「輪到的玩家」顯示，減少遮擋；其餘靠代幣圖示與右側總覽辨識 */}
             {isCurrent && (
               <span className={'absolute whitespace-nowrap text-[0.7rem] font-bold px-1.5 py-0.5 rounded-full bg-black/65 text-zizi-gold leading-none shadow ' + tagPos}>
@@ -1039,7 +1126,8 @@ function TeamsOverview({ ranked, ended, currentTurnId }) {
                 <div className="flex-1 min-w-0">
                   <p className={'font-bold truncate leading-tight ' + (t.bankrupt ? 'line-through text-white/55' : '')}>
                     {t.name}
-                    {t.free && <span className="ml-1 text-[0.65rem] align-middle bg-green-400/25 text-green-200 rounded px-1 py-0.5">已自由</span>}
+                    {t.free && <span className="ml-1 text-[0.65rem] align-middle bg-green-400/25 text-green-200 rounded px-1 py-0.5">👑已自由</span>}
+                    {t.free && t.achievementStars > 0 && <span className="ml-1 text-[0.72rem] align-middle bg-amber-400/25 text-amber-200 rounded px-1.5 py-0.5 font-bold">⭐{t.achievementStars}</span>}
                     {isCurrent && <span className="ml-1 text-[0.65rem] align-middle bg-zizi-gold/30 text-zizi-gold rounded px-1 py-0.5">輪到中</span>}
                   </p>
                   <p className="text-[0.7rem] text-white/50 leading-tight truncate">{t.professionName} ‧ 薪 {formatMoney(t.salary)}</p>
@@ -1053,23 +1141,44 @@ function TeamsOverview({ ranked, ended, currentTurnId }) {
               {t.bankrupt ? (
                 <p className="mt-1 text-sm font-bold text-red-300 text-center">已破產淘汰</p>
               ) : (
-                /* 只放重點摘要：現金 / 月現金流 / 被動收入（持有資產明細在老師「投影」細項看） */
-                <div className="mt-1.5 grid grid-cols-3 gap-1.5 text-center">
-                  <div className="rounded-lg bg-black/20 py-1">
-                    <p className="text-[0.6rem] text-white/45">現金</p>
-                    <p className={'text-sm font-bold tabular-nums ' + (t.cash < 0 ? 'text-rose-300' : 'text-cyan-300')}>{formatMoney(t.cash)}</p>
+                <>
+                  {/* 只放重點摘要：現金 / 月現金流 / 被動收入（持有資產明細在老師「投影」細項看） */}
+                  <div className="mt-1.5 grid grid-cols-3 gap-1.5 text-center">
+                    <div className="rounded-lg bg-black/20 py-1">
+                      <p className="text-[0.6rem] text-white/45">現金</p>
+                      <p className={'text-sm font-bold tabular-nums ' + (t.cash < 0 ? 'text-rose-300' : 'text-cyan-300')}>{formatMoney(t.cash)}</p>
+                    </div>
+                    <div className="rounded-lg bg-black/20 py-1">
+                      <p className="text-[0.6rem] text-white/45">月現金流</p>
+                      <p className={'text-sm font-bold tabular-nums ' + (cf >= 0 ? 'text-green-300' : 'text-red-300')}>
+                        {cf >= 0 ? '+' : '−'}{formatMoney(Math.abs(cf))}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-black/20 py-1">
+                      <p className="text-[0.6rem] text-white/45">被動收入</p>
+                      <p className="text-sm font-bold tabular-nums text-zizi-gold">{formatMoney(t.passiveIncome)}</p>
+                    </div>
                   </div>
-                  <div className="rounded-lg bg-black/20 py-1">
-                    <p className="text-[0.6rem] text-white/45">月現金流</p>
-                    <p className={'text-sm font-bold tabular-nums ' + (cf >= 0 ? 'text-green-300' : 'text-red-300')}>
-                      {cf >= 0 ? '+' : '−'}{formatMoney(Math.abs(cf))}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-black/20 py-1">
-                    <p className="text-[0.6rem] text-white/45">被動收入</p>
-                    <p className="text-sm font-bold tabular-nums text-zizi-gold">{formatMoney(t.passiveIncome)}</p>
-                  </div>
-                </div>
+
+                  {/* 財富自由後：目前追求的人生夢想 + 進度（還差多少現金） */}
+                  {t.free && t.currentGoal && (
+                    <div className="mt-1.5 rounded-lg bg-emerald-500/12 ring-1 ring-emerald-400/30 px-2 py-1.5 flex items-center gap-2">
+                      <span className="text-xl shrink-0">{t.currentGoal.emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[0.72rem] text-white/75 truncate leading-tight">🎯 {t.currentGoal.name}</p>
+                        <div className="mt-1 h-1.5 rounded-full bg-black/30 overflow-hidden">
+                          <div className="h-full bg-zizi-gold transition-all duration-500" style={{ width: `${Math.min(100, Math.round((t.cash / t.currentGoal.cost) * 100))}%` }} />
+                        </div>
+                      </div>
+                      <span className="text-[0.72rem] font-bold text-zizi-gold shrink-0 tabular-nums">
+                        {t.cash >= t.currentGoal.cost ? '可達成！' : `差 ${formatMoney(t.currentGoal.cost - t.cash)}`}
+                      </span>
+                    </div>
+                  )}
+                  {t.free && !t.currentGoal && (
+                    <p className="mt-1.5 text-[0.72rem] text-center text-white/45">👑 財富自由中，尚未選定下一個夢想</p>
+                  )}
+                </>
               )}
             </div>
           );

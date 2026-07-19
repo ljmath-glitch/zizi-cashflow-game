@@ -265,6 +265,34 @@ export const MARKET = [
   },
 ];
 
+// ── 簡化版 / 大人版開關 ──
+// 國中生版把市場商品精簡到最基本（避免股票種類太多太難）；標為 advanced 的商品先隱藏。
+// 之後若要做「大人版」，把 ADVANCED_MARKET 改成 true，全部進階商品就會一次開放（其他程式都吃 activeMarket()）。
+const ADVANCED_IDS = new Set([
+  'etf_ai',          // AI 主題 ETF
+  'stock_aisoft',    // AI 軟體新創股
+  'stock_biotech',   // 生技新藥股
+  'stock_traditional', // 傳產龍頭股
+  'stock_food',      // 食品股
+  'stock_telecom',   // 電信股
+  'silver',          // 白銀
+  'oil',             // 石油期貨
+  'bond_etf',        // 債券 ETF
+  're_2r_shilin',    // 兩房一廳（房地產再多一種）
+]);
+for (const m of MARKET) {
+  if (ADVANCED_IDS.has(m.id)) m.advanced = true;
+}
+
+// 進階市場總開關：false＝國中生簡化版；true＝大人版（開放全部）
+export const ADVANCED_MARKET = false;
+
+// 目前生效的市場商品清單（依開關過濾）。所有要「給學生看／建立行情」的地方都用這個。
+export function activeMarket() {
+  return ADVANCED_MARKET ? MARKET : MARKET.filter((m) => !m.advanced);
+}
+
+// 依 id 找商品（查完整清單，確保舊存檔中已持有的進階資產仍能正確顯示名稱/估值）
 export function getMarketItem(id) {
   return MARKET.find((m) => m.id === id) || null;
 }

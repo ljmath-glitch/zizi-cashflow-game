@@ -454,3 +454,62 @@ button:active:not(:disabled) {
 @media (prefers-reduced-motion: reduce) {
   .lobby-stars, .lobby-coin, .lobby-window, .lobby-badge-float { animation: none !important; }
 }
+
+/* ── 大事件專屬動畫劇場：整個月初報告彈窗背後的全螢幕特效 ── */
+.bigfx-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.bigfx-p { position: absolute; will-change: transform, opacity; }
+
+/* 由上往下墜（幣雨 coinrain / 紅色墜落 crash 共用；速度由 inline animationDuration 決定） */
+.bigfx-fall { top: -8%; animation-name: bigfx-fall; animation-timing-function: linear; animation-iteration-count: infinite; }
+@keyframes bigfx-fall {
+  0% { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translateY(112vh) rotate(300deg); opacity: 0.9; }
+}
+/* 由下往上噴（綠色噴發 boom） */
+.bigfx-rise { bottom: -8%; animation-name: bigfx-rise; animation-timing-function: ease-out; animation-iteration-count: infinite; }
+@keyframes bigfx-rise {
+  0% { transform: translateY(10vh) scale(0.7); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateY(-114vh) scale(1.15); opacity: 0.9; }
+}
+/* 橫向吹襲（颱風 storm） */
+.bigfx-blow { animation-name: bigfx-blow; animation-timing-function: linear; animation-iteration-count: infinite; }
+@keyframes bigfx-blow {
+  0% { transform: translateX(-16vw) rotate(-10deg); opacity: 0; }
+  10% { opacity: 0.9; }
+  100% { transform: translateX(118vw) rotate(14deg); opacity: 0.9; }
+}
+/* 定點閃爍（金光 gold / 電路 circuit 的火花） */
+.bigfx-twinkle { animation-name: bigfx-twinkle; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+@keyframes bigfx-twinkle {
+  0% { transform: scale(0) rotate(0deg); opacity: 0; }
+  40% { transform: scale(1.25) rotate(15deg); opacity: 1; }
+  100% { transform: scale(0.5) rotate(0deg); opacity: 0; }
+}
+
+/* 色調覆蓋層（脈動）與警報閃爍、颱風搖晃 */
+.bigfx-tint { position: absolute; inset: 0; animation: bigfx-tintpulse 1.8s ease-in-out infinite; }
+@keyframes bigfx-tintpulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.85; } }
+.bigfx-tint-red { background: radial-gradient(circle at 50% 38%, transparent 28%, rgba(220, 40, 40, 0.32)); }
+.bigfx-tint-blue { background: radial-gradient(circle at 50% 40%, rgba(70, 130, 246, 0.26), transparent 62%); }
+.bigfx-tint-gold { background: radial-gradient(circle at 50% 40%, rgba(245, 158, 11, 0.3), transparent 62%); }
+.bigfx-tint-green { background: radial-gradient(circle at 50% 62%, transparent 28%, rgba(16, 185, 129, 0.28)); }
+.bigfx-tint-storm { background: linear-gradient(115deg, rgba(40, 60, 90, 0.4), transparent 70%); animation: none; }
+.bigfx-tint-festive { background: radial-gradient(circle at 50% 40%, rgba(245, 158, 11, 0.22), transparent 62%); }
+.bigfx-siren { position: absolute; inset: 0; animation: bigfx-siren 0.7s steps(1, end) infinite; }
+@keyframes bigfx-siren {
+  0% { background: radial-gradient(circle at 28% 30%, rgba(239, 68, 68, 0.4), transparent 55%); }
+  50% { background: radial-gradient(circle at 72% 42%, rgba(59, 130, 246, 0.4), transparent 55%); }
+  100% { background: radial-gradient(circle at 28% 30%, rgba(239, 68, 68, 0.4), transparent 55%); }
+}
+.bigfx-shake { animation: bigfx-shake 0.5s ease-in-out infinite; }
+@keyframes bigfx-shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(-7px) rotate(-1deg); }
+  75% { transform: translateX(7px) rotate(1deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bigfx-fall, .bigfx-rise, .bigfx-blow, .bigfx-twinkle, .bigfx-tint, .bigfx-siren, .bigfx-shake { animation: none !important; }
+}
