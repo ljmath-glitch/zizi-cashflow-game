@@ -308,15 +308,21 @@ function FinancePanel({ team, phase }) {
   }
 
   // 手指左右滑動切換分頁（滑動 UI）
-  const touchX = useRef(null);
+  // 只有「明顯水平」的滑動才換頁：水平位移要夠大、且明顯大於垂直位移，
+  // 避免直向捲動（尤其滑到底時）帶一點左右偏移就被誤判成換分頁。
+  const touchStart = useRef(null);
   function onTouchStart(e) {
-    touchX.current = e.touches[0].clientX;
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY };
   }
   function onTouchEnd(e) {
-    if (touchX.current == null) return;
-    const dx = e.changedTouches[0].clientX - touchX.current;
-    touchX.current = null;
-    if (Math.abs(dx) < 60) return;
+    if (!touchStart.current) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.current.x;
+    const dy = t.clientY - touchStart.current.y;
+    touchStart.current = null;
+    if (Math.abs(dx) < 60) return; // 水平位移不夠大
+    if (Math.abs(dx) < Math.abs(dy) * 1.5) return; // 比較像直向捲動 → 不換頁
     const ni = dx < 0 ? Math.min(idx + 1, TABS.length - 1) : Math.max(idx - 1, 0);
     if (ni !== idx) changeTab(TABS[ni].key);
   }
@@ -663,7 +669,7 @@ const SQUARE_HINT = {
   doodad: '額外支出，已自動扣款',
   charity: '慈善機會，請選擇捐或不捐',
   baby: '生了一個小孩，每月支出增加',
-  downsized: '失業，下回合輪空',
+  downsized: '失業，下個發薪日領不到薪水',
 };
 
 // 擲骰列：依序輪流，只有「輪到你」才能擲骰
@@ -845,8 +851,10 @@ function AssetRow({ a, teamId, canSell }) {
   const [qty, setQty] = useState(1);
   const [amount, setAmount] = useState(5000);
 
-  const isShares = a.category === 'dividend' && a.units != null;
+  // 股票/ETF 與原物料（黃金/白銀/石油）都用「單位數」持有 → 可分批賣
+  const isShares = (a.category === 'dividend' || a.category === 'commodity') && a.units != null;
   const isCrypto = a.category === 'crypto' && a.units != null;
+  const unitWord = a.category === 'commodity' ? '單位' : '股'; // 原物料用「單位」，股票用「股」
   // 房地產/企業：直接賣會折價（拿約帳面 75%），等「🤝收購卡」較划算
   const illiquid = a.category === 'realestate' || a.category === 'business';
   const cost = a.totalCost != null ? a.totalCost : a.buyValue;
@@ -882,7 +890,7 @@ function AssetRow({ a, teamId, canSell }) {
         <div className="flex-1">
           <p className="font-semibold text-slate-800 text-sm">
             {a.name}
-            {isShares && <span className="text-slate-400"> 共 {a.qty} 股</span>}
+            {isShares && <span className="text-slate-400"> 共 {a.qty} {unitWord}</span>}
             {a.location && (
               <span className="ml-1 text-xs bg-teal-100 text-teal-700 rounded px-1.5 py-0.5">
                 📍{a.location}{a.roomType ? ` ${a.roomType}` : ''}
@@ -932,7 +940,7 @@ function AssetRow({ a, teamId, canSell }) {
             <>
               <input type="number" min="1" max={a.qty} value={qty} onChange={(e) => setQty(e.target.value)}
                 className="w-20 rounded-lg border border-slate-300 px-2 py-1.5 text-sm" />
-              <span className="text-xs text-slate-400">股</span>
+              <span className="text-xs text-slate-400">{unitWord}</span>
               <button onClick={() => setQty(a.qty)} className="text-xs text-zizi-ink underline">全部</button>
             </>
           ) : (

@@ -343,8 +343,8 @@ function applyMonthlyEvent() {
 
   addFeed(`${evt.emoji} ${evt.scale === 'big' ? '【大事件】' : ''}${evt.title}（${evt.desc || ''}）`);
 
-  // 全班共同「搞笑賺賠」：事件帶 cashRange（隨機）或 cash（固定）時，非破產各組現金一次性 +/−
-  // （同一回合全班同額；emitTeam 由 enterNewRound 收尾推播）
+  // 共同「搞笑賺賠」：事件帶 cashRange（隨機）或 cash（固定）時，符合條件的組現金一次性 +/−
+  // professions 有設＝只影響這些職業（不寫＝全體）；emitTeam 由 enterNewRound 收尾推播
   let cashAmt = 0;
   if (evt.cashRange) {
     const [lo, hi] = evt.cashRange;
@@ -352,12 +352,17 @@ function applyMonthlyEvent() {
   } else if (evt.cash) {
     cashAmt = evt.cash;
   }
+  const cashProfs = evt.professions || null; // null＝全體
+  const cashScope = cashProfs ? (evt.professionLabel || '部分職業') : '全班每組';
   if (cashAmt) {
+    let affected = 0;
     for (const team of Object.values(state.teams)) {
       if (team.bankrupt) continue;
+      if (cashProfs && !cashProfs.includes(team.professionId)) continue; // 職業別事件：不符合就跳過
       team.cash += cashAmt;
+      affected += 1;
     }
-    addFeed(`${cashAmt > 0 ? '💰' : '💸'} ${evt.title}：全班每組 ${cashAmt > 0 ? '+' : '−'}${Math.abs(cashAmt).toLocaleString()}`);
+    addFeed(`${cashAmt > 0 ? '💰' : '💸'} ${evt.title}：${cashScope} ${cashAmt > 0 ? '+' : '−'}${Math.abs(cashAmt).toLocaleString()}${cashProfs ? `（影響 ${affected} 組）` : ''}`);
   }
 
   // 釋出新情報（約 25% 機率），暗示下回合可能行情
@@ -376,7 +381,8 @@ function applyMonthlyEvent() {
       thisEvent: { emoji: evt.emoji, title: evt.title, desc: evt.desc || '', fx: evt.fx || null },
       moves,
       scale: evt.scale,
-      cash: cashAmt, // 全班共同賺賠金額（0＝無；已解析 cashRange 隨機值）
+      cash: cashAmt, // 共同賺賠金額（0＝無；已解析 cashRange 隨機值）
+      cashScope, // 受影響族群顯示字串（全班每組 / 職業族群名）
       rumor,
     });
   }
@@ -509,7 +515,8 @@ function resetTeamFinances(team) {
   team.assets = []; // 投資資產（每筆含 category）
   team.assetLiabilities = []; // 投資連動負債（房貸/企業貸款）
   team.charityTurns = 0; // 慈善剩餘可用次數（擲兩顆骰）
-  team.skipTurns = 0; // 失業輪空次數
+  team.skipTurns = 0; // （保留相容；失業已改為「發薪日沒薪水」不再輪空）
+  team.missPaydays = 0; // 失業：接下來幾個發薪日領不到薪水
   team.position = 0; // 在老鼠賽跑圈上的格子（0–23）
   team.hasRolledThisRound = false; // 本回合是否已擲骰
   team.pendingAction = null; // 待處理的互動事件（機會抽卡 / 慈善）
@@ -909,14 +916,23 @@ function settleTeam(team) {
     team.salary = Math.round(((team.baseSalary || team.salary) * macro * noise) / 1000) * 1000;
   }
   const d = computeDerived(team);
-  team.cash += d.cashflow; // 月現金流入帳（可能為負）
+  // 失業中：這個發薪日領不到薪水（只結算被動收入 − 總支出），扣掉一個 missPayday
+  let cashflow = d.cashflow;
+  let paidSalary = team.salary;
+  if ((team.missPaydays || 0) > 0) {
+    team.missPaydays -= 1;
+    cashflow = d.cashflow - team.salary;
+    paidSalary = 0;
+    addFeed(`💼 ${team.name} 失業中，這個發薪日沒領到薪水（少 ${formatNT(team.salary)}）`);
+  }
+  team.cash += cashflow; // 月現金流入帳（可能為負）
   addHistory(team, {
     round: state.round,
     type: 'payday',
-    salary: team.salary,
+    salary: paidSalary,
     passive: d.passiveTotal,
     expense: d.totalExpense,
-    delta: d.cashflow,
+    delta: cashflow,
   });
   checkBankruptOrCover(team); // 判定破產淘汰 / 暫時周轉
   checkFreedom(team);
@@ -1314,23 +1330,19 @@ function haveBaby(team) {
   broadcastTeams();
 }
 
-// 失業：付一個月總支出 + 下回合輪空，並使慈善失效
+// 失業：下一個發薪日領不到薪水（不馬上扣現金、不輪空、可繼續前進）
 function downsize(team) {
-  // 鐵飯碗職業（警察/公務員）免於失業
+  // 鐵飯碗職業（警察/公務員/消防/保全）免於失業
   if (team.layoffImmune) {
     addFeed(`🛡️ ${team.name} 是鐵飯碗，免於這次裁員`);
     emitEvent(team, { emoji: '🛡️', title: '鐵飯碗，免裁員', text: '你的工作非常穩定，這次裁員與你無關！' });
     emitTeam(team);
     return;
   }
-  const d = computeDerived(team);
-  team.cash -= d.totalExpense;
-  team.skipTurns += 1;
-  team.charityTurns = 0;
-  addHistory(team, { round: state.round, type: 'expense', text: '失業（付一個月支出）', delta: -d.totalExpense });
-  addFeed(`💼 ${team.name} 失業了！付一個月支出 ${formatNT(d.totalExpense)}，下回合輪空`);
-  emitEvent(team, { emoji: '💼', title: '失業', text: `付一個月總支出 ${formatNT(d.totalExpense)}，下回合輪空一次` });
-  checkBankruptOrCover(team);
+  team.missPaydays = (team.missPaydays || 0) + 1;
+  addHistory(team, { round: state.round, type: 'event', text: '失業（下個發薪日沒薪水）', delta: 0 });
+  addFeed(`💼 ${team.name} 失業了！下一個發薪日領不到薪水`);
+  emitEvent(team, { emoji: '💼', title: '失業', text: '下一個發薪日領不到薪水（薪水歸零一次）；不會馬上扣錢，也能繼續前進。' });
   emitTeam(team);
   broadcastTeams();
 }
@@ -1681,8 +1693,9 @@ function sellAsset(teamId, payload = {}) {
   const sellQty = Number(payload.sellQty) || 0;
   const sellAmount = Number(payload.sellAmount) || 0;
 
-  // 可分割商品的部分賣出（股票依股數、加密依金額）
-  const isShares = asset.category === 'dividend' && asset.units != null;
+  // 可分割商品的部分賣出（股票/原物料依股數或單位、加密依金額）
+  // 原物料（黃金/白銀/石油）與股票一樣用「單位數」持有，也能分批賣，不必一次全賣。
+  const isShares = (asset.category === 'dividend' || asset.category === 'commodity') && asset.units != null;
   const isCrypto = asset.category === 'crypto' && asset.units != null;
   if ((isShares && sellQty > 0) || (isCrypto && sellAmount > 0)) {
     let unitsToSell;

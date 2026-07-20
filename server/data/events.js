@@ -3,9 +3,11 @@
 // 類別：stock（股票/ETF）、crypto（加密）、commodity（原物料）、realestate（房地產）
 // scale='small'｜'big'；catastrophe=true 的大事件不會連續出現
 //
-// 全班共同「搞笑賺賠」（與市場乘數各自獨立，由 game.js 的 applyMonthlyEvent 套用）：
-//   cashRange:[lo,hi]＝金額每次隨機（取整到 500），同一回合全班同額、每次出現不同 → 首選；
-//   cash:N＝固定金額（保留相容）。負值＝全班一起賠。
+// 共同「搞笑賺賠」（與市場乘數各自獨立，由 game.js 的 applyMonthlyEvent 套用）：
+//   cashRange:[lo,hi]＝金額每次隨機（取整到 500），同一回合受影響者同額、每次出現不同 → 首選；
+//   cash:N＝固定金額（保留相容）。負值＝賠錢。
+//   professions:[...]＝只影響這些職業的組（其餘不受影響）；professionLabel＝大螢幕顯示的族群名。
+//     不寫 professions＝全體（全班每組）。→ 讓損失不會每次都全班一起痛，有時只有某些職業。
 // weight（可選）：大事件被抽中的相對權重；未指定時，災難型 catastrophe 預設 0.3（黑天鵝＝稀有），其餘為 1。
 
 // 小事件：每回合最常見，像「本週新聞快訊」。
@@ -56,6 +58,19 @@ export const SMALL_EVENTS = [
   { id: 's_tow', emoji: '🚗', title: '違規停車被拖吊', desc: '停一下下就被拖走，領車還要付拖吊費', effects: {}, cashRange: [-3000, -1000] },
   { id: 's_scalper', emoji: '🎫', title: '買到黃牛假票', desc: '搶不到票跟黃牛買，結果是假的…嗚嗚', effects: {}, cashRange: [-5000, -2000] },
   { id: 's_impulse', emoji: '🛒', title: '半夜手滑下單', desc: '半夜逛購物網手滑買了一堆用不到的東西', effects: {}, cashRange: [-3500, -1000] },
+
+  // —— 職業別「賺錢」：只有某些職業的組會進帳（有職業代入感，也讓賺賠不總是全體）——
+  { id: 'p_medbonus', emoji: '🩺', title: '醫療績效獎金', desc: '醫院這季績效亮眼，醫護領到一筆獎金！', effects: {}, professions: ['doctor', 'nurse', 'vet'], professionLabel: '🩺 醫療人員', cashRange: [4000, 9000] },
+  { id: 'p_viral', emoji: '🎬', title: '影片爆紅、分潤大進', desc: '一支影片突然爆紅，自媒體與電商流量變現！', effects: {}, professions: ['youtuber', 'streamer', 'ecommerce'], professionLabel: '🎬 自媒體／電商', cashRange: [5000, 12000] },
+  { id: 'p_bigdeal', emoji: '💼', title: '談成大訂單', desc: '業務族拿下大客戶，業績獎金入袋！', effects: {}, professions: ['sales', 'manager'], professionLabel: '💼 業務族', cashRange: [5000, 10000] },
+  { id: 'p_techbonus', emoji: '💻', title: '專案上線、工程分紅', desc: '大專案順利上線，工程師領到分紅！', effects: {}, professions: ['engineer'], professionLabel: '💻 工程師', cashRange: [5000, 10000] },
+  { id: 'p_foodfest', emoji: '🍜', title: '美食節爆單', desc: '美食節人潮爆棚，餐飲業者大排長龍賺翻！', effects: {}, professions: ['restaurant', 'chef', 'barista'], professionLabel: '🍜 餐飲業者', cashRange: [4000, 9000] },
+
+  // —— 職業別「賠錢」：只有某些職業的組會損失（不會全班一起痛）——
+  { id: 'p_medmal', emoji: '🩺', title: '醫療糾紛賠償', desc: '一起醫療糾紛要和解，醫護得自掏一筆。', effects: {}, professions: ['doctor', 'nurse', 'vet'], professionLabel: '🩺 醫療人員', cashRange: [-8000, -4000] },
+  { id: 'p_foodsafe', emoji: '🍜', title: '食安風暴、客訴賠償', desc: '被檢舉食材有問題，餐飲業者忙著賠償整頓。', effects: {}, professions: ['restaurant', 'chef', 'barista'], professionLabel: '🍜 餐飲業者', cashRange: [-7000, -3000] },
+  { id: 'p_algo', emoji: '📉', title: '平台演算法大改', desc: '平台改版、流量腰斬，自媒體與電商收入銳減。', effects: {}, professions: ['youtuber', 'streamer', 'ecommerce'], professionLabel: '🎬 自媒體／電商', cashRange: [-8000, -4000] },
+  { id: 'p_flightdelay', emoji: '✈️', title: '航班大延誤、旅客賠償', desc: '天候導致班機大延誤，航空從業補貼旅客。', effects: {}, professions: ['pilot', 'flightattendant'], professionLabel: '✈️ 航空從業', cashRange: [-7000, -3000] },
 ];
 
 // 大事件：偶爾出現、影響大、有戲劇性（catastrophe 標記者不會連續出現）

@@ -310,7 +310,7 @@ function Tutorial() {
     { e: '💸', t: '額外支出', d: '臨時花費，乖乖付錢' },
     { e: '❤️', t: '慈善', d: '捐 10% 收入，接下來 3 回合可擲兩顆骰' },
     { e: '👶', t: '生小孩', d: '每月支出增加（最多 3 個）' },
-    { e: '💼', t: '失業', d: '付一個月支出並暫停一回合' },
+    { e: '💼', t: '失業', d: '下個發薪日領不到薪水（不扣現金、不暫停）' },
   ];
   return (
     <div className="fixed inset-0 z-50 bg-zizi-ink/85 backdrop-blur-md flex flex-col items-center justify-center p-10 overflow-auto">
@@ -435,7 +435,9 @@ function BigEventFx({ type }) {
 
 // 月初彈窗：回顧上個月 + 公布本月突發事件（含動畫）
 function MonthReport({ report, onClose }) {
-  const { round, prevEvent, thisEvent, moves, scale, cash, rumor } = report;
+  const { round, prevEvent, thisEvent, moves, scale, cash, cashScope, rumor } = report;
+  const scopeLabel = cashScope || '全班每組';
+  const isAll = scopeLabel === '全班每組';
   const fx = scale === 'big' ? thisEvent.fx : null;
   const moveRow = (label, emoji, pct, i) => (
     <div className="flex items-center justify-between px-4 py-1.5 fade-in" style={{ animationDelay: `${0.15 + i * 0.12}s`, animationFillMode: 'backwards' }}>
@@ -486,11 +488,15 @@ function MonthReport({ report, onClose }) {
             {Array.from({ length: 6 }).map((_, i) => (
               <span key={i} className="report-drift absolute text-2xl opacity-60" style={{ left: `${6 + i * 15}%`, animationDelay: `${i * 0.3}s` }}>{cash > 0 ? '🪙' : '💸'}</span>
             ))}
-            <p className="relative text-sm text-white/60">{cash > 0 ? '💰 全班共同進帳' : '😱 全班共同損失'}</p>
+            <p className="relative text-sm text-white/60">
+              {cash > 0 ? '💰 ' : '😱 '}
+              {isAll ? '全班共同' : scopeLabel}
+              {cash > 0 ? '進帳' : '損失'}
+            </p>
             <p className={'relative text-4xl font-black tabular-nums drop-shadow ' + (cash > 0 ? 'text-emerald-300' : 'text-rose-300')}>
               {cash > 0 ? '+' : '−'}<CountUp value={Math.abs(cash)} />
             </p>
-            <p className="relative text-xs text-white/45">每組現金{cash > 0 ? '增加' : '減少'}</p>
+            <p className="relative text-xs text-white/45">{isAll ? '全班每組' : scopeLabel}現金{cash > 0 ? '增加' : '減少'}</p>
           </div>
         ) : null}
 
@@ -564,7 +570,7 @@ function reactionTheme(square, paydays) {
     case 'doodad': return { mood: 'sad', emoji: '💸', title: '額外支出', sub: '臨時花費，嗚嗚…', fx: 'none' };
     case 'charity': return { mood: 'love', emoji: '❤️', title: '慈善', sub: '行善積德，好人有好報！', fx: 'none' };
     case 'baby': return { mood: 'surprised', emoji: '👶', title: '生小孩', sub: '家裡多一張嘴！', fx: 'spark' };
-    case 'downsized': return { mood: 'angry', emoji: '💼', title: '失業', sub: '被裁員了…下回合輪空', fx: 'none' };
+    case 'downsized': return { mood: 'angry', emoji: '💼', title: '失業', sub: '被裁員了…下個發薪日沒薪水', fx: 'none' };
     default: return { mood: paydays > 0 ? 'happy' : 'neutral', emoji: '🎲', title: '前進', sub: paydays > 0 ? `領了 ${paydays} 次薪水！` : '', fx: paydays > 0 ? 'coins' : 'none' };
   }
 }
@@ -707,7 +713,7 @@ function DealLiveOverlay({ deal, teamFull, onClose }) {
           ) : (
             <div className="mt-3 bg-slate-50 rounded-xl p-3 text-sm grid grid-cols-2 gap-y-1 text-left">
               <span className="text-slate-400">需要現金（頭期）</span>
-              <span className="text-right font-semibold">{formatMoney(card.cost)}</span>
+              <span className="text-right font-bold text-zizi-ink">{formatMoney(card.cost)}</span>
               {card.mortgage > 0 && (<>
                 <span className="text-slate-400">抵押貸款</span>
                 <span className="text-right font-semibold text-red-500">{formatMoney(card.mortgage)}</span>
@@ -740,9 +746,9 @@ function DealLiveOverlay({ deal, teamFull, onClose }) {
           )}
         </div>
 
-        {/* 決定戳章：斜蓋在卡面上 */}
+        {/* 決定戳章：斜蓋在「上半部圖示/標題區」，避開下方的關鍵數字，讓大家看得到金額 */}
         {decided && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="absolute inset-x-0 top-24 flex justify-center pointer-events-none">
             <span className={'stamp-in bg-white/85 backdrop-blur-sm text-4xl font-black px-8 py-4 rounded-2xl ring-4 shadow-2xl ' + stampTone}>
               {stampText}
             </span>
@@ -1159,6 +1165,22 @@ function TeamsOverview({ ranked, ended, currentTurnId }) {
                       <p className="text-sm font-bold tabular-nums text-zizi-gold">{formatMoney(t.passiveIncome)}</p>
                     </div>
                   </div>
+
+                  {/* 尚未自由：財富自由進度（被動收入 ÷ 總支出，越接近 100% 越快跳出老鼠圈） */}
+                  {!t.free && (() => {
+                    const pct = t.expense > 0 ? Math.round((t.passiveIncome / t.expense) * 100) : 0;
+                    return (
+                      <div className="mt-1.5">
+                        <div className="flex items-center justify-between text-[0.62rem] mb-0.5 leading-tight">
+                          <span className="text-white/50 truncate">🎯 財富自由進度 <span className="text-white/35">被動{formatMoney(t.passiveIncome)}/支出{formatMoney(t.expense)}</span></span>
+                          <span className="font-bold text-zizi-gold tabular-nums shrink-0 ml-1">{pct}%</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-black/30 overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-amber-400 to-zizi-gold transition-all duration-500" style={{ width: `${Math.min(100, pct)}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* 財富自由後：目前追求的人生夢想 + 進度（還差多少現金） */}
                   {t.free && t.currentGoal && (

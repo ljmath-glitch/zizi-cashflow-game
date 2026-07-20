@@ -277,6 +277,20 @@ export const PROFESSIONS = [
   },
 ];
 
+// 養小孩每月支出依「家庭背景（薪資階級）」拉開差距：越高薪的家庭，養一個小孩越貴
+// （私校、才藝、補習、生活水準…），越低薪則較省。用薪資級距重算，取代上面各職業 perChild 的初值。
+// 浮動收入職業用範圍中位數當代表薪資。
+for (const p of PROFESSIONS) {
+  const s = p.variableIncome ? (p.variableIncome[0] + p.variableIncome[1]) / 2 : p.salary;
+  p.perChild =
+    s >= 110000 ? 8000 : // 頂尖高薪（醫師/機師/律師）
+    s >= 78000 ? 5500 : // 高薪（經理/獸醫/工程師/實況主）
+    s >= 58000 ? 4000 : // 中高（餐廳/YouTuber/空服/電商）
+    s >= 50000 ? 3200 : // 中等（老師/消防/公務員/警察）
+    s >= 44000 ? 2700 : // 中低（護理/咖啡店長/廚師/業務/髮型師）
+    2000;               // 低薪（保全/超商店員）
+}
+
 export function getProfession(id) {
   return PROFESSIONS.find((p) => p.id === id) || null;
 }
