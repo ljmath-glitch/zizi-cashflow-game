@@ -484,6 +484,15 @@ function PendingModal({ team }) {
             >
               🔵 大買賣<span className="block text-xs font-normal">昂貴、報酬高</span>
             </button>
+            {team.free && (
+              <button
+                disabled={busy}
+                onClick={() => decide('student:chooseDeck', { deck: 'super' })}
+                className="col-span-2 rounded-xl bg-gradient-to-r from-zizi-gold to-amber-500 text-zizi-ink font-black py-4 shadow-glow disabled:opacity-50"
+              >
+                🚀 超級生意<span className="block text-xs font-bold">財富自由專屬 · 超高報酬、本金不用大，以錢滾錢！</span>
+              </button>
+            )}
           </div>
         </div>
       </Overlay>

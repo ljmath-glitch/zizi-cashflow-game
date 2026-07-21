@@ -80,6 +80,8 @@ const state = {
   pendingRumor: null, // 待兌現的股市情報
   showTutorial: false, // 大螢幕是否顯示新手教學
   spotlightTeamId: null, // 老師投影到大螢幕教學的組別（平常不公開）
+  spotlightTab: 'finance', // 投影手機鏡像目前分頁（finance/market/assets/history）
+  spotlightScroll: 0, // 投影手機鏡像的捲動步數（老師端上下捲）
   difficulty: 'normal', // 難度（easy｜normal｜hard），老師在大廳選
 };
 
@@ -149,6 +151,8 @@ function publicState() {
     monthlyEvent: state.monthlyEvent, // 本月大事件
     showTutorial: state.showTutorial, // 大螢幕教學開關
     spotlight: state.spotlightTeamId ? getTeamPayload(state.spotlightTeamId) : null, // 老師投影的組別完整財務
+    spotlightTab: state.spotlightTab, // 手機鏡像分頁
+    spotlightScroll: state.spotlightScroll, // 手機鏡像捲動步數
     difficulty: state.difficulty, // 本場難度
   };
 }
@@ -176,9 +180,25 @@ function toggleTutorial(on) {
   broadcast();
 }
 
-// 老師把某組財務投到大螢幕（再點同一組或傳 null 取消）
+// 老師把某組手機畫面鏡像到大螢幕（再點同一組或傳 null 取消）；切組時重置分頁與捲動
 function setSpotlight(teamId) {
   state.spotlightTeamId = teamId && getTeam(teamId) && state.spotlightTeamId !== teamId ? teamId : null;
+  state.spotlightTab = 'finance';
+  state.spotlightScroll = 0;
+  broadcast();
+}
+
+// 老師端導覽投影中的手機鏡像：切分頁 / 上下捲動（scroll 為步數，不小於 0）
+function navSpotlight({ tab, scroll } = {}) {
+  if (!state.spotlightTeamId) return;
+  const TABS = ['finance', 'market', 'assets', 'history'];
+  if (tab && TABS.includes(tab)) {
+    state.spotlightTab = tab;
+    state.spotlightScroll = 0; // 換分頁回到最上面
+  }
+  if (typeof scroll === 'number') {
+    state.spotlightScroll = Math.max(0, Math.round(scroll));
+  }
   broadcast();
 }
 
@@ -1365,7 +1385,12 @@ function adjustDealCard(card) {
 function chooseDeck(teamId, deck) {
   const team = getTeam(teamId);
   if (!team || team.pendingAction?.type !== 'opportunity') return { ok: false, reason: '目前沒有機會可抽' };
-  if (deck !== 'small' && deck !== 'big') return { ok: false, reason: '請選擇小生意或大買賣' };
+  if (deck === 'super') {
+    // 超級生意：財富自由後專屬（高報酬、本金不用大）
+    if (!team.free) return { ok: false, reason: '要先財富自由才能開啟超級生意' };
+  } else if (deck !== 'small' && deck !== 'big') {
+    return { ok: false, reason: '請選擇小生意或大買賣' };
+  }
   const card = adjustDealCard(drawCard(deck));
   team.pendingAction = { type: 'deal', deck, card };
   // 大螢幕直播：完整卡面（含頭期/貸款/現金流/售價範圍），全班一起看他怎麼選
@@ -1801,5 +1826,5 @@ function grantFreedom(teamId) {
 }
 
 
-  return { getPublicState, startGame, pauseGame, skipTurn, nextRound, resetGame, clearGame, toggleTutorial, setSpotlight, professionPair, createTeam, getTeam, getTeamPayload, listPublicTeams, broadcastTeams, setConfig, getSnapshot, loadSnapshot, getFeed, rollDice, acquireDecision, chooseDeck, dealDecision, charityDecision, buyAsset, loanMoney, repayLoan, repayDebt, sellAsset, chooseGoal, buyAchievement, grantFreedom, netWorth, publicTeam };
+  return { getPublicState, startGame, pauseGame, skipTurn, nextRound, resetGame, clearGame, toggleTutorial, setSpotlight, navSpotlight, professionPair, createTeam, getTeam, getTeamPayload, listPublicTeams, broadcastTeams, setConfig, getSnapshot, loadSnapshot, getFeed, rollDice, acquireDecision, chooseDeck, dealDecision, charityDecision, buyAsset, loanMoney, repayLoan, repayDebt, sellAsset, chooseGoal, buyAchievement, grantFreedom, netWorth, publicTeam };
 }

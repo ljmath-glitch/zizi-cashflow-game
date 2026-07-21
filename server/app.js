@@ -80,6 +80,7 @@ export function mountCashflow(app, httpServer, { base = '', serveStatic = true, 
     socket.on('teacher:skipTurn', () => roomOf(socket)?.skipTurn());
     socket.on('teacher:tutorial', ({ show } = {}) => roomOf(socket)?.toggleTutorial(show));
     socket.on('teacher:spotlight', ({ teamId } = {}) => roomOf(socket)?.setSpotlight(teamId));
+    socket.on('teacher:spotlightNav', ({ tab, scroll } = {}) => roomOf(socket)?.navSpotlight({ tab, scroll }));
     socket.on('teacher:grantFreedom', ({ teamId } = {}, ack) => { ack?.(roomOf(socket)?.grantFreedom(teamId) || { ok: false }); }); // 測試用
     socket.on('teacher:reset', () => roomOf(socket)?.resetGame());
     socket.on('teacher:clear', () => roomOf(socket)?.clearGame());

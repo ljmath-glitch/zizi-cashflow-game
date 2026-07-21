@@ -54,6 +54,22 @@ export const BIG_DEALS = [
   { id: 'bd_solarfarm', name: '農地種電場', emoji: '🌾', category: 'business', cost: 600000, fullValue: 600000, monthlyIncome: 20000, story: '在農地架設大型太陽能電場，長期售電給台電。' },
 ];
 
+// ── 超級生意（財富自由後專屬）──
+// 給已經跳出老鼠圈的玩家：報酬率極高（年化約 100~130%）、但「本金不用很大」（多在 15~50 萬），
+// 讓自由玩家輕鬆以錢滾錢、快速堆高被動收入去圓夢。全歸類 business（算企業被動收入）。
+export const SUPER_DEALS = [
+  { id: 'su_unicorn', name: 'AI 獨角獸早期股權', emoji: '🦄', category: 'business', cost: 300000, fullValue: 300000, monthlyIncome: 32000, story: '搶進一家準上市的 AI 獨角獸早期股權，成長爆發、分潤驚人。' },
+  { id: 'su_franchise', name: '連鎖品牌總部分潤', emoji: '🏢', category: 'business', cost: 400000, fullValue: 400000, monthlyIncome: 40000, story: '入股知名連鎖品牌總部，全台展店的權利金月月分你一份。' },
+  { id: 'su_agency', name: '網紅經紀公司股權', emoji: '🌟', category: 'business', cost: 250000, fullValue: 250000, monthlyIncome: 27000, story: '旗下一票百萬網紅的經紀公司，接不完的業配都在抽成。' },
+  { id: 'su_onsen', name: '包棟溫泉民宿（旺季爆滿）', emoji: '♨️', category: 'business', cost: 500000, fullValue: 500000, monthlyIncome: 50000, story: '整棟高檔溫泉民宿，連假一房難求，現金流強得誇張。' },
+  { id: 'su_fund', name: '私募基金入股', emoji: '💼', category: 'business', cost: 200000, fullValue: 200000, monthlyIncome: 21000, story: '被邀請加入只給有錢人的私募基金，配息又高又穩。' },
+  { id: 'su_concert', name: '演唱會主辦分潤', emoji: '🎤', category: 'business', cost: 300000, fullValue: 300000, monthlyIncome: 33000, story: '當大型演唱會的幕後金主，一場售罄就回本一大半。' },
+  { id: 'su_ip', name: '熱門手遊 IP 授權', emoji: '🎮', category: 'business', cost: 150000, fullValue: 150000, monthlyIncome: 17000, story: '手上握著一個爆紅手遊的聯名 IP，周邊與抽卡都在替你賺。' },
+  { id: 'su_charger', name: '電動車充電網加盟主', emoji: '🔌', category: 'business', cost: 350000, fullValue: 350000, monthlyIncome: 37000, story: '成為全區電動車充電網的加盟主，每一度電都在幫你數錢。' },
+  { id: 'su_saas', name: 'AI SaaS 獨角獸 B 輪', emoji: '🤖', category: 'business', cost: 450000, fullValue: 450000, monthlyIncome: 46000, story: '投進一輪就翻倍的 AI 訂閱軟體，訂閱戶暴增、月月現金流。' },
+  { id: 'su_michelin', name: '米其林餐廳合夥人', emoji: '🍽️', category: 'business', cost: 400000, fullValue: 400000, monthlyIncome: 42000, story: '掛名米其林餐廳的合夥人，訂位排到三個月後。' },
+];
+
 // ── 市場風雲卡（影響全班） ──
 // kind='price'：把符合 targetCategory 或 targetTag 的資產價值 ×factor
 // kind='windfall'：全班每人現金 +amount（可負）
@@ -121,7 +137,7 @@ export const DOODAD_CARDS = [
   { id: 'dd_scooter', name: '機車拋錨大修', emoji: '🛵', amount: 16000, story: '通勤機車半路熄火，牽去保養廠一次噴掉一筆。' },
 ];
 
-const DECKS = { small: SMALL_DEALS, big: BIG_DEALS, market: MARKET_CARDS, doodad: DOODAD_CARDS };
+const DECKS = { small: SMALL_DEALS, big: BIG_DEALS, super: SUPER_DEALS, market: MARKET_CARDS, doodad: DOODAD_CARDS };
 
 // 從指定牌庫隨機抽一張（抽完放回，等同無限牌庫，適合課堂）
 export function drawCard(deck) {

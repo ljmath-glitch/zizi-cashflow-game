@@ -204,7 +204,7 @@ export default function Screen() {
       {dice && phase === 'running' && !['opportunity', 'market', 'doodad'].includes(dice.square) && (
         <DiceBanner payload={dice} team={teams.find((t) => t.id === dice.teamId)} />
       )}
-      {game?.spotlight && <Spotlight team={game.spotlight} />}
+      {game?.spotlight && <Spotlight team={game.spotlight} tab={game.spotlightTab || 'finance'} scroll={game.spotlightScroll || 0} market={game.market} />}
       {game?.showTutorial && <Tutorial />}
       {report && !game?.showTutorial && <MonthReport report={report} onClose={() => setReport(null)} />}
       {deal && !game?.showTutorial && !game?.spotlight && (
@@ -219,85 +219,124 @@ export default function Screen() {
 
 // 新手教學說明書（老師可開關）
 // 老師投影：把某組完整財務投到大螢幕做教學分析
-function Spotlight({ team }) {
+// 大螢幕「手機鏡像」：把某組的手機畫面投到大螢幕，老師端可切分頁＋上下捲動（只看、不操作）
+const SPOT_TABS = [
+  { key: 'finance', label: '💰 損益' },
+  { key: 'market', label: '🛒 市場' },
+  { key: 'assets', label: '📊 資產負債' },
+  { key: 'history', label: '📜 歷史' },
+];
+function Spotlight({ team, tab = 'finance', scroll = 0, market }) {
   const d = team.derived || {};
   const p = d.passive || {};
   const e = team.expenses || {};
   const pl = team.personalLiabilities || {};
+  const cf = d.cashflow ?? 0;
   const PASSIVE = { interest: '利息', dividend: '股利', realestate: '房地產', business: '企業' };
-  const incomeRows = [
-    ['工資（主動）', team.salary],
-    ...['interest', 'dividend', 'realestate', 'business'].filter((k) => (p[k] || 0) > 0).map((k) => [`${PASSIVE[k]}（被動）`, p[k]]),
-  ];
-  const expenseRows = [
-    ['稅金', e.tax], ['自住房貸', e.homeMortgage], ['車貸', e.carLoan], ['學貸', e.schoolLoan],
-    ['卡債', e.creditCard], ['額外支出', e.other],
-    [`小孩 ×${team.children || 0}`, (team.perChild || 0) * (team.children || 0)],
-    ['貸款利息', d.bankLoanPayment],
-  ].filter((r) => (r[1] || 0) > 0);
+  const row = (l, v, cls) => (
+    <div className="flex justify-between py-0.5"><span className="text-slate-500">{l}</span><span className={'tabular-nums font-semibold ' + (cls || '')}>{v}</span></div>
+  );
+  const incomeRows = [['工資（主動）', team.salary],
+    ...['interest', 'dividend', 'realestate', 'business'].filter((k) => (p[k] || 0) > 0).map((k) => [`${PASSIVE[k]}（被動）`, p[k]])];
+  const expenseRows = [['稅金', e.tax], ['自住房貸', e.homeMortgage], ['車貸', e.carLoan], ['學貸', e.schoolLoan],
+    ['卡債', e.creditCard], ['生活費', e.other], [`小孩 ×${team.children || 0}`, (team.perChild || 0) * (team.children || 0)],
+    ['貸款利息', d.bankLoanPayment]].filter((r) => (r[1] || 0) > 0);
+  const debtRows = [['自住房貸', pl.homeMortgage], ['車貸', pl.carLoan], ['學貸', pl.schoolLoan], ['卡債', pl.creditCard], ['銀行貸款', pl.bankLoan]]
+    .filter((r) => (r[1] || 0) > 0);
+  const insts = market?.instruments ? Object.values(market.instruments) : [];
+  const pct = d.totalExpense ? Math.min(100, Math.round((d.passiveTotal / d.totalExpense) * 100)) : 0;
 
   return (
-    <div className="fixed inset-0 z-50 bg-zizi-ink/85 backdrop-blur-md flex flex-col items-center justify-center p-8 overflow-auto">
-      <div className="flex items-center gap-3 mb-4">
-        <span className="text-5xl">{team.professionEmoji}</span>
+    <div className="fixed inset-0 z-50 bg-zizi-ink/85 backdrop-blur-md flex flex-col items-center justify-center p-5">
+      <div className="flex items-center gap-3 mb-3">
+        <span className="text-4xl">{team.professionEmoji}</span>
         <div>
-          <p className="text-3xl font-black text-zizi-gold">{team.name}{team.bankrupt && ' 💀'}</p>
-          <p className="text-white/70">{team.professionName} ‧ 現金 {formatMoney(team.cash)}</p>
+          <p className="text-2xl font-black text-zizi-gold">📱 {team.name} 的手機{team.bankrupt && ' 💀'}</p>
+          <p className="text-white/70 text-sm">{team.professionName} ‧ 現金 {formatMoney(team.cash)} ‧ 月現金流 <b className={cf >= 0 ? 'text-green-300' : 'text-red-300'}>{cf >= 0 ? '+' : '−'}{formatMoney(Math.abs(cf))}</b></p>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-5 max-w-6xl w-full">
-        {/* 收入 */}
-        <div className="glass-dark rounded-2xl p-4">
-          <h3 className="text-lg font-bold text-green-300 mb-2">收入　總 {formatMoney(d.totalIncome)}</h3>
-          {incomeRows.map(([l, v]) => (
-            <div key={l} className="flex justify-between text-white/85 py-0.5"><span>{l}</span><span className="tabular-nums">+{formatMoney(v)}</span></div>
-          ))}
-        </div>
-        {/* 支出 */}
-        <div className="glass-dark rounded-2xl p-4">
-          <h3 className="text-lg font-bold text-red-300 mb-2">支出　總 {formatMoney(d.totalExpense)}</h3>
-          {expenseRows.map(([l, v]) => (
-            <div key={l} className="flex justify-between text-white/85 py-0.5"><span>{l}</span><span className="tabular-nums">-{formatMoney(v)}</span></div>
-          ))}
-        </div>
-        {/* 資產負債 + 持有資產明細 */}
-        <div className="glass-dark rounded-2xl p-4">
-          <h3 className="text-lg font-bold text-zizi-gold mb-2">資產負債</h3>
-          <div className="flex justify-between text-white/85 py-0.5"><span>資產總值</span><span className="tabular-nums">{formatMoney(d.assetsValue)}</span></div>
-          <div className="flex justify-between text-white/85 py-0.5"><span>負債總額</span><span className="tabular-nums text-red-300">-{formatMoney(d.liabilitiesTotal)}</span></div>
-          <div className="flex justify-between text-white font-bold py-1 border-t border-white/15 mt-1"><span>淨資產</span><span className="tabular-nums">{formatMoney(d.netWorth)}</span></div>
-
-          <p className="text-sm font-bold text-white/80 mt-3 mb-1">持有資產（{(team.assets || []).length} 筆）</p>
-          <div className="space-y-1 max-h-56 overflow-auto pr-1">
-            {(team.assets || []).map((a) => (
-              <div key={a.uid} className="flex items-center gap-2 bg-white/5 rounded-lg px-2 py-1">
-                <span className="text-xl shrink-0">{a.emoji}</span>
-                <span className="flex-1 min-w-0 truncate text-white/90">
-                  {a.name}
-                  {a.units != null && <span className="text-white/45 text-xs"> ×{Math.round(a.units)}</span>}
-                </span>
-                <span className="text-right tabular-nums text-white/80 shrink-0">{formatMoney(a.value)}</span>
-                {(a.monthlyIncome || 0) !== 0 && (
-                  <span className={'text-right tabular-nums text-xs shrink-0 w-20 ' + (a.monthlyIncome > 0 ? 'text-green-300' : 'text-red-300')}>
-                    {a.monthlyIncome > 0 ? '+' : '−'}{formatMoney(Math.abs(a.monthlyIncome))}/月
-                  </span>
-                )}
-              </div>
+      {/* 手機外框 */}
+      <div className="w-[27rem] max-w-[94vw] h-[70vh] bg-black rounded-[2rem] p-2.5 shadow-2xl">
+        <div className="w-full h-full bg-zizi-cream rounded-[1.6rem] overflow-hidden flex flex-col">
+          <div className="bg-gradient-to-r from-zizi-dusk via-zizi-plum to-zizi-dusk text-white px-4 py-2 flex justify-between items-center shrink-0">
+            <span className="font-bold">⚡ {team.name}</span>
+            <span className="text-xs text-white/70">代號 {team.id}</span>
+          </div>
+          {/* 分頁列：反白目前分頁（由老師端控制） */}
+          <div className="flex bg-white/70 px-2 py-1.5 gap-1 shrink-0 border-b border-black/5">
+            {SPOT_TABS.map((t) => (
+              <span key={t.key} className={'flex-1 text-center py-1.5 text-sm font-bold rounded-lg ' + (t.key === tab ? 'bg-white text-zizi-ink shadow' : 'text-slate-400')}>{t.label}</span>
             ))}
-            {(team.assets || []).length === 0 && <p className="text-white/40 text-sm">尚無投資資產</p>}
+          </div>
+          {/* 內容：用 translateY 由老師端上下捲動 */}
+          <div className="flex-1 overflow-hidden">
+            <div className="p-4 text-[15px] leading-relaxed transition-transform duration-300" style={{ transform: `translateY(-${scroll * 150}px)` }}>
+              {tab === 'finance' && (<>
+                <p className="font-black text-green-700 mb-1">收入　總 {formatMoney(d.totalIncome)}</p>
+                {incomeRows.map(([l, v]) => row(l, '+' + formatMoney(v), 'text-green-700'))}
+                <p className="font-black text-rose-700 mt-3 mb-1">支出　總 {formatMoney(d.totalExpense)}</p>
+                {expenseRows.map(([l, v]) => row(l, '−' + formatMoney(v), 'text-rose-700'))}
+                <div className="flex justify-between border-t border-black/10 mt-2 pt-2 font-black">
+                  <span>＝ 月現金流</span><span className={'tabular-nums ' + (cf >= 0 ? 'text-green-700' : 'text-rose-700')}>{cf >= 0 ? '+' : '−'}{formatMoney(Math.abs(cf))}</span>
+                </div>
+                <div className="mt-3 bg-white rounded-xl p-3 ring-1 ring-black/5">
+                  <div className="flex justify-between text-sm text-slate-500 mb-1"><span>🎯 財富自由進度</span><span className="font-black text-amber-600">{pct}%</span></div>
+                  <div className="h-2.5 rounded-full bg-black/10 overflow-hidden"><div className="h-full bg-gradient-to-r from-amber-400 to-zizi-gold" style={{ width: `${pct}%` }} /></div>
+                  <p className="text-xs text-slate-400 mt-1">被動 {formatMoney(d.passiveTotal)} ／ 支出 {formatMoney(d.totalExpense)}</p>
+                </div>
+              </>)}
+
+              {tab === 'assets' && (<>
+                <div className="bg-white rounded-xl p-3 ring-1 ring-black/5">
+                  {row('資產總值', formatMoney(d.assetsValue), 'text-slate-700')}
+                  {row('負債總額', '−' + formatMoney(d.liabilitiesTotal), 'text-rose-700')}
+                  <div className="flex justify-between border-t border-black/10 mt-1 pt-1 font-black"><span>淨資產</span><span className="tabular-nums text-amber-600">{formatMoney(d.netWorth)}</span></div>
+                </div>
+                <p className="font-black mt-3 mb-1">持有資產（{(team.assets || []).length} 筆）</p>
+                {(team.assets || []).map((a) => (
+                  <div key={a.uid} className="flex items-center gap-2 bg-white rounded-lg px-2 py-1.5 mb-1 ring-1 ring-black/5">
+                    <span className="text-xl shrink-0">{a.emoji}</span>
+                    <span className="flex-1 min-w-0 truncate">{a.name}{a.units != null && <span className="text-slate-400 text-xs"> ×{Math.round(a.units)}</span>}</span>
+                    <span className="tabular-nums text-slate-600 shrink-0">{formatMoney(a.value)}</span>
+                    {(a.monthlyIncome || 0) !== 0 && <span className={'tabular-nums text-xs shrink-0 w-16 text-right ' + (a.monthlyIncome > 0 ? 'text-green-700' : 'text-rose-700')}>{a.monthlyIncome > 0 ? '+' : '−'}{formatMoney(Math.abs(a.monthlyIncome))}</span>}
+                  </div>
+                ))}
+                {(team.assets || []).length === 0 && <p className="text-slate-400">尚無投資資產</p>}
+                {debtRows.length > 0 && <>
+                  <p className="font-black mt-3 mb-1">負債明細</p>
+                  {debtRows.map(([l, v]) => row(l, '−' + formatMoney(v), 'text-rose-700'))}
+                </>}
+              </>)}
+
+              {tab === 'market' && (<>
+                <p className="text-sm text-slate-400 mb-1">目前市場牌價（全班一樣）</p>
+                {insts.map((it) => (
+                  <div key={it.id} className="flex items-center gap-2 bg-white rounded-lg px-2 py-1.5 mb-1 ring-1 ring-black/5">
+                    <span className="text-xl shrink-0">{it.emoji}</span>
+                    <span className="flex-1 min-w-0 truncate">{it.name}</span>
+                    <span className="tabular-nums font-bold text-slate-700">{formatMoney(it.price)}</span>
+                  </div>
+                ))}
+                {insts.length === 0 && <p className="text-slate-400">市場資料載入中…</p>}
+              </>)}
+
+              {tab === 'history' && (<>
+                <p className="text-sm text-slate-400 mb-1">最近的紀錄（新的在上）</p>
+                {(team.history || []).map((h, i) => (
+                  <div key={i} className="flex items-center gap-2 bg-white rounded-lg px-2 py-1.5 mb-1 ring-1 ring-black/5">
+                    <span className="text-xs text-slate-400 shrink-0 w-12">第{h.round}回</span>
+                    <span className="flex-1 min-w-0 truncate">{h.text}</span>
+                    {(h.delta || 0) !== 0 && <span className={'tabular-nums text-sm shrink-0 ' + (h.delta > 0 ? 'text-green-700' : 'text-rose-700')}>{h.delta > 0 ? '+' : '−'}{formatMoney(Math.abs(h.delta))}</span>}
+                  </div>
+                ))}
+                {(team.history || []).length === 0 && <p className="text-slate-400">還沒有紀錄</p>}
+              </>)}
+            </div>
           </div>
         </div>
       </div>
-
-      <div className="mt-5 bg-zizi-gold/15 rounded-2xl px-6 py-3 text-center">
-        <span className="text-white/70">月現金流 </span>
-        <span className={'text-2xl font-black tabular-nums ' + ((d.cashflow ?? 0) >= 0 ? 'text-green-300' : 'text-red-300')}>
-          {(d.cashflow ?? 0) >= 0 ? '+' : '-'}{formatMoney(Math.abs(d.cashflow ?? 0))}
-        </span>
-        <span className="text-white/70 ml-4">距財富自由：被動 {formatMoney(d.passiveTotal)} / 支出 {formatMoney(d.totalExpense)}</span>
-      </div>
-      <p className="mt-4 text-white/40 text-sm">（老師再點一次「投影中」即可關閉）</p>
+      <p className="mt-3 text-white/45 text-sm">老師端可切分頁、上下捲動；再點一次「投影中」即可關閉</p>
     </div>
   );
 }

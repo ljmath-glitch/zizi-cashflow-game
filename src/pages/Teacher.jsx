@@ -139,31 +139,55 @@ export default function Teacher() {
           <div className="space-y-1.5">
             {teams.map((t) => {
               const on = game?.spotlight?.id === t.id;
+              const curTab = game?.spotlightTab || 'finance';
+              const curScroll = game?.spotlightScroll || 0;
               return (
-                <div key={t.id} className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-1.5">
-                  <span className="text-sm">{t.professionEmoji} {t.name}{t.bankrupt ? ' 💀' : ''}{t.free ? ' 👑' : ''}</span>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {TEST_TOOLS && !t.free && !t.bankrupt && (
+                <div key={t.id} className={on ? 'bg-zizi-gold/10 ring-1 ring-zizi-gold/40 rounded-xl p-1.5' : ''}>
+                  <div className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-1.5">
+                    <span className="text-sm">{t.professionEmoji} {t.name}{t.bankrupt ? ' 💀' : ''}{t.free ? ' 👑' : ''}</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {TEST_TOOLS && !t.free && !t.bankrupt && (
+                        <button
+                          onClick={() => {
+                            socket.timeout(3000).emit('teacher:grantFreedom', { teamId: t.id }, (err, res) => {
+                              if (err) alert('❌ 沒收到伺服器回應（可能未連線或房間不符），請重新整理頁面');
+                              else if (!res?.ok) alert('❌ 測試自由失敗：' + (res?.reason || '未知原因'));
+                            });
+                          }}
+                          className="text-xs font-medium rounded-lg px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-300"
+                          title="測試用：讓這組直接財富自由＋給 300 萬現金"
+                        >
+                          🧪 測試自由
+                        </button>
+                      )}
                       <button
-                        onClick={() => {
-                          socket.timeout(3000).emit('teacher:grantFreedom', { teamId: t.id }, (err, res) => {
-                            if (err) alert('❌ 沒收到伺服器回應（可能未連線或房間不符），請重新整理頁面');
-                            else if (!res?.ok) alert('❌ 測試自由失敗：' + (res?.reason || '未知原因'));
-                          });
-                        }}
-                        className="text-xs font-medium rounded-lg px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-300"
-                        title="測試用：讓這組直接財富自由＋給 300 萬現金"
+                        onClick={() => socket.emit('teacher:spotlight', { teamId: t.id })}
+                        className={'text-xs font-medium rounded-lg px-3 py-1 ' + (on ? 'bg-zizi-gold text-white' : 'bg-white text-zizi-ink border border-zizi-gold/40')}
                       >
-                        🧪 測試自由
+                        {on ? '投影中 ✕' : '📽️ 投影'}
                       </button>
-                    )}
-                    <button
-                      onClick={() => socket.emit('teacher:spotlight', { teamId: t.id })}
-                      className={'text-xs font-medium rounded-lg px-3 py-1 ' + (on ? 'bg-zizi-gold text-white' : 'bg-white text-zizi-ink border border-zizi-gold/40')}
-                    >
-                      {on ? '投影中 ✕' : '📽️ 投影'}
-                    </button>
+                    </div>
                   </div>
+                  {/* 投影中：控制大螢幕手機鏡像的分頁與捲動 */}
+                  {on && (
+                    <div className="px-1 pt-1.5">
+                      <div className="flex gap-1 mb-1">
+                        {[['finance', '💰損益'], ['market', '🛒市場'], ['assets', '📊資產'], ['history', '📜歷史']].map(([k, lb]) => (
+                          <button
+                            key={k}
+                            onClick={() => socket.emit('teacher:spotlightNav', { tab: k })}
+                            className={'flex-1 text-xs font-bold rounded-lg py-1 ' + (curTab === k ? 'bg-zizi-gold text-white' : 'bg-white text-zizi-ink border border-zizi-gold/40')}
+                          >{lb}</button>
+                        ))}
+                      </div>
+                      <div className="flex gap-1 items-center">
+                        <button onClick={() => socket.emit('teacher:spotlightNav', { scroll: Math.max(0, curScroll - 1) })} className="flex-1 text-sm font-bold rounded-lg py-1 bg-white text-zizi-ink border border-zizi-gold/40">▲ 上捲</button>
+                        <span className="text-xs text-slate-400 w-8 text-center tabular-nums">{curScroll}</span>
+                        <button onClick={() => socket.emit('teacher:spotlightNav', { scroll: curScroll + 1 })} className="flex-1 text-sm font-bold rounded-lg py-1 bg-white text-zizi-ink border border-zizi-gold/40">▼ 下捲</button>
+                      </div>
+                      <p className="text-[0.65rem] text-slate-400 mt-1 text-center">切分頁／上下捲，畫面會同步到大螢幕（只看、不會動到學生操作）</p>
+                    </div>
+                  )}
                 </div>
               );
             })}
