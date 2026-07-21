@@ -11,7 +11,7 @@ export const SMALL_DEALS = [
   { id: 'sd_rooftop', name: '頂樓加蓋套房 ‧ 士林', emoji: '🏠', category: 'realestate', location: '士林', roomType: '套房', cost: 40000, fullValue: 300000, mortgage: 260000, monthlyIncome: 1300, priceLow: 270000, priceHigh: 380000, story: '頂樓加蓋分租套房，租金報酬不錯，但頂加有被報拆的風險。' },
   { id: 'sd_parking_re', name: '車位出租 ‧ 天母', emoji: '🅿️', category: 'realestate', location: '天母', roomType: '車位', cost: 80000, fullValue: 80000, monthlyIncome: 1500, priceLow: 70000, priceHigh: 120000, story: '天母精華區的產權車位，無貸款、好出租，未來也保值。' },
   { id: 'sd_oldflat', name: '老公寓分租 ‧ 士林', emoji: '🏠', category: 'realestate', location: '士林', roomType: '一房一廳', cost: 90000, fullValue: 700000, mortgage: 610000, monthlyIncome: 3000, priceLow: 650000, priceHigh: 1100000, story: '老公寓隔成雅房分租，現金流佳，且位在傳聞要都更的區域。' },
-  { id: 'sd_landlot', name: '重劃區小套房 ‧ 士林（養房）', emoji: '🏚️', category: 'realestate', location: '士林', roomType: '套房', cost: 30000, fullValue: 350000, mortgage: 320000, monthlyIncome: -500, priceLow: 350000, priceHigh: 700000, story: '位在重劃區邊緣，現在每月還要倒貼一點，但一旦重劃通過，價格可能翻倍！' },
+  { id: 'sd_landlot', name: '重劃區小套房 ‧ 士林（養房）', emoji: '🏚️', category: 'realestate', location: '士林', roomType: '套房', cost: 30000, fullValue: 350000, mortgage: 320000, monthlyIncome: -500, priceLow: 350000, priceHigh: 700000, renewal: true, story: '位在重劃區邊緣，現在每月還要倒貼一點，但一旦重劃通過，價格可能翻倍！' },
   // 事業（小）
   { id: 'sd_vending', name: '二手販賣機一台', emoji: '🥤', category: 'business', cost: 60000, fullValue: 60000, monthlyIncome: 2000, story: '頂讓一台二手飲料販賣機，擺在補習班樓下，幾乎被動收入。' },
   { id: 'sd_claw', name: '路邊夾娃娃機台', emoji: '🎰', category: 'business', cost: 40000, fullValue: 40000, monthlyIncome: 1300, story: '夜市旁的夾娃娃機台，補貨擺台就有收入。' },
@@ -36,7 +36,7 @@ export const BIG_DEALS = [
   { id: 'bd_4r_tianmu', name: '四房一廳豪宅 ‧ 天母', emoji: '🏯', category: 'realestate', location: '天母', roomType: '四房一廳', cost: 300000, fullValue: 2500000, mortgage: 2200000, monthlyIncome: 10000, priceLow: 2300000, priceHigh: 3600000, story: '天母明星學區豪宅，租金高、抗跌保值。' },
   { id: 'bd_bnb', name: '三房一廳民宿 ‧ 天母', emoji: '🏡', category: 'realestate', location: '天母', roomType: '三房一廳', cost: 200000, fullValue: 1500000, mortgage: 1300000, monthlyIncome: 6700, priceLow: 1400000, priceHigh: 2100000, story: '改成合法民宿經營，觀光旺季收入可觀。' },
   { id: 'bd_storefront', name: '店面 ‧ 士林夜市旁', emoji: '🏪', category: 'realestate', location: '士林', roomType: '店面', cost: 400000, fullValue: 3500000, mortgage: 3100000, monthlyIncome: 13300, priceLow: 3200000, priceHigh: 5200000, story: '士林夜市黃金店面，人潮就是錢潮，店面增值想像空間大。' },
-  { id: 'bd_renewal', name: '都更老屋 ‧ 士林（等都更）', emoji: '🏚️', category: 'realestate', location: '士林', roomType: '三房一廳', cost: 300000, fullValue: 2600000, mortgage: 2400000, monthlyIncome: 1500, priceLow: 2600000, priceHigh: 5000000, story: '老屋租金不高、每月只小賺，但已納入都更計畫，一旦通過分回新屋，價值可能近翻倍！' },
+  { id: 'bd_renewal', name: '都更老屋 ‧ 士林（等都更）', emoji: '🏚️', category: 'realestate', location: '士林', roomType: '三房一廳', cost: 300000, fullValue: 2600000, mortgage: 2400000, monthlyIncome: 1500, priceLow: 2600000, priceHigh: 5000000, renewal: true, story: '老屋租金不高、每月只小賺，但已納入都更計畫，一旦通過分回新屋，價值可能近翻倍！' },
   { id: 'bd_warehouse', name: '辦公室（整層）‧ 天母', emoji: '🏬', category: 'realestate', location: '天母', roomType: '辦公室', cost: 350000, fullValue: 3000000, mortgage: 2650000, monthlyIncome: 11700, priceLow: 2800000, priceHigh: 4300000, story: '天母整層辦公室，企業長約承租，金流穩定。' },
   // 事業（大）
   { id: 'bd_bubble', name: '加盟連鎖手搖飲', emoji: '🧋', category: 'business', cost: 300000, fullValue: 300000, monthlyIncome: 10000, story: '加盟知名手搖飲品牌，展店就有穩定權利金收入。' },
@@ -68,6 +68,16 @@ export const SUPER_DEALS = [
   { id: 'su_charger', name: '電動車充電網加盟主', emoji: '🔌', category: 'business', cost: 350000, fullValue: 350000, monthlyIncome: 37000, story: '成為全區電動車充電網的加盟主，每一度電都在幫你數錢。' },
   { id: 'su_saas', name: 'AI SaaS 獨角獸 B 輪', emoji: '🤖', category: 'business', cost: 450000, fullValue: 450000, monthlyIncome: 46000, story: '投進一輪就翻倍的 AI 訂閱軟體，訂閱戶暴增、月月現金流。' },
   { id: 'su_michelin', name: '米其林餐廳合夥人', emoji: '🍽️', category: 'business', cost: 400000, fullValue: 400000, monthlyIncome: 42000, story: '掛名米其林餐廳的合夥人，訂位排到三個月後。' },
+  { id: 'su_space', name: '太空觀光公司股權', emoji: '🚀', category: 'business', cost: 500000, fullValue: 500000, monthlyIncome: 55000, story: '投資民間太空旅遊公司，船票一開賣就被富豪秒殺，訂單排到五年後。' },
+  { id: 'su_esports', name: '電競冠軍戰隊', emoji: '🏆', category: 'business', cost: 300000, fullValue: 300000, monthlyIncome: 33000, story: '旗下戰隊拿下世界冠軍，贊助商與轉播權利金一夜爆量。' },
+  { id: 'su_whisky', name: '限量威士忌酒桶收藏', emoji: '🥃', category: 'business', cost: 250000, fullValue: 250000, monthlyIncome: 28000, story: '囤一批限量單桶威士忌，越陳越貴、藏家排隊搶著加價收。' },
+  { id: 'su_medbeauty', name: '頂級醫美診所連鎖', emoji: '💉', category: 'business', cost: 400000, fullValue: 400000, monthlyIncome: 44000, story: '貴婦名媛都來報到的醫美連鎖，回頭客多到預約要等三個月。' },
+  { id: 'su_meta', name: '元宇宙虛擬地產', emoji: '🌐', category: 'business', cost: 200000, fullValue: 200000, monthlyIncome: 22000, story: '在爆紅的元宇宙裡買下黃金地段，品牌搶著進駐、虛擬店租月月收。' },
+  { id: 'su_racing', name: '賽車車隊冠名權', emoji: '🏎️', category: 'business', cost: 450000, fullValue: 450000, monthlyIncome: 49000, story: '冠名一支方程式賽車隊，全球轉播時你的品牌就是移動廣告看板。' },
+  { id: 'su_artfund', name: '名畫藝術品基金', emoji: '🖼️', category: 'business', cost: 350000, fullValue: 350000, monthlyIncome: 38000, story: '入股藝術品基金，名畫增值加上出借美術館展覽，兩頭都在分潤。' },
+  { id: 'su_marina', name: '頂級遊艇碼頭經營', emoji: '⚓', category: 'business', cost: 400000, fullValue: 400000, monthlyIncome: 43000, story: '經營富豪停遊艇的碼頭，光一個泊位的月租就抵人家一份薪水。' },
+  { id: 'su_pharma', name: 'AI 新藥研發新創', emoji: '💊', category: 'business', cost: 300000, fullValue: 300000, monthlyIncome: 32000, story: '投資用 AI 加速新藥開發的新創，一次解盲成功估值就狂飆。' },
+  { id: 'su_coffee', name: '得獎精品咖啡莊園', emoji: '☕', category: 'business', cost: 150000, fullValue: 150000, monthlyIncome: 17000, story: '買下一座國際得獎的咖啡莊園，一公斤精品豆能賣到好幾千元。' },
 ];
 
 // ── 市場風雲卡（影響全班） ──

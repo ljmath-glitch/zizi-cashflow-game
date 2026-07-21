@@ -1221,13 +1221,20 @@ function maybeAcquisitionOffer(team) {
   if (houses.length === 0) return null;
   if (Math.random() > 0.35) return null;
 
-  const asset = houses[Math.floor(Math.random() * houses.length)];
-  // 開價依該房的售價範圍（priceLow~priceHigh）抽出，低機率偏向高端（重劃/搶手）
+  // 都更/重劃房優先被相中：一旦被收購就是等待已久的「翻盤」（持有多間時，都更房先出場）
+  const renewalHouses = houses.filter((h) => h.renewal);
+  const asset = renewalHouses.length
+    ? renewalHouses[Math.floor(Math.random() * renewalHouses.length)]
+    : houses[Math.floor(Math.random() * houses.length)];
+  const isRenewal = !!asset.renewal;
+  // 開價依該房的售價範圍（priceLow~priceHigh）抽出
   let offerPrice;
   if (asset.priceLow && asset.priceHigh) {
     const lo = asset.priceLow, hi = asset.priceHigh;
-    // 12% 機率偏高端（後 1/3），其餘落在全區間
-    const r = Math.random() < 0.12 ? 0.67 + Math.random() * 0.33 : Math.random();
+    // 都更/重劃房：直接走高價端（都更通過分回新屋，價值翻倍）；一般房：多為中間價、少數偏高
+    const r = isRenewal
+      ? 0.8 + Math.random() * 0.2
+      : (Math.random() < 0.12 ? 0.67 + Math.random() * 0.33 : Math.random());
     offerPrice = Math.round(lo + (hi - lo) * r);
   } else {
     // 無範圍資料（舊資料）退回用現值加溢價
@@ -1237,7 +1244,7 @@ function maybeAcquisitionOffer(team) {
   // 賣出淨額 = 開價 − 抵押貸款（不夠則歸零，不欠債）
   const mortgage = asset.mortgageAmt || 0;
   const net = Math.max(0, offerPrice - mortgage);
-  const buyer = BUYERS[Math.floor(Math.random() * BUYERS.length)];
+  const buyer = isRenewal ? '都更建商' : BUYERS[Math.floor(Math.random() * BUYERS.length)];
   const where = [asset.location, asset.roomType].filter(Boolean).join(' ');
   // 相對「投入頭期」的報酬率
   const gainPct = asset.totalCost ? Math.round(((net - asset.totalCost) / asset.totalCost) * 100) : 0;
@@ -1249,9 +1256,11 @@ function maybeAcquisitionOffer(team) {
     gainPct,
     buyer,
     card: {
-      emoji: '🤝',
-      name: `${buyer}想收購你的${asset.roomType || '房產'}`,
-      desc: `${where}　開價 ${formatNT(offerPrice)}（清貸款後淨入 ${formatNT(net)}）`,
+      emoji: isRenewal ? '🏗️' : '🤝',
+      name: isRenewal ? `你的${asset.roomType || '房子'}都更／重劃通過了！` : `${buyer}想收購你的${asset.roomType || '房產'}`,
+      desc: isRenewal
+        ? `${where}　${buyer}開價 ${formatNT(offerPrice)}（清貸款後淨入 ${formatNT(net)}）— 等待已久的翻盤！`
+        : `${where}　開價 ${formatNT(offerPrice)}（清貸款後淨入 ${formatNT(net)}）`,
     },
   };
 }
@@ -1458,6 +1467,8 @@ function dealDecision(teamId, accept, withLoan = false) {
     roomType: card.roomType || null,
     priceLow: card.priceLow || null, // 房地產售價範圍（收購/賣出用）
     priceHigh: card.priceHigh || null,
+    renewal: card.renewal || false, // 都更/重劃房：被收購時走高價端（翻盤）
+
     mortgageAmt: card.mortgage || 0, // 記錄原始貸款（賣出計算淨額）
     qty: 1,
     value: dealValue,

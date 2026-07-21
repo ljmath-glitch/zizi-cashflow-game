@@ -291,6 +291,15 @@ for (const p of PROFESSIONS) {
     2000;               // 低薪（保全/超商店員）
 }
 
+// 銀行風控角度：收入浮動大（variableIncome）的職業＝還款穩定度低＝風險高，
+// 起手的房貸／學貸「利息（月付）」會被抓高一點（差異不大：房貸 ×1.12、學貸 ×1.15，取整到百）。
+// 多數浮動職業是租屋族（房貸 0），實際多反映在學貸上，貼近現實。
+for (const p of PROFESSIONS) {
+  if (!p.variableIncome) continue;
+  if (p.expenses.homeMortgage > 0) p.expenses.homeMortgage = Math.round((p.expenses.homeMortgage * 1.12) / 100) * 100;
+  if (p.expenses.schoolLoan > 0) p.expenses.schoolLoan = Math.round((p.expenses.schoolLoan * 1.15) / 100) * 100;
+}
+
 export function getProfession(id) {
   return PROFESSIONS.find((p) => p.id === id) || null;
 }
