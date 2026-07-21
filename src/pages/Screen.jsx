@@ -28,6 +28,7 @@ export default function Screen() {
   const feed = useFeed();
   const [serverInfo, setServerInfo] = useState(null);
   const [board, setBoard] = useState([]);
+  const [marketCatalog, setMarketCatalog] = useState([]); // 完整市場目錄（給投影鏡像的市場分頁，與學生端一致）
   const [drawn, setDrawn] = useState(null); // 最近抽到的卡（翻牌動畫）
   const [celebrate, setCelebrate] = useState(null); // 跳出老鼠圈大慶祝
   const [report, setReport] = useState(null); // 月初回顧/預告彈窗
@@ -47,6 +48,7 @@ export default function Screen() {
   useEffect(() => {
     fetch(api('api/server-info')).then((r) => r.json()).then(setServerInfo).catch(() => {});
     fetch(api('api/board')).then((r) => r.json()).then(setBoard).catch(() => {});
+    fetch(api('api/market')).then((r) => r.json()).then(setMarketCatalog).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -204,7 +206,7 @@ export default function Screen() {
       {dice && phase === 'running' && !['opportunity', 'market', 'doodad'].includes(dice.square) && (
         <DiceBanner payload={dice} team={teams.find((t) => t.id === dice.teamId)} />
       )}
-      {game?.spotlight && <Spotlight team={game.spotlight} tab={game.spotlightTab || 'finance'} scroll={game.spotlightScroll || 0} market={game.market} />}
+      {game?.spotlight && <Spotlight team={game.spotlight} tab={game.spotlightTab || 'finance'} scroll={game.spotlightScroll || 0} market={game.market} catalog={marketCatalog} />}
       {game?.showTutorial && <Tutorial />}
       {report && !game?.showTutorial && <MonthReport report={report} onClose={() => setReport(null)} />}
       {deal && !game?.showTutorial && !game?.spotlight && (
@@ -226,7 +228,15 @@ const SPOT_TABS = [
   { key: 'assets', label: '📊 資產負債' },
   { key: 'history', label: '📜 歷史' },
 ];
-function Spotlight({ team, tab = 'finance', scroll = 0, market }) {
+// 市場分類（與學生端 MarketTab 一致）
+const MKT_ORDER = ['dividend', 'commodity', 'crypto', 'interest'];
+const MKT_LABEL = {
+  dividend: '📈 股票 / ETF',
+  commodity: '🥇 原物料（黃金/白銀/石油）',
+  crypto: '🪙 加密貨幣',
+  interest: '🏦 定存 / 債券',
+};
+function Spotlight({ team, tab = 'finance', scroll = 0, market, catalog = [] }) {
   const d = team.derived || {};
   const p = d.passive || {};
   const e = team.expenses || {};
@@ -243,7 +253,6 @@ function Spotlight({ team, tab = 'finance', scroll = 0, market }) {
     ['貸款利息', d.bankLoanPayment]].filter((r) => (r[1] || 0) > 0);
   const debtRows = [['自住房貸', pl.homeMortgage], ['車貸', pl.carLoan], ['學貸', pl.schoolLoan], ['卡債', pl.creditCard], ['銀行貸款', pl.bankLoan]]
     .filter((r) => (r[1] || 0) > 0);
-  const insts = market?.instruments ? Object.values(market.instruments) : [];
   const pct = d.totalExpense ? Math.min(100, Math.round((d.passiveTotal / d.totalExpense) * 100)) : 0;
 
   return (
@@ -310,15 +319,55 @@ function Spotlight({ team, tab = 'finance', scroll = 0, market }) {
               </>)}
 
               {tab === 'market' && (<>
-                <p className="text-sm text-slate-400 mb-1">目前市場牌價（全班一樣）</p>
-                {insts.map((it) => (
-                  <div key={it.id} className="flex items-center gap-2 bg-white rounded-lg px-2 py-1.5 mb-1 ring-1 ring-black/5">
-                    <span className="text-xl shrink-0">{it.emoji}</span>
-                    <span className="flex-1 min-w-0 truncate">{it.name}</span>
-                    <span className="tabular-nums font-bold text-slate-700">{formatMoney(it.price)}</span>
-                  </div>
-                ))}
-                {insts.length === 0 && <p className="text-slate-400">市場資料載入中…</p>}
+                <p className="text-sm text-slate-400 mb-2">目前市場行情（全班一樣，與學生端同步）</p>
+                {MKT_ORDER.map((cat) => {
+                  const items = (catalog || []).filter((m) => m.category === cat);
+                  if (!items.length) return null;
+                  return (
+                    <div key={cat} className="mb-3">
+                      <p className="text-sm font-bold text-slate-500 mb-1">{MKT_LABEL[cat]}</p>
+                      <div className="space-y-1.5">
+                        {items.map((item) => {
+                          const inst = market?.instruments?.[item.id];
+                          const hist = inst?.history || [];
+                          const price = inst?.price ?? item.price ?? null;
+                          const prev = hist.length > 1 ? hist[hist.length - 2] : price;
+                          const up = price != null && price >= prev;
+                          const chg = prev ? Math.round(((price - prev) / prev) * 100) : 0;
+                          return (
+                            <div key={item.id} className="bg-white rounded-xl px-3 py-2 ring-1 ring-black/5">
+                              <div className="flex items-start gap-2">
+                                <span className="text-2xl shrink-0">{item.emoji}</span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="font-bold truncate">{item.name}</span>
+                                    <span className="text-[0.7rem] rounded-full bg-slate-100 px-2 py-0.5 text-slate-500 shrink-0">風險 {item.risk}</span>
+                                  </div>
+                                  <p className="text-xs text-slate-500 leading-snug">{item.desc}</p>
+                                  <div className="flex items-center gap-2 mt-0.5 text-sm">
+                                    {inst ? (<>
+                                      <span className="text-slate-400 text-xs">現價</span>
+                                      <span className="font-bold tabular-nums text-slate-800">{formatMoney(price)}</span>
+                                      <span className={up ? 'text-green-600' : 'text-red-500'}>{up ? '▲' : '▼'}{Math.abs(chg)}%</span>
+                                    </>) : item.annualRate != null ? (
+                                      <span className="text-slate-500 text-xs">年利率 {(item.annualRate * 100).toFixed(1)}%（每月配息）</span>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              </div>
+                              {hist.length > 1 && (
+                                <div className="mt-1.5 bg-slate-50 rounded-lg p-1 flex justify-center">
+                                  <Sparkline data={hist} width={300} height={40} color={up ? '#16a34a' : '#dc2626'} />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+                {(!catalog || catalog.length === 0) && <p className="text-slate-400">市場資料載入中…</p>}
               </>)}
 
               {tab === 'history' && (<>
