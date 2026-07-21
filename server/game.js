@@ -1525,6 +1525,9 @@ function charityDecision(teamId, donate) {
 
 // ── 買賣資產 ──
 
+// 同組重複購買防呆視窗（毫秒）：3 秒內買同一支會被擋，避免多支手機同時按重複扣款
+const DUP_BUY_WINDOW = 3000;
+
 // 買入資產；options 依商品類型帶 qty（股數）或 amount（基金金額）
 function buyAsset(teamId, { marketId, qty, amount } = {}) {
   if (state.phase !== 'running') {
@@ -1534,6 +1537,13 @@ function buyAsset(teamId, { marketId, qty, amount } = {}) {
   if (!team) return { ok: false, reason: '找不到組別' };
   const item = getMarketItem(marketId);
   if (!item) return { ok: false, reason: '查無此投資商品' };
+
+  // 防呆（同組多支手機）：短時間內重複買「同一支」多半是好幾個人同時按 → 先擋，避免重複扣款
+  const now = Date.now();
+  if (team.lastBuy && team.lastBuy.marketId === marketId && now - team.lastBuy.ts < DUP_BUY_WINDOW) {
+    const wait = Math.ceil((DUP_BUY_WINDOW - (now - team.lastBuy.ts)) / 1000);
+    return { ok: false, reason: `剛買過「${item.name}」了，怕同組重複扣款先擋一下，${wait} 秒後想再買可再按` };
+  }
 
   const instId = resolveInstrumentId(item.category, item.tags || [], marketId);
   const instPrice = instId ? state.market.instruments[instId].price : null;
@@ -1573,6 +1583,7 @@ function buyAsset(teamId, { marketId, qty, amount } = {}) {
   }
 
   team.cash -= cost;
+  team.lastBuy = { marketId, ts: now }; // 記錄這次購買，供上面的重複購買防呆判斷
 
   // 可分割商品（股票/ETF/加密/定存）→ 同商品合併成一筆，方便整合與部分賣出
   const fungible = item.kind === 'shares' || item.kind === 'amount';
