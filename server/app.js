@@ -145,6 +145,7 @@ export function mountCashflow(app, httpServer, { base = '', serveStatic = true, 
     socket.on('student:acquireDecision', ({ teamId, accept } = {}, ack) => { ensureTeamRoom(socket, teamId); ack?.(roomOf(socket)?.acquireDecision(teamId, accept) || { ok: false }); });
     socket.on('student:chooseGoal', ({ teamId, achievementId } = {}, ack) => { ensureTeamRoom(socket, teamId); ack?.(roomOf(socket)?.chooseGoal(teamId, achievementId) || { ok: false }); });
     socket.on('student:buyAchievement', ({ teamId } = {}, ack) => { ensureTeamRoom(socket, teamId); ack?.(roomOf(socket)?.buyAchievement(teamId) || { ok: false }); });
+    socket.on('student:toggleInsurance', ({ teamId, cover } = {}, ack) => { ensureTeamRoom(socket, teamId); ack?.(roomOf(socket)?.toggleInsurance(teamId, cover) || { ok: false }); });
 
     socket.on('disconnect', () => {});
   });

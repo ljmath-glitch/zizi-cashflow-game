@@ -116,26 +116,26 @@ export const MARKET_CARDS = [
 // requires='realestate'（要有出租房）或 'child'（要有小孩）才會發生，否則「幸好沒有，免了」
 export const DOODAD_CARDS = [
   // 連動型：有出租房才會遇到
-  { id: 'dd_tenant', name: '房客落跑、屋況受損', emoji: '🏚️', amount: 10000, requires: 'realestate', story: '房客兩個月沒付租金又搞壞房子，保險理賠後你還要自掏腰包。' },
-  { id: 'dd_repair', name: '出租屋漏水大修', emoji: '🔧', amount: 18000, requires: 'realestate', story: '你的出租房半夜漏水，得馬上找師傅來修。' },
+  { id: 'dd_tenant', name: '房客落跑、屋況受損', emoji: '🏚️', amount: 10000, requires: 'realestate', insure: 'property', story: '房客兩個月沒付租金又搞壞房子，屋況要整修。' },
+  { id: 'dd_repair', name: '出租屋漏水大修', emoji: '🔧', amount: 18000, requires: 'realestate', insure: 'property', story: '你的出租房半夜漏水，得馬上找師傅來修。' },
   { id: 'dd_vacancy', name: '出租屋空租一個月', emoji: '🪧', amount: 8000, requires: 'realestate', story: '舊房客搬走、新房客還沒來，這個月少收了租金。' },
   // 連動型：有小孩才會遇到
   { id: 'dd_childclass', name: '小孩才藝補習費', emoji: '🎒', amount: 8000, requires: 'child', story: '孩子吵著要學鋼琴和畫畫，報名費一次繳。' },
-  { id: 'dd_childsick', name: '小孩生病住院', emoji: '🤒', amount: 12000, requires: 'child', story: '孩子半夜發高燒送急診，住院觀察了幾天。' },
+  { id: 'dd_childsick', name: '小孩生病住院', emoji: '🤒', amount: 12000, requires: 'child', insure: 'medical', story: '孩子半夜發高燒送急診，住院觀察了幾天。' },
   { id: 'dd_childbike', name: '幫小孩買新腳踏車', emoji: '🚲', amount: 4000, requires: 'child', story: '孩子的舊腳踏車壞了，買台新的給他。' },
   // 一般（人人都可能）
   { id: 'dd_phone', name: '換最新手機', emoji: '📱', amount: 16000 },
   { id: 'dd_console', name: '買電競主機', emoji: '🎮', amount: 10000 },
   { id: 'dd_flight', name: '衝動訂出國機票', emoji: '✈️', amount: 22000 },
   { id: 'dd_concert', name: '搶到演唱會搖滾區', emoji: '🎤', amount: 5000 },
-  { id: 'dd_carfix', name: '愛車進廠大修', emoji: '🔧', amount: 14000 },
+  { id: 'dd_carfix', name: '愛車進廠大修', emoji: '🔧', amount: 14000, insure: 'auto' },
   { id: 'dd_shopping', name: '週年慶失心瘋', emoji: '🛍️', amount: 7000 },
   { id: 'dd_laptop', name: '買新筆電', emoji: '💻', amount: 18000 },
   { id: 'dd_tour', name: '跟團出國玩', emoji: '🏝️', amount: 24000 },
   { id: 'dd_dinner', name: '朋友聚餐請客', emoji: '🍽️', amount: 4000 },
   { id: 'dd_gift', name: '送禮物給情人', emoji: '💍', amount: 8000 },
   { id: 'dd_party', name: '辦生日派對', emoji: '🎂', amount: 6000 },
-  { id: 'dd_dental', name: '牙齒矯正', emoji: '🦷', amount: 28000 },
+  { id: 'dd_dental', name: '牙齒矯正', emoji: '🦷', amount: 28000, insure: 'medical' },
   { id: 'dd_tv', name: '買大電視', emoji: '📺', amount: 15000 },
   { id: 'dd_idol', name: '追星買周邊', emoji: '🎟️', amount: 4000 },
   { id: 'dd_dog', name: '養了一隻狗', emoji: '🐶', amount: 2000, recurring: true },
@@ -146,8 +146,23 @@ export const DOODAD_CARDS = [
   { id: 'dd_return', name: '網購踩雷退貨運費', emoji: '📮', amount: 2500, story: '一次買了十件衣服全部不合身，退貨運費自己吸收。' },
   { id: 'dd_merch', name: '演唱會周邊噴錢', emoji: '🎀', amount: 5000, story: '應援手燈、毛巾、寫真集全包，理智線當場斷掉。' },
   { id: 'dd_snacks', name: '追劇囤零食飲料', emoji: '🍿', amount: 3000, story: '為了追新番囤了一整櫃零食跟手搖飲，體重與帳單一起上升。' },
-  { id: 'dd_scooter', name: '機車拋錨大修', emoji: '🛵', amount: 9000, story: '通勤機車半路熄火，牽去保養廠一次噴掉一筆。' },
+  { id: 'dd_scooter', name: '機車拋錨大修', emoji: '🛵', amount: 9000, insure: 'auto', story: '通勤機車半路熄火，牽去保養廠一次噴掉一筆。' },
 ];
+
+// ── 保險（高階專屬）：每月保費，遇到「對應的意外支出」可理賠（保 80%、自付 20%）──
+// 費率參考市售：醫療險(實支實付)月約1-2k、住宅火險+地震月約3-500、汽機車險年約1.5-3萬。
+// 教學重點：保「意外」不保「想買的消費」（換手機/演唱會/出國不賠）；保費長期通常略高於理賠＝買安心的代價。
+export const COVER_RATE = 0.8; // 理賠比例（自付額 20%）
+// 保費已按「遊戲內實際損失規模與發生率」校準（非照真實絕對金額），保費：理賠比例貼近市售，
+// 且各類都有一張「重大意外」大額卡，讓保險真的能避免被一次打垮（＝為什麼要保險）。
+export const INSURANCE = [
+  { id: 'ins_health', name: '醫療險', emoji: '🏥', premium: 300, cover: 'medical', desc: '理賠住院、牙齒矯正等醫療支出（保 80%）', ref: '對應可保損失約 1.2～2.8 萬' },
+  { id: 'ins_home', name: '房屋險', emoji: '🏠', premium: 200, cover: 'property', desc: '理賠出租屋漏水、房客落跑（保 80%）', ref: '對應可保損失約 1～1.8 萬' },
+  { id: 'ins_auto', name: '汽機車險', emoji: '🚗', premium: 250, cover: 'auto', desc: '理賠愛車大修、機車拋錨（保 80%）', ref: '對應可保損失約 0.9～1.4 萬' },
+];
+export function insuranceByCover(cover) {
+  return INSURANCE.find((i) => i.cover === cover) || null;
+}
 
 // ── 好運卡（停「🍀 好運」格：小賺一筆）──
 export const BONUS_CARDS = [

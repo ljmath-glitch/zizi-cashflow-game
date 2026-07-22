@@ -1426,6 +1426,75 @@ function MarketTab({ team, phase }) {
           </div>
         </div>
       ))}
+
+      {game?.insuranceCatalog?.length > 0 && (
+        <InsuranceSection team={team} list={game.insuranceCatalog} canBuy={canBuy} />
+      )}
+    </div>
+  );
+}
+
+// 保險（高階）：每月繳一小筆保費，意外發生時保險幫你擋 80%，避免被一次打垮
+function InsuranceSection({ team, list, canBuy }) {
+  const insured = team.insured || {};
+  const premium = team.derived?.insurancePremium || 0;
+
+  function toggle(cover, name, on) {
+    socket.emit('student:toggleInsurance', { teamId: team.id, cover }, (res) => {
+      if (res?.ok) {
+        toast({
+          emoji: res.insured ? '🛡️' : '🚫',
+          title: res.insured ? `已投保 ${name}` : `已退保 ${name}`,
+          text: res.insured ? '每月扣保費，意外時幫你擋 80%' : '之後意外要自己全額承擔',
+          tone: res.insured ? 'good' : 'bad',
+        });
+      } else {
+        toast({ emoji: '⚠️', title: res?.reason || '操作失敗', tone: 'bad' });
+      }
+    });
+  }
+
+  return (
+    <div>
+      <p className="text-sm font-semibold text-slate-500 mb-1">🛡️ 保險</p>
+      <p className="text-[0.72rem] leading-snug text-slate-400 mb-2">
+        每月繳一小筆保費，意外發生時保險幫你擋 <b>80%</b>（自付 20%）。平常沒事＝繳小錢買安心；中大獎＝避免被一次打垮。
+      </p>
+      <div className="space-y-3">
+        {list.map((ins) => {
+          const on = !!insured[ins.cover];
+          return (
+            <div key={ins.id} className={`rounded-2xl shadow-sm p-4 ring-1 ${on ? 'bg-emerald-50 ring-emerald-200' : 'bg-white ring-transparent'}`}>
+              <div className="flex items-start gap-3">
+                <span className="text-3xl">{ins.emoji}</span>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-slate-800 text-sm">
+                      {ins.name}
+                      {on && <span className="ml-2 text-[0.7rem] rounded-full bg-emerald-500 text-white px-2 py-0.5">保障中</span>}
+                    </span>
+                    <span className="text-xs rounded-full bg-slate-100 px-2 py-0.5 text-slate-500 tabular-nums">保費 {formatMoney(ins.premium)}/月</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">{ins.desc}</p>
+                  {ins.ref && <p className="text-[0.7rem] text-slate-400 mt-0.5">{ins.ref}</p>}
+                </div>
+              </div>
+              <button
+                disabled={!canBuy}
+                onClick={() => toggle(ins.cover, ins.name, on)}
+                className={`mt-3 w-full rounded-xl py-2 text-sm font-semibold transition disabled:opacity-40 ${
+                  on ? 'bg-white text-rose-600 ring-1 ring-rose-200' : 'bg-emerald-500 text-white'
+                }`}
+              >
+                {on ? '退保' : '投保'}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-[0.72rem] text-slate-500 text-right tabular-nums">
+        目前每月保費合計：<b className="text-zizi-ink">{formatMoney(premium)}</b>
+      </p>
     </div>
   );
 }

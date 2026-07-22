@@ -6,7 +6,7 @@ import { PROFESSIONS, randomProfession, getProfession } from './data/professions
 import { activeMarket, marketFor, getMarketItem, INSTRUMENT_VOL } from './data/assets.js';
 import { getAchievement, starsOf } from './data/achievements.js';
 import { BOARD, boardFor } from './data/board.js';
-import { drawCard } from './data/cards.js';
+import { drawCard, INSURANCE, COVER_RATE, insuranceByCover } from './data/cards.js';
 import { pickEvent, randomRumor } from './data/events.js';
 import { saveToFile } from './storage.js';
 
@@ -44,9 +44,9 @@ export function roomExists(code) {
 
 // 已淘汰舊「難度（輕鬆/標準/挑戰）」，改為三階分級（初階/中階/高階），難易直接內含在各階。
 
-// 起手現金：所有職業統一（比較公平），金額拉高以免太容易破產。難度倍率(startCash)仍適用（輕鬆×2）。
+// 起手現金：所有職業統一（比較公平），15 萬讓開場就買得起一個中型資產、及早啟動被動收入。難度倍率(startCash)仍適用。
 // 取代各職業原本高低不一的 savings（savings 保留在資料裡但不再決定起手現金）。
-const START_CASH = 100000;
+const START_CASH = 150000;
 
 // 遊戲階段：初階（給國中生第一次玩，只教核心現金流）／完整（全部機制）
 // 三階分級（取代舊難度）：每階自帶難易倍率（startCash/dealIncome/doodad）＋機制開關。
@@ -54,15 +54,15 @@ const START_CASH = 100000;
 //   market：'basic' 定存+2ETF｜'mid' 股票/黃金(無加密)｜'full' 全部
 //   events 市場事件/月初報告、loan 貸款、acquire 收購/都更、achievements 人生成就、superDeal 超級生意
 export const STAGES = {
-  basic: { label: '初階', emoji: '🟢', startCash: 2, dealIncome: 1.5, doodad: 0.7,
+  basic: { label: '初階', emoji: '🟢', startCash: 2, dealIncome: 2.0, doodad: 0.7,
     board: 'basic', market: 'basic', events: false, loan: false, acquire: false, achievements: false, superDeal: false,
     desc: '核心觀念：買資產養被動收入→財富自由。極簡報表、只有定存+ETF、無市場波動/貸款/失業/成就（最寬鬆）' },
-  mid: { label: '中階', emoji: '🟡', startCash: 1.5, dealIncome: 1, doodad: 1,
+  mid: { label: '中階', emoji: '🟡', startCash: 1.5, dealIncome: 1.5, doodad: 1,
     board: 'full', market: 'mid', events: true, loan: true, acquire: true, achievements: true, superDeal: false,
     desc: '加入市場漲跌、貸款、失業、慈善、房產收購、人生成就；市場含股票/黃金（無加密貨幣）' },
-  full: { label: '高階', emoji: '🔴', startCash: 1, dealIncome: 0.8, doodad: 1.3,
-    board: 'full', market: 'full', events: true, loan: true, acquire: true, achievements: true, superDeal: true,
-    desc: '全部機制：加密貨幣、超級生意、黑天鵝…最完整也最有挑戰' },
+  full: { label: '高階', emoji: '🔴', startCash: 1, dealIncome: 1.3, doodad: 1.3,
+    board: 'full', market: 'full', events: true, loan: true, acquire: true, achievements: true, superDeal: true, insurance: true,
+    desc: '全部機制：加密貨幣、超級生意、黑天鵝、保險…最完整也最有挑戰' },
 };
 
 // ── 單一房間的完整遊戲邏輯 ──
@@ -172,6 +172,7 @@ function publicState() {
     stage: state.stage, // 分級（basic 初階｜mid 中階｜full 高階）
     board: boardFor(state.stage), // 依階段的盤面（前端直接用，不必再打 /api/board）
     marketCatalog: marketFor(state.stage), // 依階段的市場可買清單（初階只有定存＋2 ETF）
+    insuranceCatalog: stageCfg().insurance ? INSURANCE : [], // 高階才有保險
   };
 }
 
@@ -574,6 +575,7 @@ function resetTeamFinances(team) {
   team.achievements = []; // 已完成的人生成就 id（財富自由後才能追求）
   team.currentGoalId = null; // 目前選定要達成的成就 id
   team.achievementUpkeep = 0; // 成就帶來的每月額外開銷加總（如夢想之家管理費）
+  team.insured = {}; // 已投保的險種 { medical:true, property:true, auto:true }（高階）
   team.bankrupt = false; // 是否已破產淘汰
   team.bankruptRound = null;
 }
@@ -704,7 +706,13 @@ function computeTotalExpense(team) {
   const e = team.expenses || {};
   const base = (e.tax || 0) + (e.homeMortgage || 0) + (e.carLoan || 0) +
     (e.schoolLoan || 0) + (e.creditCard || 0) + (e.other || 0);
-  return base + (team.perChild || 0) * (team.children || 0) + bankLoanPayment(team) + (team.achievementUpkeep || 0);
+  return base + (team.perChild || 0) * (team.children || 0) + bankLoanPayment(team) + (team.achievementUpkeep || 0) + insurancePremium(team);
+}
+
+// 每月保費總額（已投保的險種保費加總）
+function insurancePremium(team) {
+  const ins = team.insured || {};
+  return INSURANCE.reduce((s, i) => s + (ins[i.cover] ? i.premium : 0), 0);
 }
 
 // 負債總額（計入淨資產）
@@ -749,6 +757,7 @@ function computeDerived(team) {
     totalExpense,
     cashflow,
     bankLoanPayment: bankLoanPayment(team),
+    insurancePremium: insurancePremium(team), // 每月保費總額（高階）
     assetsValue,
     liabilitiesTotal,
     netWorth: team.cash + assetsValue - liabilitiesTotal,
@@ -1369,10 +1378,22 @@ function applyDoodad(team, card) {
     addFeed(`${card.emoji} ${team.name}：${card.name}（每月支出 +${card.amount}）`);
     emitEvent(team, { emoji: card.emoji, title: '額外支出（每月）', text: `${card.name}，每月支出增加 ${formatNT(card.amount)}` });
   } else {
-    team.cash -= card.amount;
-    addHistory(team, { round: state.round, type: 'expense', text: card.name, delta: -card.amount });
-    addFeed(`${card.emoji} ${team.name}：${card.name}（-${card.amount}）`);
-    emitEvent(team, { emoji: card.emoji, title: '額外支出', text: `${card.name}，花掉 ${formatNT(card.amount)}` });
+    // 保險理賠：若這是「可保的意外」且該組有投保對應險種，保險付 COVER_RATE，玩家只付自付額
+    const insuredCover = card.insure && (team.insured || {})[card.insure];
+    if (insuredCover) {
+      const claim = Math.round(card.amount * COVER_RATE);
+      const outOfPocket = card.amount - claim;
+      team.cash -= outOfPocket;
+      addHistory(team, { round: state.round, type: 'expense', text: `${card.name}（保險理賠 ${formatNT(claim)}）`, delta: -outOfPocket });
+      addFeed(`🛡️ ${team.name}：${card.name} 由保險理賠 ${formatNT(claim)}，只付自付額 ${formatNT(outOfPocket)}`);
+      emitEvent(team, { emoji: '🛡️', title: '保險理賠！', text: `${card.name}：保險付了 ${formatNT(claim)}，你只付自付額 ${formatNT(outOfPocket)}。好家在有保險！` });
+    } else {
+      team.cash -= card.amount;
+      addHistory(team, { round: state.round, type: 'expense', text: card.name, delta: -card.amount });
+      addFeed(`${card.emoji} ${team.name}：${card.name}（-${card.amount}）`);
+      const noInsHint = card.insure ? '（沒保這種險，只能自己全額付…）' : '';
+      emitEvent(team, { emoji: card.emoji, title: '額外支出', text: `${card.name}，花掉 ${formatNT(card.amount)}${noInsHint}` });
+    }
     checkBankruptOrCover(team);
   }
   emitTeam(team);
@@ -1389,6 +1410,23 @@ function applyBonus(team, card) {
   emitEvent(team, { emoji: card.emoji, title: '🍀 好運！', text: `${card.name}，進帳 ${formatNT(card.amount)}` });
   emitTeam(team);
   broadcastTeams();
+}
+
+// 投保 / 退保（高階專屬）：切換某險種的投保狀態
+function toggleInsurance(teamId, cover) {
+  if (state.phase !== 'running') return { ok: false, reason: '目前不是操作時間' };
+  if (!stageCfg().insurance) return { ok: false, reason: '這個階段沒有保險' };
+  const team = getTeam(teamId);
+  if (!team) return { ok: false, reason: '找不到組別' };
+  const ins = insuranceByCover(cover);
+  if (!ins) return { ok: false, reason: '查無此險種' };
+  team.insured = team.insured || {};
+  const on = !team.insured[cover];
+  if (on) team.insured[cover] = true; else delete team.insured[cover];
+  addFeed(`🛡️ ${team.name} ${on ? '投保了' : '退保了'} ${ins.name}（每月保費 ${formatNT(ins.premium)}）`);
+  emitTeam(team);
+  broadcastTeams();
+  return { ok: true, insured: on };
 }
 
 // 生小孩：最多 3 個，增加每月小孩支出
@@ -1899,5 +1937,5 @@ function grantFreedom(teamId) {
 
 
   const endGameNow = () => { if (state.phase === 'running' || state.phase === 'paused') endGame('🏁 老師結束了遊戲！'); };
-  return { getPublicState, startGame, pauseGame, endGame: endGameNow, skipTurn, nextRound, resetGame, clearGame, toggleTutorial, setSpotlight, navSpotlight, professionPair, createTeam, getTeam, getTeamPayload, listPublicTeams, broadcastTeams, setConfig, getSnapshot, loadSnapshot, getFeed, rollDice, acquireDecision, chooseDeck, dealDecision, charityDecision, buyAsset, loanMoney, repayLoan, repayDebt, sellAsset, chooseGoal, buyAchievement, grantFreedom, netWorth, publicTeam };
+  return { getPublicState, startGame, pauseGame, endGame: endGameNow, skipTurn, nextRound, resetGame, clearGame, toggleTutorial, setSpotlight, navSpotlight, professionPair, createTeam, getTeam, getTeamPayload, listPublicTeams, broadcastTeams, setConfig, getSnapshot, loadSnapshot, getFeed, rollDice, acquireDecision, chooseDeck, dealDecision, charityDecision, buyAsset, loanMoney, repayLoan, repayDebt, sellAsset, chooseGoal, buyAchievement, toggleInsurance, grantFreedom, netWorth, publicTeam };
 }
