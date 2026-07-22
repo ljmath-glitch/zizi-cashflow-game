@@ -1452,6 +1452,11 @@ function MarketCard({ item, canBuy, onBuy, inst }) {
             <span className="text-xs rounded-full bg-slate-100 px-2 py-0.5 text-slate-500">風險 {item.risk}</span>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
+          {item.category === 'crypto' && (
+            <p className="mt-1 text-[0.7rem] leading-snug bg-rose-50 text-rose-600 ring-1 ring-rose-200 rounded-lg px-2 py-1">
+              ⚠️ 高風險：暴漲暴跌、不配息，還可能遇<b>詐騙或交易所暴雷而歸零</b>。別把錢全押！
+            </p>
+          )}
           {price != null && (
             <button
               onClick={() => setShowChart((v) => !v)}

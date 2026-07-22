@@ -90,6 +90,8 @@ export const MARKET_CARDS = [
   { id: 'mk_btc_halving', kind: 'price', name: '比特幣減半行情', emoji: '🪙', desc: '加密貨幣 +60%', targetCategory: 'crypto', factor: 1.6 },
   { id: 'mk_crypto_crash', kind: 'price', name: '幣圈大崩盤', emoji: '📉', desc: '加密貨幣 -50%', targetCategory: 'crypto', factor: 0.5 },
   { id: 'mk_meme_viral', kind: 'price', name: '迷因幣爆紅', emoji: '🐶', desc: '加密貨幣 +80%', targetCategory: 'crypto', factor: 1.8 },
+  { id: 'mk_crypto_scam', kind: 'price', name: '🚨 交易所捲款跑路', emoji: '🚨', desc: '假交易所暴雷、加密貨幣 −65%！💡 投資前先懂風險，別信「穩賺不賠」的詐騙', targetCategory: 'crypto', factor: 0.35 },
+  { id: 'mk_meme_scam', kind: 'price', name: '🐶 迷因幣其實是詐騙', emoji: '🕳️', desc: '一夜崩盤、加密貨幣 −70%。💡 越是「保證獲利」越要小心，天下沒有穩賺不賠', targetCategory: 'crypto', factor: 0.3 },
   { id: 'mk_stock_high', kind: 'price', name: '台股創新高', emoji: '📈', desc: '股票 / ETF +10%', targetCategory: 'dividend', factor: 1.1 },
   { id: 'mk_stock_crash', kind: 'price', name: '股市拉回', emoji: '🔻', desc: '股票 / ETF -12%', targetCategory: 'dividend', factor: 0.88 },
   { id: 'mk_gold_surge', kind: 'price', name: '黃金價格飆升', emoji: '🥇', desc: '原物料 +30%', targetCategory: 'commodity', factor: 1.3 },
