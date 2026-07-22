@@ -1153,6 +1153,9 @@ function resolveSquare(team, type) {
     case 'doodad':
       applyDoodad(team, drawCard('doodad'));
       break;
+    case 'bonus':
+      applyBonus(team, drawCard('bonus'));
+      break;
     case 'baby':
       haveBaby(team);
       break;
@@ -1342,6 +1345,18 @@ function applyDoodad(team, card) {
     emitEvent(team, { emoji: card.emoji, title: '額外支出', text: `${card.name}，花掉 ${formatNT(card.amount)}` });
     checkBankruptOrCover(team);
   }
+  emitTeam(team);
+  broadcastTeams();
+}
+
+// 好運格：抽一張好運卡，小賺一筆現金
+function applyBonus(team, card) {
+  if (!card) return;
+  announceCard('bonus', card, team);
+  team.cash += card.amount;
+  addHistory(team, { round: state.round, type: 'income', text: card.name, delta: card.amount });
+  addFeed(`${card.emoji} ${team.name}：好運！${card.name}（+${card.amount}）`);
+  emitEvent(team, { emoji: card.emoji, title: '🍀 好運！', text: `${card.name}，進帳 ${formatNT(card.amount)}` });
   emitTeam(team);
   broadcastTeams();
 }

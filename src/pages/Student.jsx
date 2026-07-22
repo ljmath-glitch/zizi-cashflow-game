@@ -676,6 +676,7 @@ const SQUARE_HINT = {
   opportunity: '抽到機會卡，請做選擇',
   market: '市場風雲，全班資產跟著漲跌',
   doodad: '額外支出，已自動扣款',
+  bonus: '好運！小賺一筆 🍀',
   charity: '慈善機會，請選擇捐或不捐',
   baby: '生了一個小孩，每月支出增加',
   downsized: '失業，下個發薪日領不到薪水',

@@ -114,40 +114,54 @@ export const MARKET_CARDS = [
 // requires='realestate'（要有出租房）或 'child'（要有小孩）才會發生，否則「幸好沒有，免了」
 export const DOODAD_CARDS = [
   // 連動型：有出租房才會遇到
-  { id: 'dd_tenant', name: '房客落跑、屋況受損', emoji: '🏚️', amount: 15000, requires: 'realestate', story: '房客兩個月沒付租金又搞壞房子，保險理賠後你還要自掏腰包。' },
-  { id: 'dd_repair', name: '出租屋漏水大修', emoji: '🔧', amount: 30000, requires: 'realestate', story: '你的出租房半夜漏水，得馬上找師傅來修。' },
-  { id: 'dd_vacancy', name: '出租屋空租一個月', emoji: '🪧', amount: 12000, requires: 'realestate', story: '舊房客搬走、新房客還沒來，這個月少收了租金。' },
+  { id: 'dd_tenant', name: '房客落跑、屋況受損', emoji: '🏚️', amount: 10000, requires: 'realestate', story: '房客兩個月沒付租金又搞壞房子，保險理賠後你還要自掏腰包。' },
+  { id: 'dd_repair', name: '出租屋漏水大修', emoji: '🔧', amount: 18000, requires: 'realestate', story: '你的出租房半夜漏水，得馬上找師傅來修。' },
+  { id: 'dd_vacancy', name: '出租屋空租一個月', emoji: '🪧', amount: 8000, requires: 'realestate', story: '舊房客搬走、新房客還沒來，這個月少收了租金。' },
   // 連動型：有小孩才會遇到
-  { id: 'dd_childclass', name: '小孩才藝補習費', emoji: '🎒', amount: 12000, requires: 'child', story: '孩子吵著要學鋼琴和畫畫，報名費一次繳。' },
-  { id: 'dd_childsick', name: '小孩生病住院', emoji: '🤒', amount: 20000, requires: 'child', story: '孩子半夜發高燒送急診，住院觀察了幾天。' },
-  { id: 'dd_childbike', name: '幫小孩買新腳踏車', emoji: '🚲', amount: 6000, requires: 'child', story: '孩子的舊腳踏車壞了，買台新的給他。' },
+  { id: 'dd_childclass', name: '小孩才藝補習費', emoji: '🎒', amount: 8000, requires: 'child', story: '孩子吵著要學鋼琴和畫畫，報名費一次繳。' },
+  { id: 'dd_childsick', name: '小孩生病住院', emoji: '🤒', amount: 12000, requires: 'child', story: '孩子半夜發高燒送急診，住院觀察了幾天。' },
+  { id: 'dd_childbike', name: '幫小孩買新腳踏車', emoji: '🚲', amount: 4000, requires: 'child', story: '孩子的舊腳踏車壞了，買台新的給他。' },
   // 一般（人人都可能）
-  { id: 'dd_phone', name: '換最新手機', emoji: '📱', amount: 30000 },
-  { id: 'dd_console', name: '買電競主機', emoji: '🎮', amount: 18000 },
-  { id: 'dd_flight', name: '衝動訂出國機票', emoji: '✈️', amount: 40000 },
-  { id: 'dd_concert', name: '搶到演唱會搖滾區', emoji: '🎤', amount: 8000 },
-  { id: 'dd_carfix', name: '愛車進廠大修', emoji: '🔧', amount: 25000 },
-  { id: 'dd_shopping', name: '週年慶失心瘋', emoji: '🛍️', amount: 12000 },
-  { id: 'dd_laptop', name: '買新筆電', emoji: '💻', amount: 35000 },
-  { id: 'dd_tour', name: '跟團出國玩', emoji: '🏝️', amount: 45000 },
-  { id: 'dd_dinner', name: '朋友聚餐請客', emoji: '🍽️', amount: 6000 },
-  { id: 'dd_gift', name: '送禮物給情人', emoji: '💍', amount: 15000 },
-  { id: 'dd_party', name: '辦生日派對', emoji: '🎂', amount: 10000 },
-  { id: 'dd_dental', name: '牙齒矯正', emoji: '🦷', amount: 50000 },
-  { id: 'dd_tv', name: '買大電視', emoji: '📺', amount: 28000 },
-  { id: 'dd_idol', name: '追星買周邊', emoji: '🎟️', amount: 7000 },
+  { id: 'dd_phone', name: '換最新手機', emoji: '📱', amount: 16000 },
+  { id: 'dd_console', name: '買電競主機', emoji: '🎮', amount: 10000 },
+  { id: 'dd_flight', name: '衝動訂出國機票', emoji: '✈️', amount: 22000 },
+  { id: 'dd_concert', name: '搶到演唱會搖滾區', emoji: '🎤', amount: 5000 },
+  { id: 'dd_carfix', name: '愛車進廠大修', emoji: '🔧', amount: 14000 },
+  { id: 'dd_shopping', name: '週年慶失心瘋', emoji: '🛍️', amount: 7000 },
+  { id: 'dd_laptop', name: '買新筆電', emoji: '💻', amount: 18000 },
+  { id: 'dd_tour', name: '跟團出國玩', emoji: '🏝️', amount: 24000 },
+  { id: 'dd_dinner', name: '朋友聚餐請客', emoji: '🍽️', amount: 4000 },
+  { id: 'dd_gift', name: '送禮物給情人', emoji: '💍', amount: 8000 },
+  { id: 'dd_party', name: '辦生日派對', emoji: '🎂', amount: 6000 },
+  { id: 'dd_dental', name: '牙齒矯正', emoji: '🦷', amount: 28000 },
+  { id: 'dd_tv', name: '買大電視', emoji: '📺', amount: 15000 },
+  { id: 'dd_idol', name: '追星買周邊', emoji: '🎟️', amount: 4000 },
   { id: 'dd_dog', name: '養了一隻狗', emoji: '🐶', amount: 2000, recurring: true },
   { id: 'dd_cat', name: '認養貓咪', emoji: '🐱', amount: 1500, recurring: true },
   { id: 'dd_gym', name: '辦健身房會員', emoji: '🏋️', amount: 1800, recurring: true },
   // 一般（搞笑款）
-  { id: 'dd_gacha', name: '手遊課金抽不到', emoji: '🎰', amount: 9000, story: '為了抽限定角色課金了一整晚，結果還是沒中，錢包哭哭。' },
-  { id: 'dd_return', name: '網購踩雷退貨運費', emoji: '📮', amount: 4000, story: '一次買了十件衣服全部不合身，退貨運費自己吸收。' },
-  { id: 'dd_merch', name: '演唱會周邊噴錢', emoji: '🎀', amount: 9000, story: '應援手燈、毛巾、寫真集全包，理智線當場斷掉。' },
-  { id: 'dd_snacks', name: '追劇囤零食飲料', emoji: '🍿', amount: 5000, story: '為了追新番囤了一整櫃零食跟手搖飲，體重與帳單一起上升。' },
-  { id: 'dd_scooter', name: '機車拋錨大修', emoji: '🛵', amount: 16000, story: '通勤機車半路熄火，牽去保養廠一次噴掉一筆。' },
+  { id: 'dd_gacha', name: '手遊課金抽不到', emoji: '🎰', amount: 5000, story: '為了抽限定角色課金了一整晚，結果還是沒中，錢包哭哭。' },
+  { id: 'dd_return', name: '網購踩雷退貨運費', emoji: '📮', amount: 2500, story: '一次買了十件衣服全部不合身，退貨運費自己吸收。' },
+  { id: 'dd_merch', name: '演唱會周邊噴錢', emoji: '🎀', amount: 5000, story: '應援手燈、毛巾、寫真集全包，理智線當場斷掉。' },
+  { id: 'dd_snacks', name: '追劇囤零食飲料', emoji: '🍿', amount: 3000, story: '為了追新番囤了一整櫃零食跟手搖飲，體重與帳單一起上升。' },
+  { id: 'dd_scooter', name: '機車拋錨大修', emoji: '🛵', amount: 9000, story: '通勤機車半路熄火，牽去保養廠一次噴掉一筆。' },
 ];
 
-const DECKS = { small: SMALL_DEALS, big: BIG_DEALS, super: SUPER_DEALS, market: MARKET_CARDS, doodad: DOODAD_CARDS };
+// ── 好運卡（停「🍀 好運」格：小賺一筆）──
+export const BONUS_CARDS = [
+  { id: 'bn_wallet', name: '撿到錢包物歸原主', emoji: '👛', amount: 3000, story: '路上撿到錢包送去警局，失主包了個謝禮給你。' },
+  { id: 'bn_lottery', name: '刮刮樂小中獎', emoji: '🎟️', amount: 5000, story: '順手買張刮刮樂，居然刮中了！' },
+  { id: 'bn_invoice', name: '統一發票中獎', emoji: '🧾', amount: 4000, story: '對中了這期的統一發票，開心！' },
+  { id: 'bn_redenvelope', name: '長輩包紅包', emoji: '🧧', amount: 6000, story: '長輩心情好，突然塞了個紅包給你。' },
+  { id: 'bn_resell', name: '二手拍賣賣掉閒置品', emoji: '📦', amount: 4000, story: '把家裡用不到的東西上網賣掉，秒殺成交。' },
+  { id: 'bn_cashback', name: '刷卡回饋入帳', emoji: '💳', amount: 2500, story: '信用卡的現金回饋這個月一次入帳。' },
+  { id: 'bn_bonus', name: '公司發小獎金', emoji: '💰', amount: 8000, story: '表現不錯，主管給了一筆小獎金。' },
+  { id: 'bn_refund', name: '報稅退稅', emoji: '📋', amount: 5000, story: '今年報稅退了一筆稅款回來。' },
+  { id: 'bn_repay', name: '朋友還你欠款', emoji: '🤝', amount: 3500, story: '之前借朋友的錢，他終於還你了。' },
+  { id: 'bn_prize', name: '活動抽獎中獎', emoji: '🎁', amount: 4500, story: '參加活動抽獎，居然被抽中！' },
+];
+
+const DECKS = { small: SMALL_DEALS, big: BIG_DEALS, super: SUPER_DEALS, market: MARKET_CARDS, doodad: DOODAD_CARDS, bonus: BONUS_CARDS };
 
 // 從指定牌庫隨機抽一張（抽完放回，等同無限牌庫，適合課堂）
 export function drawCard(deck) {

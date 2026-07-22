@@ -8,6 +8,7 @@ export const SQUARE_META = {
   market: { label: '市場', emoji: '📈', color: 'bg-teal-500', screenColor: 'bg-teal-500/25 ring-teal-300/40' },
   baby: { label: '生小孩', emoji: '👶', color: 'bg-violet-500', screenColor: 'bg-violet-500/30 ring-violet-300/40' },
   downsized: { label: '失業', emoji: '💼', color: 'bg-slate-500', screenColor: 'bg-slate-500/30 ring-slate-300/40' },
+  bonus: { label: '好運', emoji: '🍀', color: 'bg-lime-500', screenColor: 'bg-lime-500/25 ring-lime-300/50' },
 };
 
 // 24 格環狀跑道排成「長方形」外圈（寬 9 × 高 5，周長 = 2×(9+5)−4 = 24）。

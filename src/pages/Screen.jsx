@@ -267,7 +267,7 @@ function Spotlight({ team, tab = 'finance', scroll = 0, market, catalog = [] }) 
 
       {/* 手機外框 */}
       <div className="w-[27rem] max-w-[94vw] h-[70vh] bg-black rounded-[2rem] p-2.5 shadow-2xl">
-        <div className="w-full h-full bg-zizi-cream rounded-[1.6rem] overflow-hidden flex flex-col">
+        <div className="w-full h-full bg-zizi-cream text-zizi-ink rounded-[1.6rem] overflow-hidden flex flex-col">
           <div className="bg-gradient-to-r from-zizi-dusk via-zizi-plum to-zizi-dusk text-white px-4 py-2 flex justify-between items-center shrink-0">
             <span className="font-bold">⚡ {team.name}</span>
             <span className="text-xs text-white/70">代號 {team.id}</span>
@@ -396,6 +396,7 @@ function Tutorial() {
     { e: '🎲', t: '機會', d: '抽卡投資：小生意 / 大買賣，買房地產或企業就靠它' },
     { e: '📈', t: '市場', d: '抽市場風雲卡，全班股價、房價一起漲跌' },
     { e: '💸', t: '額外支出', d: '臨時花費，乖乖付錢' },
+    { e: '🍀', t: '好運', d: '天上掉錢！撿到錢、中獎、領獎金，小賺一筆' },
     { e: '❤️', t: '慈善', d: '捐 10% 收入，接下來 3 回合可擲兩顆骰' },
     { e: '👶', t: '生小孩', d: '每月支出增加（最多 3 個）' },
     { e: '💼', t: '失業', d: '下個發薪日領不到薪水（不扣現金、不暫停）' },
@@ -659,6 +660,7 @@ function reactionTheme(square, paydays) {
     case 'charity': return { mood: 'love', emoji: '❤️', title: '慈善', sub: '行善積德，好人有好報！', fx: 'none' };
     case 'baby': return { mood: 'surprised', emoji: '👶', title: '生小孩', sub: '家裡多一張嘴！', fx: 'spark' };
     case 'downsized': return { mood: 'angry', emoji: '💼', title: '失業', sub: '被裁員了…下個發薪日沒薪水', fx: 'none' };
+    case 'bonus': return { mood: 'happy', emoji: '🍀', title: '好運', sub: '天上掉錢，小賺一筆！', fx: 'coins' };
     default: return { mood: paydays > 0 ? 'happy' : 'neutral', emoji: '🎲', title: '前進', sub: paydays > 0 ? `領了 ${paydays} 次薪水！` : '', fx: paydays > 0 ? 'coins' : 'none' };
   }
 }
@@ -855,13 +857,14 @@ function CardOverlay({ payload, teamFull, onClose }) {
     big: { label: '機會・大買賣', color: 'bg-amber-600', mood: 'excited', badge: '🎲', title: '機會' },
     market: { label: '市場風雲', color: 'bg-amber-500', mood: 'surprised', badge: '📈', title: '市場風雲' },
     doodad: { label: '額外支出', color: 'bg-rose-500', mood: 'sad', badge: '💸', title: '額外支出' },
+    bonus: { label: '🍀 好運', color: 'bg-lime-500', mood: 'happy', badge: '🍀', title: '好運' },
     acquire: { label: '房產收購要約', color: 'bg-teal-600', mood: 'excited', badge: '🤝', title: '收購' },
   };
   const m = META[deck] || { label: '事件', color: 'bg-slate-500', mood: 'surprised', badge: '🎲', title: '事件' };
   return (
     <div onClick={onClose} className="fixed inset-0 z-40 flex items-center justify-center gap-8 px-6 bg-zizi-ink/55 backdrop-blur-sm cursor-pointer">
       <span className="absolute bottom-6 inset-x-0 text-center text-white/55 text-sm">👆 點畫面任一處關閉</span>
-      <CharacterPanel team={teamFull} professionEmoji={professionEmoji} name={teamName} mood={m.mood} badge={m.badge} title={m.title} sub={deck === 'doodad' ? '又要花錢了…' : '行情來囉！'} />
+      <CharacterPanel team={teamFull} professionEmoji={professionEmoji} name={teamName} mood={m.mood} badge={m.badge} title={m.title} sub={deck === 'doodad' ? '又要花錢了…' : deck === 'bonus' ? '天上掉錢啦！' : '行情來囉！'} />
       <div className="card-pop bg-white rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] ring-1 ring-black/5 w-80 max-w-[46vw] overflow-hidden">
         <div className={'py-2 text-center text-white font-bold ' + m.color}>{m.label}</div>
         <div className="p-6 text-center">
@@ -870,6 +873,9 @@ function CardOverlay({ payload, teamFull, onClose }) {
           {card.desc && <p className="text-slate-500 mt-2">{card.desc}</p>}
           {card.amount != null && deck === 'doodad' && (
             <p className="mt-3 text-rose-500 font-bold text-xl">-{formatMoney(card.amount)}{card.recurring ? ' / 月' : ''}</p>
+          )}
+          {card.amount != null && deck === 'bonus' && (
+            <p className="mt-3 text-green-600 font-bold text-xl">+{formatMoney(card.amount)}</p>
           )}
         </div>
       </div>
