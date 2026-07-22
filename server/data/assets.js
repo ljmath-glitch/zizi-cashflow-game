@@ -292,6 +292,17 @@ export function activeMarket() {
   return ADVANCED_MARKET ? MARKET : MARKET.filter((m) => !m.advanced);
 }
 
+// 初階市場：只留「銀行定存 + 兩支最穩的 ETF」（0050 型、0056 型），沒有個股/黃金/加密。
+const BASIC_MARKET_IDS = ['deposit', 'etf_market', 'etf_highdiv'];
+
+// 依分級取「市場可買清單」：
+//   basic 初階＝定存+2 ETF；mid 中階＝股票/ETF/原物料/定存（無加密）；full 高階＝全部
+export function marketFor(stage) {
+  if (stage === 'basic') return MARKET.filter((m) => BASIC_MARKET_IDS.includes(m.id));
+  if (stage === 'mid') return activeMarket().filter((m) => m.category !== 'crypto');
+  return activeMarket();
+}
+
 // 依 id 找商品（查完整清單，確保舊存檔中已持有的進階資產仍能正確顯示名稱/估值）
 export function getMarketItem(id) {
   return MARKET.find((m) => m.id === id) || null;

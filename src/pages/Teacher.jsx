@@ -12,10 +12,11 @@ import ConnectionBadge from '../components/ConnectionBadge.jsx';
 const TEST_TOOLS = false;
 
 // 難度選項（需與 server/game.js 的 DIFFICULTY 一致）
-const DIFFICULTIES = [
-  { key: 'easy', emoji: '🌱', label: '輕鬆', desc: '起始存款×2、機會卡現金流×1.5、額外支出7折 — 適合第一次玩' },
-  { key: 'normal', emoji: '⚖️', label: '標準', desc: '原汁原味的現金流挑戰' },
-  { key: 'hard', emoji: '🔥', label: '挑戰', desc: '機會卡現金流8折、額外支出×1.3 — 高手限定' },
+// 三階分級（取代舊難度；需與 server/game.js 的 STAGES 一致）
+const STAGES = [
+  { key: 'basic', emoji: '🟢', label: '初階', desc: '第一次玩：只教「買資產養被動收入→財富自由」。極簡報表、只有定存+ETF、無市場波動/貸款/失業/成就（最寬鬆）' },
+  { key: 'mid', emoji: '🟡', label: '中階', desc: '加入市場漲跌、貸款、失業、慈善、房產收購、人生成就；市場含股票/黃金（無加密）' },
+  { key: 'full', emoji: '🔴', label: '高階', desc: '全部機制：加密貨幣、超級生意、黑天鵝…最完整也最有挑戰' },
 ];
 
 // 老師端（手機/筆電）— 模組 2：開始/暫停/下一回合/重置 + 調整回合參數
@@ -30,13 +31,13 @@ export default function Teacher() {
   const timeLeft = game?.timeLeft ?? 0;
 
   // lobby 階段可調整的參數（以分鐘輸入，較直覺）
-  const [minutes, setMinutes] = useState(4);
-  const [totalRounds, setTotalRounds] = useState(12);
+  const [minutes, setMinutes] = useState(60); // 遊戲總時長（分鐘）
+  const [totalRounds, setTotalRounds] = useState(30);
 
   function applyConfig() {
     socket.emit('teacher:setConfig', {
       maxRounds: Number(totalRounds),
-      roundSeconds: Math.round(Number(minutes) * 60),
+      gameSeconds: Math.round(Number(minutes) * 60),
     });
   }
 
@@ -79,12 +80,12 @@ export default function Teacher() {
             <p className="text-sm text-slate-500">
               {PHASE_LABEL[phase]}
               {(() => {
-                const d = DIFFICULTIES.find((x) => x.key === (game?.difficulty || 'normal'));
-                return d ? <span className="ml-2 text-xs bg-slate-100 rounded-full px-2 py-0.5">{d.emoji} {d.label}</span> : null;
+                const s = STAGES.find((x) => x.key === (game?.stage || 'basic'));
+                return s ? <span className="ml-2 text-xs bg-slate-100 rounded-full px-2 py-0.5">{s.emoji} {s.label}</span> : null;
               })()}
             </p>
             <p className="text-lg font-semibold text-zizi-ink">
-              {phase === 'lobby' ? '尚未開始' : `第 ${round} / ${maxRounds} 回合`}
+              {phase === 'lobby' ? '尚未開始' : `第 ${round} 回合`}
             </p>
           </div>
           <div className="text-right">
@@ -215,47 +216,47 @@ export default function Teacher() {
           <div className="glass ring-1 ring-white/50 rounded-2xl p-4 shadow-soft space-y-3">
             <p className="text-sm font-medium text-slate-600">遊戲設定</p>
 
-            {/* 難度選擇（只能在開始前選；影響起始存款、機會卡現金流、額外支出） */}
+            {/* 分級：初階/中階/高階（只能在開始前選；含難易與機制多寡） */}
             <div>
-              <span className="text-xs text-slate-500">難度</span>
+              <span className="text-xs text-slate-500">分級（初階→高階，難度與內容一起加深）</span>
               <div className="mt-1 grid grid-cols-3 gap-2">
-                {DIFFICULTIES.map((d) => {
-                  const on = (game?.difficulty || 'normal') === d.key;
+                {STAGES.map((s) => {
+                  const on = (game?.stage || 'basic') === s.key;
                   return (
                     <button
-                      key={d.key}
-                      onClick={() => socket.emit('teacher:setConfig', { difficulty: d.key })}
+                      key={s.key}
+                      onClick={() => socket.emit('teacher:setConfig', { stage: s.key })}
                       className={
                         'rounded-xl py-2 text-sm font-semibold ring-1 transition ' +
                         (on
-                          ? 'bg-gradient-to-r from-zizi-gold to-amber-500 text-white ring-amber-400 shadow-glow'
-                          : 'bg-white/70 text-slate-600 ring-slate-200 hover:ring-zizi-gold/50')
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white ring-emerald-400 shadow-glow'
+                          : 'bg-white/70 text-slate-600 ring-slate-200 hover:ring-emerald-400/50')
                       }
                     >
-                      {d.emoji} {d.label}
+                      {s.emoji} {s.label}
                     </button>
                   );
                 })}
               </div>
               <p className="mt-1.5 text-xs text-slate-400">
-                {DIFFICULTIES.find((d) => d.key === (game?.difficulty || 'normal'))?.desc}
+                {STAGES.find((s) => s.key === (game?.stage || 'basic'))?.desc}
               </p>
             </div>
 
             <div className="flex gap-3">
               <label className="flex-1">
-                <span className="text-xs text-slate-500">每回合分鐘</span>
+                <span className="text-xs text-slate-500">遊戲時長（分鐘）</span>
                 <input
                   type="number"
-                  min="1"
-                  step="0.5"
+                  min="5"
+                  step="5"
                   value={minutes}
                   onChange={(e) => setMinutes(e.target.value)}
                   className="mt-1 w-full rounded-xl border border-slate-300 bg-white/70 px-3 py-2 focus:border-zizi-gold focus:ring-2 focus:ring-zizi-gold/30 focus:outline-none transition"
                 />
               </label>
               <label className="flex-1">
-                <span className="text-xs text-slate-500">總回合數</span>
+                <span className="text-xs text-slate-500">回合上限</span>
                 <input
                   type="number"
                   min="1"
@@ -328,6 +329,16 @@ export default function Teacher() {
             />
           )}
         </div>
+
+        {/* 結束遊戲：提早進入結算（時間到會自動結束，這是老師手動提早結束） */}
+        {(phase === 'running' || phase === 'paused') && (
+          <button
+            onClick={() => { if (window.confirm('確定要結束遊戲、進入結算嗎？')) socket.emit('teacher:end'); }}
+            className="w-full rounded-2xl py-2 font-medium text-rose-600 bg-rose-50 ring-1 ring-rose-200 hover:bg-rose-100"
+          >
+            🏁 結束遊戲（進入結算）
+          </button>
+        )}
 
         {/* 重置：回合歸零、各組財務還原（保留隊名與職業） */}
         {phase !== 'lobby' && (

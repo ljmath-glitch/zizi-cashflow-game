@@ -292,16 +292,25 @@ const TABS = [
   { key: 'balance', label: '📊 資產負債' },
   { key: 'history', label: '📜 歷史' },
 ];
+// 初階分頁：只有「總覽（簡化儀表）＋市場」，不給完整損益表/資產負債表，降低國中生負擔
+const BASIC_TABS = [
+  { key: 'overview', label: '📊 總覽' },
+  { key: 'market', label: '🛒 市場' },
+];
 
 function FinancePanel({ team, phase }) {
+  const game = useGameState();
+  const basic = game?.stage === 'basic';
+  const tabs = basic ? BASIC_TABS : TABS;
   const [tab, setTab] = useState('finance');
   const [dir, setDir] = useState(1); // 內容滑入方向：右切=+1、左切=-1
-  const idx = TABS.findIndex((t) => t.key === tab);
+  const cur = tabs.some((t) => t.key === tab) ? tab : tabs[0].key; // 切換模式時，若原分頁不存在就回第一頁
+  const idx = tabs.findIndex((t) => t.key === cur);
   const free = isFinanciallyFree(team);
   const d = team.derived || {};
 
   function changeTab(key) {
-    const ni = TABS.findIndex((t) => t.key === key);
+    const ni = tabs.findIndex((t) => t.key === key);
     if (ni === idx) return;
     setDir(ni > idx ? 1 : -1);
     setTab(key);
@@ -323,8 +332,8 @@ function FinancePanel({ team, phase }) {
     touchStart.current = null;
     if (Math.abs(dx) < 60) return; // 水平位移不夠大
     if (Math.abs(dx) < Math.abs(dy) * 1.5) return; // 比較像直向捲動 → 不換頁
-    const ni = dx < 0 ? Math.min(idx + 1, TABS.length - 1) : Math.max(idx - 1, 0);
-    if (ni !== idx) changeTab(TABS[ni].key);
+    const ni = dx < 0 ? Math.min(idx + 1, tabs.length - 1) : Math.max(idx - 1, 0);
+    if (ni !== idx) changeTab(tabs[ni].key);
   }
 
   return (
@@ -356,7 +365,9 @@ function FinancePanel({ team, phase }) {
         </div>
       )}
 
-      {free && !team.bankrupt && <AchievementPanel team={team} phase={phase} />}
+      {free && !team.bankrupt && (basic
+        ? <div className="bg-green-500 text-white text-center py-2 font-bold">🎉👑 恭喜達成財富自由！被動收入已經 ≥ 支出</div>
+        : <AchievementPanel team={team} phase={phase} />)}
 
       {!team.bankrupt && (team.personalLiabilities?.bankLoan || 0) > 0 && (
         <div className="bg-red-500 text-white text-center py-1.5 text-sm font-medium">
@@ -372,17 +383,17 @@ function FinancePanel({ team, phase }) {
           <span
             className="seg-indicator absolute inset-y-1 left-1 rounded-xl bg-white shadow-[0_2px_10px_rgba(245,158,11,0.28)]"
             style={{
-              width: `calc((100% - 0.5rem) / ${TABS.length})`,
+              width: `calc((100% - 0.5rem) / ${tabs.length})`,
               transform: `translateX(calc(${idx} * 100%))`,
             }}
           />
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <button
               key={t.key}
               onClick={() => changeTab(t.key)}
               className={
                 'relative z-10 flex-1 py-2 text-sm font-semibold rounded-xl transition-colors ' +
-                (tab === t.key ? 'text-zizi-ink' : 'text-slate-400')
+                (cur === t.key ? 'text-zizi-ink' : 'text-slate-400')
               }
             >
               {t.label}
@@ -396,11 +407,12 @@ function FinancePanel({ team, phase }) {
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        <div key={tab} className="slide-in" style={{ '--slide-from': dir > 0 ? '16px' : '-16px' }}>
-          {tab === 'finance' && <IncomeStatement team={team} />}
-          {tab === 'market' && <MarketTab team={team} phase={phase} />}
-          {tab === 'balance' && <BalanceSheet team={team} phase={phase} />}
-          {tab === 'history' && <HistoryTab team={team} />}
+        <div key={cur} className="slide-in" style={{ '--slide-from': dir > 0 ? '16px' : '-16px' }}>
+          {cur === 'overview' && <BasicOverview team={team} />}
+          {cur === 'finance' && <IncomeStatement team={team} />}
+          {cur === 'market' && <MarketTab team={team} phase={phase} />}
+          {cur === 'balance' && <BalanceSheet team={team} phase={phase} />}
+          {cur === 'history' && <HistoryTab team={team} />}
         </div>
       </main>
     </div>
@@ -421,6 +433,7 @@ function Overlay({ children }) {
 // 重要：所有決定都用 socket ack 確認，成功才關閉彈窗（不靠廣播，手機斷線重連也不會卡死）；
 // 並用 busy 防連點，避免狂按狂跳 toast。
 function PendingModal({ team }) {
+  const game = useGameState();
   const pa = team.pendingAction;
   const [busy, setBusy] = useState(false);
   const [resolvedKey, setResolvedKey] = useState(null);
@@ -484,7 +497,7 @@ function PendingModal({ team }) {
             >
               🔵 大買賣<span className="block text-xs font-normal">昂貴、報酬高</span>
             </button>
-            {team.free && (
+            {team.free && game?.stage === 'full' && (
               <button
                 disabled={busy}
                 onClick={() => decide('student:chooseDeck', { deck: 'super' })}
@@ -1292,6 +1305,65 @@ function AchievementPanel({ team, phase }) {
   );
 }
 
+// 初階「總覽」：簡化儀表，只給最重要的幾個數字＋財富自由進度＋生錢資產，不放完整報表
+function BasicOverview({ team }) {
+  const d = team.derived || {};
+  const income = d.totalIncome ?? 0;
+  const expense = d.totalExpense ?? 0;
+  const cf = d.cashflow ?? 0;
+  const passive = d.passiveTotal ?? 0;
+  const pct = expense ? Math.min(100, Math.round((passive / expense) * 100)) : 0;
+  const earners = (team.assets || []).filter((a) => (a.monthlyIncome || 0) > 0);
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="bg-white rounded-xl p-2 shadow-sm">
+          <p className="text-[0.7rem] text-slate-400">每月收入</p>
+          <p className="font-black text-green-600 tabular-nums text-sm">{formatMoney(income)}</p>
+        </div>
+        <div className="bg-white rounded-xl p-2 shadow-sm">
+          <p className="text-[0.7rem] text-slate-400">每月支出</p>
+          <p className="font-black text-rose-500 tabular-nums text-sm">{formatMoney(expense)}</p>
+        </div>
+        <div className="bg-white rounded-xl p-2 shadow-sm">
+          <p className="text-[0.7rem] text-slate-400">月現金流</p>
+          <p className={'font-black tabular-nums text-sm ' + (cf >= 0 ? 'text-green-600' : 'text-rose-500')}>{cf >= 0 ? '+' : '−'}{formatMoney(Math.abs(cf))}</p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl p-4 shadow-sm">
+        <div className="flex justify-between items-baseline mb-1">
+          <p className="font-bold text-zizi-ink">🎯 財富自由進度</p>
+          <p className="font-black text-amber-600 text-lg tabular-nums">{pct}%</p>
+        </div>
+        <div className="h-3 rounded-full bg-slate-100 overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-amber-400 to-zizi-gold transition-all duration-500" style={{ width: `${pct}%` }} />
+        </div>
+        <p className="text-xs text-slate-500 mt-2">被動收入 <b className="text-green-600">{formatMoney(passive)}</b> ／ 總支出 <b>{formatMoney(expense)}</b></p>
+        <p className="text-xs text-slate-400 mt-1">💡 買「每月會生錢的資產」讓被動收入變多，等它 ≥ 支出就財富自由！</p>
+      </div>
+
+      <div className="bg-white rounded-2xl p-4 shadow-sm">
+        <p className="font-bold text-zizi-ink mb-2">💰 我的生錢資產</p>
+        {earners.length === 0 ? (
+          <p className="text-sm text-slate-400">還沒有～去「🛒 市場」或踩「🎲 機會」格買第一個吧！</p>
+        ) : (
+          <div className="space-y-1.5">
+            {earners.map((a) => (
+              <div key={a.uid} className="flex items-center gap-2 bg-slate-50 rounded-lg px-2 py-1.5">
+                <span className="text-xl">{a.emoji}</span>
+                <span className="flex-1 min-w-0 truncate text-sm">{a.name}</span>
+                <span className="text-green-600 font-bold text-sm tabular-nums shrink-0">+{formatMoney(a.monthlyIncome)}/月</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <p className="text-center text-xs text-slate-400">目前現金 {formatMoney(team.cash)}</p>
+    </div>
+  );
+}
+
 // 市場分頁：只列可隨時交易的金融商品（股票/ETF、加密、定存債券）
 // 房地產與企業副業改由機會卡抽到才能買賣
 function MarketTab({ team, phase }) {
@@ -1327,8 +1399,10 @@ function MarketTab({ team, phase }) {
   };
   const order = ['dividend', 'commodity', 'crypto', 'interest'];
   const instruments = game?.market?.instruments || {};
+  // 初階等模式：伺服器會依階段給精簡的市場清單（marketCatalog），優先用它
+  const list = game?.marketCatalog?.length ? game.marketCatalog : market;
   const grouped = order
-    .map((cat) => ({ cat, items: market.filter((m) => m.category === cat) }))
+    .map((cat) => ({ cat, items: list.filter((m) => m.category === cat) }))
     .filter((g) => g.items.length > 0);
 
   return (

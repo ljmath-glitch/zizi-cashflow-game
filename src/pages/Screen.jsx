@@ -14,10 +14,10 @@ import { SFX, playEventSound, setSoundEnabled, resumeAudio } from '../util/sound
 import { api, page } from '../base.js';
 
 // 難度標示（與 server/game.js 的 DIFFICULTY 對應）
-const DIFF_META = {
-  easy: { emoji: '🌱', label: '輕鬆' },
-  normal: { emoji: '⚖️', label: '標準' },
-  hard: { emoji: '🔥', label: '挑戰' },
+const STAGE_META = {
+  basic: { emoji: '🟢', label: '初階' },
+  mid: { emoji: '🟡', label: '中階' },
+  full: { emoji: '🔴', label: '高階' },
 };
 
 // 大螢幕端（投影機）— M7：等待室 QR / 進行中老鼠賽跑圈盤面 + 排行榜 + 動態
@@ -153,11 +153,11 @@ export default function Screen() {
           茲茲財富自由挑戰賽
           {ROOM && <span className="ml-2 text-white/50 text-base">房號 {ROOM}</span>}
           <span className="ml-3 text-zizi-gold text-lg">
-            {phase === 'lobby' ? '等待開始' : phase === 'ended' ? '遊戲結束' : `第 ${round} / ${maxRounds} 回合`}
+            {phase === 'lobby' ? '等待開始' : phase === 'ended' ? '遊戲結束' : `第 ${round} 回合`}
           </span>
-          {DIFF_META[game?.difficulty] && (
+          {STAGE_META[game?.stage] && (
             <span className="ml-2 text-sm font-medium bg-white/10 ring-1 ring-white/20 rounded-full px-2.5 py-0.5 text-white/80">
-              {DIFF_META[game.difficulty].emoji} {DIFF_META[game.difficulty].label}
+              {STAGE_META[game.stage].emoji} {STAGE_META[game.stage].label}
             </span>
           )}
         </h1>
@@ -190,7 +190,7 @@ export default function Screen() {
             <div className="flex-1 min-w-0 flex flex-col gap-3">
               <MarketBar market={game?.market} monthlyEvent={game?.monthlyEvent} />
               <div className="flex-1 min-h-0 flex items-center justify-center">
-                <Board board={board} teams={teams} round={round} timeLeft={timeLeft} phase={phase} currentTurnId={game?.currentTurnId} movingId={movingId} />
+                <Board board={game?.board?.length ? game.board : board} teams={teams} round={round} timeLeft={timeLeft} phase={phase} currentTurnId={game?.currentTurnId} movingId={movingId} />
               </div>
               <FeedPanel feed={feed} />
             </div>
@@ -206,7 +206,7 @@ export default function Screen() {
       {dice && phase === 'running' && !['opportunity', 'market', 'doodad'].includes(dice.square) && (
         <DiceBanner payload={dice} team={teams.find((t) => t.id === dice.teamId)} />
       )}
-      {game?.spotlight && <Spotlight team={game.spotlight} tab={game.spotlightTab || 'finance'} scroll={game.spotlightScroll || 0} market={game.market} catalog={marketCatalog} />}
+      {game?.spotlight && <Spotlight team={game.spotlight} tab={game.spotlightTab || 'finance'} scroll={game.spotlightScroll || 0} market={game.market} catalog={game?.marketCatalog?.length ? game.marketCatalog : marketCatalog} />}
       {game?.showTutorial && <Tutorial />}
       {report && !game?.showTutorial && <MonthReport report={report} onClose={() => setReport(null)} />}
       {deal && !game?.showTutorial && !game?.spotlight && (

@@ -3,9 +3,9 @@
 // 模組 3：各組登入 + 抽職業卡 + 財務資料
 // 模組 4：買賣資產 + 每回合發薪/被動收入結算 + 即時動態
 import { PROFESSIONS, randomProfession, getProfession } from './data/professions.js';
-import { activeMarket, getMarketItem, INSTRUMENT_VOL } from './data/assets.js';
+import { activeMarket, marketFor, getMarketItem, INSTRUMENT_VOL } from './data/assets.js';
 import { getAchievement, starsOf } from './data/achievements.js';
-import { BOARD } from './data/board.js';
+import { BOARD, boardFor } from './data/board.js';
 import { drawCard } from './data/cards.js';
 import { pickEvent, randomRumor } from './data/events.js';
 import { saveToFile } from './storage.js';
@@ -42,12 +42,27 @@ export function roomExists(code) {
   return !!getRoom(code);
 }
 
-// 難度設定（老師開局前選）：影響起始存款、機會卡現金流、額外支出
-// startCash＝起始存款倍率；dealIncome＝機會卡月現金流倍率；doodad＝額外支出卡金額倍率
-export const DIFFICULTY = {
-  easy: { label: '輕鬆', emoji: '🌱', startCash: 2, dealIncome: 1.5, doodad: 0.7, desc: '起始存款×2、機會卡現金流×1.5、額外支出7折' },
-  normal: { label: '標準', emoji: '⚖️', startCash: 1, dealIncome: 1, doodad: 1, desc: '原汁原味的現金流挑戰' },
-  hard: { label: '挑戰', emoji: '🔥', startCash: 1, dealIncome: 0.8, doodad: 1.3, desc: '機會卡現金流8折、額外支出×1.3，高手限定' },
+// 已淘汰舊「難度（輕鬆/標準/挑戰）」，改為三階分級（初階/中階/高階），難易直接內含在各階。
+
+// 起手現金：所有職業統一（比較公平），金額拉高以免太容易破產。難度倍率(startCash)仍適用（輕鬆×2）。
+// 取代各職業原本高低不一的 savings（savings 保留在資料裡但不再決定起手現金）。
+const START_CASH = 100000;
+
+// 遊戲階段：初階（給國中生第一次玩，只教核心現金流）／完整（全部機制）
+// 三階分級（取代舊難度）：每階自帶難易倍率（startCash/dealIncome/doodad）＋機制開關。
+//   board：'basic' 精簡盤面｜'full' 完整盤面
+//   market：'basic' 定存+2ETF｜'mid' 股票/黃金(無加密)｜'full' 全部
+//   events 市場事件/月初報告、loan 貸款、acquire 收購/都更、achievements 人生成就、superDeal 超級生意
+export const STAGES = {
+  basic: { label: '初階', emoji: '🟢', startCash: 2, dealIncome: 1.5, doodad: 0.7,
+    board: 'basic', market: 'basic', events: false, loan: false, acquire: false, achievements: false, superDeal: false,
+    desc: '核心觀念：買資產養被動收入→財富自由。極簡報表、只有定存+ETF、無市場波動/貸款/失業/成就（最寬鬆）' },
+  mid: { label: '中階', emoji: '🟡', startCash: 1.5, dealIncome: 1, doodad: 1,
+    board: 'full', market: 'mid', events: true, loan: true, acquire: true, achievements: true, superDeal: false,
+    desc: '加入市場漲跌、貸款、失業、慈善、房產收購、人生成就；市場含股票/黃金（無加密貨幣）' },
+  full: { label: '高階', emoji: '🔴', startCash: 1, dealIncome: 0.8, doodad: 1.3,
+    board: 'full', market: 'full', events: true, loan: true, acquire: true, achievements: true, superDeal: true,
+    desc: '全部機制：加密貨幣、超級生意、黑天鵝…最完整也最有挑戰' },
 };
 
 // ── 單一房間的完整遊戲邏輯 ──
@@ -68,7 +83,7 @@ const state = {
   phase: 'lobby', // lobby（等待開始）| running（進行中）| paused（暫停）| ended（結束）
   round: 0, // 目前回合（1 起算）
   maxRounds: 12, // 總回合數
-  roundSeconds: 240, // 每回合秒數（預設 4 分鐘，老師可調）
+  gameSeconds: 3600, // 遊戲總時長秒數（預設 60 分鐘，老師可調）；整場倒數，歸零自動結算
   timeLeft: 0, // 本回合剩餘秒數
   teams: {}, // 各組資料（模組 3 起填入）
   turnOrder: [], // 擲骰輪流順序（依加入順序的 teamId）
@@ -82,18 +97,19 @@ const state = {
   spotlightTeamId: null, // 老師投影到大螢幕教學的組別（平常不公開）
   spotlightTab: 'finance', // 投影手機鏡像目前分頁（finance/market/assets/history）
   spotlightScroll: 0, // 投影手機鏡像的捲動步數（老師端上下捲）
-  difficulty: 'normal', // 難度（easy｜normal｜hard），老師在大廳選
+  stage: 'basic', // 分級：basic 初階｜mid 中階｜full 高階（老師在大廳選；預設初階給第一次玩）
 };
 
-// 目前難度的參數（永遠回傳有效設定）
-function diffCfg() {
-  return DIFFICULTY[state.difficulty] || DIFFICULTY.normal;
+// 目前分級的參數與開關（永遠回傳有效設定）
+function stageCfg() {
+  return STAGES[state.stage] || STAGES.full;
 }
 
 // 市場初始化：每支股票/ETF/加密貨幣各自一條價格序列；房地產用分類指數
-function freshMarket() {
+// stage='basic' 時只建初階市場（定存＋兩支 ETF）；ETF 在初階不跑波動、只配息
+function freshMarket(stage) {
   const instruments = {};
-  for (const item of activeMarket()) {
+  for (const item of marketFor(stage || 'full')) {
     if (item.category === 'dividend' || item.category === 'crypto' || item.category === 'commodity') {
       // 加密以 100 為名目價（當作指數）；股票/ETF/原物料以牌價為起點
       const base = item.category === 'crypto' ? 100 : item.price;
@@ -142,7 +158,7 @@ function publicState() {
     phase: state.phase,
     round: state.round,
     maxRounds: state.maxRounds,
-    roundSeconds: state.roundSeconds,
+    gameSeconds: state.gameSeconds,
     timeLeft: state.timeLeft,
     currentTurnId: currentTurnId(), // 目前輪到擲骰的組別
     turnIndex: state.currentTurnIndex,
@@ -153,7 +169,9 @@ function publicState() {
     spotlight: state.spotlightTeamId ? getTeamPayload(state.spotlightTeamId) : null, // 老師投影的組別完整財務
     spotlightTab: state.spotlightTab, // 手機鏡像分頁
     spotlightScroll: state.spotlightScroll, // 手機鏡像捲動步數
-    difficulty: state.difficulty, // 本場難度
+    stage: state.stage, // 分級（basic 初階｜mid 中階｜full 高階）
+    board: boardFor(state.stage), // 依階段的盤面（前端直接用，不必再打 /api/board）
+    marketCatalog: marketFor(state.stage), // 依階段的市場可買清單（初階只有定存＋2 ETF）
   };
 }
 
@@ -217,17 +235,30 @@ function broadcast() {
   if (io) io.to(code).emit('game:state', publicState());
 }
 
-// 每秒倒數計時器
+// 每秒倒數計時器（整場遊戲的總時長）
 function startTick() {
   stopTick();
   tickInterval = setInterval(() => {
     if (state.phase !== 'running') return; // 暫停時不倒數
     if (state.timeLeft > 0) {
       state.timeLeft -= 1;
-      broadcast();
+      if (state.timeLeft <= 0) {
+        endGame('⏰ 時間到，遊戲結束！'); // 遊戲總時長歸零 → 自動結算
+      } else {
+        broadcast();
+      }
     }
-    // 時間到（timeLeft === 0）：停在 0，等待老師按「下一回合」，由老師掌握節奏
   }, 1000);
+}
+
+// 結束整場遊戲（時間到 / 回合到 / 老師手動）：進入結算
+function endGame(reason) {
+  state.phase = 'ended';
+  state.timeLeft = 0;
+  stopTick();
+  addFeed(reason || '🏁 遊戲結束！');
+  broadcast();
+  scheduleAutosave();
 }
 
 function stopTick() {
@@ -240,10 +271,10 @@ function stopTick() {
 // 進入新回合：跑市場事件、清旗標（發薪改由骰子經過「發薪日」格才結算）
 function enterNewRound(roundNumber) {
   state.round = roundNumber;
-  state.timeLeft = state.roundSeconds;
+  // 不再每回合重置倒數：timeLeft 是「整場遊戲」的總倒數，只在開新局時設定（見 startGame）
   state.currentTurnIndex = 0; // 從第一組重新開始輪
   broadcastDealLive(null); // 上回合沒做完的買賣直播收掉
-  applyMonthlyEvent(); // 跑市場事件，更新市場指數與資產價值
+  if (stageCfg().events) applyMonthlyEvent(); // 初階不跑市場事件/月初報告（保持單純）
   for (const team of Object.values(state.teams)) {
     if (team.bankrupt) continue; // 已淘汰跳過
     team.hasRolledThisRound = false;
@@ -427,8 +458,9 @@ function publicMarket() {
 // 開始遊戲，或從暫停/結束狀態繼續/重開
 function startGame() {
   if (state.phase === 'lobby' || state.phase === 'ended') {
-    // 開新局：進入第 1 回合並結算第一次發薪
+    // 開新局：設定整場總倒數、進入第 1 回合並結算第一次發薪
     state.phase = 'running';
+    state.timeLeft = state.gameSeconds; // 整場總時長，從這裡開始倒數
     enterNewRound(1);
   } else {
     // 從 paused 恢復進行（保留目前 timeLeft，不重新發薪）
@@ -465,15 +497,11 @@ function skipTurn() {
 function nextRound() {
   if (state.phase === 'lobby') return;
   if (state.round >= state.maxRounds) {
-    state.phase = 'ended';
-    state.timeLeft = 0;
-    stopTick();
-    addFeed('🏁 遊戲結束！');
-    broadcast();
+    endGame('🏁 回合數到，遊戲結束！');
     return;
   }
   state.phase = 'running';
-  enterNewRound(state.round + 1); // 回合 +1 並結算發薪
+  enterNewRound(state.round + 1); // 回合 +1 並結算發薪（不重置總倒數）
   startTick();
   broadcast();
 }
@@ -483,7 +511,7 @@ function resetGame() {
   state.phase = 'lobby';
   state.round = 0;
   state.timeLeft = 0;
-  state.market = freshMarket(); // 市場指數歸 100
+  state.market = freshMarket(state.stage); // 市場指數歸 100（依階段）
   state.monthlyEvent = null;
   broadcastDealLive(null);
   // 重置各組財務回到起始狀態（保留組別與職業），等同重新開始整場
@@ -523,7 +551,7 @@ function clearGame() {
 function resetTeamFinances(team) {
   const prof = getProfession(team.professionId);
   if (!prof) return;
-  team.cash = Math.round(prof.savings * diffCfg().startCash); // 起始存款依難度加成
+  team.cash = Math.round(START_CASH * stageCfg().startCash); // 起手現金統一，依難度加成
   team.salary = prof.salary;
   team.baseSalary = prof.salary; // 景氣連動職業的基準薪（餐廳/廚師用）
   team.incomeFollowsMarket = !!prof.incomeFollowsMarket; // 收入隨景氣起伏
@@ -560,7 +588,7 @@ function profLiabTotal(prof) {
   return l.homeMortgage + l.carLoan + l.schoolLoan + l.creditCard;
 }
 function professionPublic(prof) {
-  const savings = Math.round(prof.savings * diffCfg().startCash); // 顯示時就帶入難度加成
+  const savings = Math.round(START_CASH * stageCfg().startCash); // 起手現金統一（顯示帶入難度加成）
   return {
     id: prof.id,
     name: prof.name,
@@ -786,24 +814,24 @@ function broadcastTeams() {
   scheduleAutosave();
 }
 
-// 調整遊戲參數（總回合數、每回合秒數、難度）；建議在 lobby 階段調整
-function setConfig({ maxRounds, roundSeconds, difficulty } = {}) {
+// 調整遊戲參數（總回合數、遊戲時長、分級）；只能在 lobby 階段調整
+function setConfig({ maxRounds, gameSeconds, stage } = {}) {
   if (Number.isFinite(maxRounds) && maxRounds > 0) {
     state.maxRounds = Math.floor(maxRounds);
   }
-  if (Number.isFinite(roundSeconds) && roundSeconds > 0) {
-    state.roundSeconds = Math.floor(roundSeconds);
+  if (Number.isFinite(gameSeconds) && gameSeconds > 0) {
+    state.gameSeconds = Math.floor(gameSeconds);
   }
-  // 難度只能在大廳改（遊戲中改會讓進行中的數字混亂）
-  if (difficulty && DIFFICULTY[difficulty] && difficulty !== state.difficulty && state.phase === 'lobby') {
-    state.difficulty = difficulty;
-    const cfg = diffCfg();
-    // 已加入的組別重發起始財務，讓新的起始存款倍率生效
+  // 分級（初階/中階/高階）只能在大廳改；改了要重建市場＋重置各組（各階市場與起手不同）
+  if (stage && STAGES[stage] && stage !== state.stage && state.phase === 'lobby') {
+    state.stage = stage;
+    state.market = freshMarket(state.stage);
+    state.monthlyEvent = null;
     for (const team of Object.values(state.teams)) {
       resetTeamFinances(team);
       emitTeam(team);
     }
-    addFeed(`${cfg.emoji} 老師把難度設為「${cfg.label}」（${cfg.desc}）`);
+    addFeed(`${STAGES[stage].emoji} 老師把分級設為「${STAGES[stage].label}」（${STAGES[stage].desc}）`);
     broadcastTeams();
   }
   broadcast();
@@ -820,7 +848,7 @@ function getSnapshot() {
     phase: state.phase,
     round: state.round,
     maxRounds: state.maxRounds,
-    roundSeconds: state.roundSeconds,
+    gameSeconds: state.gameSeconds,
     timeLeft: state.timeLeft,
     teams: state.teams,
     turnOrder: state.turnOrder,
@@ -828,7 +856,7 @@ function getSnapshot() {
     market: state.market,
     monthlyEvent: state.monthlyEvent,
     roundsSinceBig: state.roundsSinceBig,
-    difficulty: state.difficulty,
+    stage: state.stage,
     teamSeq,
     uidSeq,
     feed,
@@ -842,13 +870,13 @@ function loadSnapshot(data) {
   state.phase = data.phase ?? 'lobby';
   state.round = data.round ?? 0;
   state.maxRounds = data.maxRounds ?? 12;
-  state.roundSeconds = data.roundSeconds ?? 240;
+  state.gameSeconds = data.gameSeconds ?? 3600;
   state.timeLeft = data.timeLeft ?? 0;
   state.teams = data.teams && typeof data.teams === 'object' ? data.teams : {};
   state.market = data.market && data.market.instruments ? data.market : freshMarket();
   state.monthlyEvent = data.monthlyEvent ?? null;
   state.roundsSinceBig = Number.isFinite(data.roundsSinceBig) ? data.roundsSinceBig : 0;
-  state.difficulty = DIFFICULTY[data.difficulty] ? data.difficulty : 'normal';
+  state.stage = STAGES[data.stage] ? data.stage : 'basic';
   state.turnOrder = Array.isArray(data.turnOrder) ? data.turnOrder : Object.keys(state.teams);
   state.currentTurnIndex = Number.isFinite(data.currentTurnIndex) ? data.currentTurnIndex : 0;
   teamSeq = Number.isFinite(data.teamSeq)
@@ -1057,16 +1085,17 @@ function rollDice(teamId) {
     steps += r;
   }
 
+  const board = boardFor(state.stage); // 依階段取盤面（初階格子較單純）
   const from = team.position;
-  const to = (from + steps) % BOARD.length;
+  const to = (from + steps) % board.length;
   team.position = to;
-  const square = BOARD[to];
+  const square = board[to];
 
   // 沿途「經過或停在」發薪日格 → 每經過一次就結算一個月現金流（過了一個月）
   let paydays = 0;
   for (let s = 1; s <= steps; s++) {
-    const idx = (from + s) % BOARD.length;
-    if (BOARD[idx].type === 'payday') {
+    const idx = (from + s) % board.length;
+    if (board[idx].type === 'payday') {
       settleTeam(team); // 收當月現金流（薪水＋被動−支出），可能觸發破產
       paydays += 1;
       if (team.bankrupt) break;
@@ -1220,6 +1249,7 @@ const BUYERS = ['建設公司', '海外投資客', '隔壁鄰居', '連鎖民宿
 
 // 若該組持有房地產，35% 機率產生一筆收購要約（對標某間房）
 function maybeAcquisitionOffer(team) {
+  if (!stageCfg().acquire) return null; // 初階不做房產收購/都更（保持單純）
   const houses = (team.assets || []).filter((a) => a.category === 'realestate');
   if (houses.length === 0) return null;
   if (Math.random() > 0.35) return null;
@@ -1320,7 +1350,7 @@ function acquireDecision(teamId, accept) {
 function applyDoodad(team, card) {
   if (!card) return;
   // 依難度調整支出金額（複製一份再改，取整到百位）
-  const mult = diffCfg().doodad;
+  const mult = stageCfg().doodad;
   if (mult !== 1) card = { ...card, amount: Math.round((card.amount * mult) / 100) * 100 };
   // 連動條件：沒出租房 / 沒小孩 就不會發生這筆支出
   if (card.requires === 'realestate' && !(team.assets || []).some((a) => a.category === 'realestate')) {
@@ -1400,7 +1430,7 @@ function formatNT(n) {
 // 依難度調整機會卡（複製一份再改，不能動到原牌庫）：月現金流乘上倍率、取整到百位
 // 只調「正」的現金流——負現金流的養房卡是刻意設計的風險，不因難度放大虧損
 function adjustDealCard(card) {
-  const mult = diffCfg().dealIncome;
+  const mult = stageCfg().dealIncome;
   if (!card || mult === 1 || !(card.monthlyIncome > 0)) return card;
   return { ...card, monthlyIncome: Math.max(100, Math.round((card.monthlyIncome * mult) / 100) * 100) };
 }
@@ -1410,7 +1440,8 @@ function chooseDeck(teamId, deck) {
   const team = getTeam(teamId);
   if (!team || team.pendingAction?.type !== 'opportunity') return { ok: false, reason: '目前沒有機會可抽' };
   if (deck === 'super') {
-    // 超級生意：財富自由後專屬（高報酬、本金不用大）
+    // 超級生意：財富自由後專屬（高報酬、本金不用大）；初階不開放
+    if (!stageCfg().superDeal) return { ok: false, reason: '這個階段沒有超級生意' };
     if (!team.free) return { ok: false, reason: '要先財富自由才能開啟超級生意' };
   } else if (deck !== 'small' && deck !== 'big') {
     return { ok: false, reason: '請選擇小生意或大買賣' };
@@ -1552,6 +1583,9 @@ function buyAsset(teamId, { marketId, qty, amount } = {}) {
   if (!team) return { ok: false, reason: '找不到組別' };
   const item = getMarketItem(marketId);
   if (!item) return { ok: false, reason: '查無此投資商品' };
+  if (!marketFor(state.stage).some((mm) => mm.id === marketId)) {
+    return { ok: false, reason: '這個階段買不到這個商品' };
+  }
 
   // 防呆（同組多支手機）：短時間內重複買「同一支」多半是好幾個人同時按 → 先擋，避免重複扣款
   const now = Date.now();
@@ -1661,6 +1695,7 @@ function buyAsset(teamId, { marketId, qty, amount } = {}) {
 // 借錢：以萬元為單位，每月利息為貸款餘額的 10%（計入總支出）
 function loanMoney(teamId, amount) {
   if (state.phase !== 'running') return { ok: false, reason: '目前不是操作時間' };
+  if (!stageCfg().loan) return { ok: false, reason: '這個階段不開放貸款' }; // 初階不教借錢
   const team = getTeam(teamId);
   if (!team) return { ok: false, reason: '找不到組別' };
   amount = Math.floor(Number(amount) || 0);
@@ -1863,5 +1898,6 @@ function grantFreedom(teamId) {
 }
 
 
-  return { getPublicState, startGame, pauseGame, skipTurn, nextRound, resetGame, clearGame, toggleTutorial, setSpotlight, navSpotlight, professionPair, createTeam, getTeam, getTeamPayload, listPublicTeams, broadcastTeams, setConfig, getSnapshot, loadSnapshot, getFeed, rollDice, acquireDecision, chooseDeck, dealDecision, charityDecision, buyAsset, loanMoney, repayLoan, repayDebt, sellAsset, chooseGoal, buyAchievement, grantFreedom, netWorth, publicTeam };
+  const endGameNow = () => { if (state.phase === 'running' || state.phase === 'paused') endGame('🏁 老師結束了遊戲！'); };
+  return { getPublicState, startGame, pauseGame, endGame: endGameNow, skipTurn, nextRound, resetGame, clearGame, toggleTutorial, setSpotlight, navSpotlight, professionPair, createTeam, getTeam, getTeamPayload, listPublicTeams, broadcastTeams, setConfig, getSnapshot, loadSnapshot, getFeed, rollDice, acquireDecision, chooseDeck, dealDecision, charityDecision, buyAsset, loanMoney, repayLoan, repayDebt, sellAsset, chooseGoal, buyAchievement, grantFreedom, netWorth, publicTeam };
 }

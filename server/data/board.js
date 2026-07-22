@@ -24,9 +24,30 @@ const LAYOUT = [
   'opportunity', 'payday', 'opportunity', 'market',
 ];
 
-export const BOARD = LAYOUT.map((type, i) => ({
-  index: i,
-  type,
-  label: SQUARE_TYPES[type].label,
-  emoji: SQUARE_TYPES[type].emoji,
-}));
+// 初階盤面（給國中生第一次玩）：只有 發薪/機會/額外支出/好運，
+// 沒有市場漲跌、慈善、生小孩、失業。機會多（買資產養被動收入）、發薪與好運多、額外支出少。
+const LAYOUT_BASIC = [
+  'opportunity', 'payday', 'bonus', 'opportunity',
+  'doodad', 'opportunity', 'payday', 'bonus',
+  'opportunity', 'doodad', 'opportunity', 'payday',
+  'bonus', 'opportunity', 'doodad', 'opportunity',
+  'payday', 'bonus', 'opportunity', 'doodad',
+  'opportunity', 'payday', 'bonus', 'opportunity',
+];
+
+function makeBoard(layout) {
+  return layout.map((type, i) => ({
+    index: i,
+    type,
+    label: SQUARE_TYPES[type].label,
+    emoji: SQUARE_TYPES[type].emoji,
+  }));
+}
+
+export const BOARD = makeBoard(LAYOUT); // 完整版（相容既有 import）
+export const BOARD_BASIC = makeBoard(LAYOUT_BASIC);
+
+// 依遊戲階段取盤面：'basic' 初階 / 其他為完整版
+export function boardFor(stage) {
+  return stage === 'basic' ? BOARD_BASIC : BOARD;
+}

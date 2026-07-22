@@ -77,6 +77,7 @@ export function mountCashflow(app, httpServer, { base = '', serveStatic = true, 
     socket.on('teacher:start', () => roomOf(socket)?.startGame());
     socket.on('teacher:pause', () => roomOf(socket)?.pauseGame());
     socket.on('teacher:nextRound', () => roomOf(socket)?.nextRound());
+    socket.on('teacher:end', () => roomOf(socket)?.endGame());
     socket.on('teacher:skipTurn', () => roomOf(socket)?.skipTurn());
     socket.on('teacher:tutorial', ({ show } = {}) => roomOf(socket)?.toggleTutorial(show));
     socket.on('teacher:spotlight', ({ teamId } = {}) => roomOf(socket)?.setSpotlight(teamId));
