@@ -12,6 +12,7 @@ import Sparkline from '../components/Sparkline.jsx';
 import Avatar from '../components/Avatar.jsx';
 import { SFX, playEventSound, setSoundEnabled, resumeAudio } from '../util/sound.js';
 import { api, page } from '../base.js';
+import Teacher from './Teacher.jsx';
 
 // 難度標示（與 server/game.js 的 DIFFICULTY 對應）
 const STAGE_META = {
@@ -19,6 +20,9 @@ const STAGE_META = {
   mid: { emoji: '🟡', label: '中階' },
   full: { emoji: '🔴', label: '高階' },
 };
+
+// host=1（由「建立新房間」帶進來）：大螢幕右上角顯示「老師控制」按鈕，可浮出老師控制台
+const HOST_MODE = new URLSearchParams(window.location.search).get('host') === '1';
 
 // 大螢幕端（投影機）— M7：等待室 QR / 進行中老鼠賽跑圈盤面 + 排行榜 + 動態
 export default function Screen() {
@@ -37,6 +41,7 @@ export default function Screen() {
   const [dice, setDice] = useState(null); // 擲骰結果橫幅
   const [movingId, setMovingId] = useState(null); // 正在走動的代幣（套用跳動動畫）
   const [soundOn, setSoundOn] = useState(true); // 大螢幕音效開關
+  const [hostOpen, setHostOpen] = useState(false); // 老師控制抽屜開關（host 模式）
 
   // 瀏覽器自動播放政策：第一次點畫面就解鎖音效
   useEffect(() => {
@@ -171,6 +176,18 @@ export default function Screen() {
               {phase === 'paused' && <span className="ml-2 text-base text-zizi-gold">(暫停)</span>}
             </span>
           )}
+          {HOST_MODE && (
+            <button
+              onClick={() => setHostOpen((v) => !v)}
+              className={
+                'text-sm font-semibold ring-1 ring-white/30 rounded-full px-4 py-1.5 ' +
+                (hostOpen ? 'bg-white text-zizi-ink' : 'bg-zizi-gold/90 hover:bg-zizi-gold text-white')
+              }
+              title="打開老師控制（開始/下一回合/設定/投影某組）"
+            >
+              🎛️ 老師控制
+            </button>
+          )}
           <button
             onClick={() => { const v = !soundOn; setSoundOn(v); setSoundEnabled(v); resumeAudio(); }}
             className="text-xl bg-white/10 hover:bg-white/20 ring-1 ring-white/20 rounded-full w-9 h-9 flex items-center justify-center"
@@ -201,6 +218,26 @@ export default function Screen() {
           </div>
         )}
       </main>
+
+      {/* 大螢幕內建老師控制抽屜（建房者 host=1 才有）：右側浮出、左邊仍看得到盤面，不用離開大螢幕 */}
+      {HOST_MODE && hostOpen && (
+        <div className="fixed inset-0 z-[60] flex justify-end">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setHostOpen(false)} />
+          <div className="relative w-full max-w-md h-full bg-white shadow-2xl overflow-y-auto">
+            <div className="sticky top-0 z-10 flex items-center justify-between bg-zizi-ink text-white px-4 py-2">
+              <span className="font-bold text-sm">🎛️ 老師控制（大螢幕內建）</span>
+              <button
+                onClick={() => setHostOpen(false)}
+                className="text-white/80 hover:text-white text-xl leading-none px-2"
+                title="關閉控制、回到純大螢幕"
+              >
+                ✕
+              </button>
+            </div>
+            <Teacher />
+          </div>
+        </div>
+      )}
 
       {/* 抽卡事件(機會/市場/額外支出)的角色反應改由全螢幕卡片場景呈現，這裡的頂部橫幅只給非抽卡事件 */}
       {dice && phase === 'running' && !['opportunity', 'market', 'doodad'].includes(dice.square) && (
