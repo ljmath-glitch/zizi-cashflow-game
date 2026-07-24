@@ -12,17 +12,22 @@ function Home() {
   const [busy, setBusy] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [err, setErr] = useState(null);
+  const [showHost, setShowHost] = useState(false); // 建房前先出現主辦帳密輸入
+  const [hostUser, setHostUser] = useState('');
+  const [hostPass, setHostPass] = useState('');
 
   async function createRoom() {
     if (busy) return;
+    if (!hostUser.trim() || !hostPass) { setErr('請輸入主辦帳號與密碼'); return; }
     setBusy(true);
     setErr(null);
     try {
-      // 建房需登入課務（同網域沿用課務的 auth_token）；加入/遊玩不受影響
-      const headers = {};
-      try { const t = localStorage.getItem('auth_token'); if (t) headers.Authorization = 'Bearer ' + t; } catch {}
-      const res = await fetch(api('api/rooms'), { method: 'POST', headers });
-      if (res.status === 401) { setErr('請先在課務系統登入，再回這頁開房'); setBusy(false); return; }
+      // 建房需主辦帳密（共用一組，寫在週報給家長）；帳密走自訂 header。加入/遊玩不受影響
+      const res = await fetch(api('api/rooms'), {
+        method: 'POST',
+        headers: { 'x-cashflow-user': hostUser.trim(), 'x-cashflow-pass': hostPass },
+      });
+      if (res.status === 401) { setErr('主辦帳號或密碼錯誤'); setBusy(false); return; }
       if (res.status === 403) { setErr('遊戲目前未開放（僅活動期間可開房）'); setBusy(false); return; }
       if (!res.ok) { setErr('建立房間失敗，請稍後再試'); setBusy(false); return; }
       const data = await res.json();
@@ -57,17 +62,53 @@ function Home() {
       <p className="text-zizi-gold mb-8">成為一道閃電，點燃孩子的學習熱誠 ⚡</p>
 
       <div className="w-full max-w-md space-y-6">
-          {/* 老師建立房間 */}
+          {/* 主辦建立房間（老師/家長）：輸入主辦帳密 → 直接進大螢幕(自帶控制) */}
           <div className="bg-white/10 rounded-2xl p-5 text-center">
-            <p className="text-lg font-semibold mb-1">我是老師</p>
-            <p className="text-sm text-white/60 mb-4">建立一個專屬房間，再把連結分享給學生</p>
-            <button
-              onClick={createRoom}
-              disabled={busy}
-              className="w-full rounded-xl bg-zizi-gold text-white font-bold py-3 disabled:opacity-50"
-            >
-              {busy ? '建立中…' : '➕ 建立新房間'}
-            </button>
+            <p className="text-lg font-semibold mb-1">我是主辦（老師 / 家長）</p>
+            {!showHost ? (
+              <>
+                <p className="text-sm text-white/60 mb-4">建立房間後直接進入大螢幕（右上角有老師控制）；學生掃大螢幕上的 QR 加入</p>
+                <button
+                  onClick={() => { setErr(null); setShowHost(true); }}
+                  className="w-full rounded-xl bg-zizi-gold text-white font-bold py-3"
+                >
+                  ➕ 建立新房間（進大螢幕）
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-white/60 mb-3">輸入主辦帳號密碼即可開房（週報上有）</p>
+                <input
+                  value={hostUser}
+                  onChange={(e) => setHostUser(e.target.value)}
+                  placeholder="主辦帳號"
+                  autoComplete="username"
+                  className="w-full rounded-xl px-3 py-2 text-center text-zizi-ink font-semibold mb-2"
+                />
+                <input
+                  type="password"
+                  value={hostPass}
+                  onChange={(e) => setHostPass(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') createRoom(); }}
+                  placeholder="密碼"
+                  autoComplete="current-password"
+                  className="w-full rounded-xl px-3 py-2 text-center text-zizi-ink font-semibold mb-3"
+                />
+                <button
+                  onClick={createRoom}
+                  disabled={busy}
+                  className="w-full rounded-xl bg-zizi-gold text-white font-bold py-3 disabled:opacity-50"
+                >
+                  {busy ? '建立中…' : '✅ 確認開房'}
+                </button>
+                <button
+                  onClick={() => { setShowHost(false); setErr(null); }}
+                  className="mt-2 text-sm text-white/50 hover:text-white/80"
+                >
+                  取消
+                </button>
+              </>
+            )}
           </div>
 
           {/* 用房號加入：老師 / 大螢幕 / 學生 */}
