@@ -223,7 +223,7 @@ export default function Screen() {
       {HOST_MODE && hostOpen && (
         <div className="fixed inset-0 z-[60] flex justify-end">
           <div className="absolute inset-0 bg-black/40" onClick={() => setHostOpen(false)} />
-          <div className="relative w-full max-w-md h-full bg-white shadow-2xl overflow-y-auto">
+          <div className="relative w-full max-w-md h-full bg-white text-zizi-ink shadow-2xl overflow-y-auto">
             <div className="sticky top-0 z-10 flex items-center justify-between bg-zizi-ink text-white px-4 py-2">
               <span className="font-bold text-sm">🎛️ 老師控制（大螢幕內建）</span>
               <button

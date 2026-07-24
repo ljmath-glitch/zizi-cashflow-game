@@ -252,7 +252,7 @@ export default function Teacher() {
                   step="5"
                   value={minutes}
                   onChange={(e) => setMinutes(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-300 bg-white/70 px-3 py-2 focus:border-zizi-gold focus:ring-2 focus:ring-zizi-gold/30 focus:outline-none transition"
+                  className="mt-1 w-full rounded-xl border border-slate-300 bg-white/70 text-zizi-ink px-3 py-2 focus:border-zizi-gold focus:ring-2 focus:ring-zizi-gold/30 focus:outline-none transition"
                 />
               </label>
               <label className="flex-1">
@@ -262,7 +262,7 @@ export default function Teacher() {
                   min="1"
                   value={totalRounds}
                   onChange={(e) => setTotalRounds(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-300 bg-white/70 px-3 py-2 focus:border-zizi-gold focus:ring-2 focus:ring-zizi-gold/30 focus:outline-none transition"
+                  className="mt-1 w-full rounded-xl border border-slate-300 bg-white/70 text-zizi-ink px-3 py-2 focus:border-zizi-gold focus:ring-2 focus:ring-zizi-gold/30 focus:outline-none transition"
                 />
               </label>
             </div>
