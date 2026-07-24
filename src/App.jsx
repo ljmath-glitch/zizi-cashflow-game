@@ -18,7 +18,13 @@ function Home() {
     setBusy(true);
     setErr(null);
     try {
-      const res = await fetch(api('api/rooms'), { method: 'POST' });
+      // 建房需登入課務（同網域沿用課務的 auth_token）；加入/遊玩不受影響
+      const headers = {};
+      try { const t = localStorage.getItem('auth_token'); if (t) headers.Authorization = 'Bearer ' + t; } catch {}
+      const res = await fetch(api('api/rooms'), { method: 'POST', headers });
+      if (res.status === 401) { setErr('請先在課務系統登入，再回這頁開房'); setBusy(false); return; }
+      if (res.status === 403) { setErr('遊戲目前未開放（僅活動期間可開房）'); setBusy(false); return; }
+      if (!res.ok) { setErr('建立房間失敗，請稍後再試'); setBusy(false); return; }
       const data = await res.json();
       // 建房後直接進大螢幕：host=1 讓大螢幕右上角出現老師控制抽屜；學生掃大螢幕上的 QR 加入
       window.location.href = page(`screen?room=${data.code}&host=1`);
