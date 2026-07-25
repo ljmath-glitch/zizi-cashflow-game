@@ -221,9 +221,9 @@ export default function Screen() {
 
       {/* 大螢幕內建老師控制抽屜（建房者 host=1 才有）：右側浮出、左邊仍看得到盤面，不用離開大螢幕 */}
       {HOST_MODE && hostOpen && (
-        <div className="fixed inset-0 z-[60] flex justify-end">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setHostOpen(false)} />
-          <div className="relative w-full max-w-md h-full bg-white text-zizi-ink shadow-2xl overflow-y-auto">
+        <div className="fixed inset-0 z-[60] flex justify-end pointer-events-none">
+          {/* 不加暗色遮罩、整個容器不吃點擊，只有右側面板可操作 → 按「投影某組」時大螢幕鏡像看得到、面板還能切分頁/捲動 */}
+          <div className="pointer-events-auto relative w-full max-w-md h-full bg-white text-zizi-ink shadow-2xl overflow-y-auto">
             <div className="sticky top-0 z-10 flex items-center justify-between bg-zizi-ink text-white px-4 py-2">
               <span className="font-bold text-sm">🎛️ 老師控制（大螢幕內建）</span>
               <button
