@@ -17,6 +17,7 @@ import { BOARD } from './data/board.js';
 import { ensureSavesDir, saveToFile, loadFromFile, listSaves, timestampName } from './storage.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const BOOT_AT = Date.now(); // 本進程啟動時間；重新部署後會變（用來確認伺服器真的重啟了）
 
 export function mountCashflow(app, httpServer, { base = '', serveStatic = true, port = null, store = null } = {}) {
   // base 標準化：'' 或 '/cashflow'（開頭要斜線、結尾不要）
@@ -41,7 +42,7 @@ export function mountCashflow(app, httpServer, { base = '', serveStatic = true, 
   }
 
   // ── HTTP API ──
-  app.get(b + '/api/server-info', (req, res) => res.json({ lanIp, port: port || undefined }));
+  app.get(b + '/api/server-info', (req, res) => res.json({ lanIp, port: port || undefined, bootAt: BOOT_AT }));
   app.get(b + '/api/market', (req, res) => res.json(activeMarket()));
   app.get(b + '/api/achievements', (req, res) => res.json(ACHIEVEMENTS));
   app.get(b + '/api/board', (req, res) => res.json(BOARD));
