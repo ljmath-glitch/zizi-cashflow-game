@@ -176,18 +176,6 @@ export default function Screen() {
               {phase === 'paused' && <span className="ml-2 text-base text-zizi-gold">(暫停)</span>}
             </span>
           )}
-          {HOST_MODE && (
-            <button
-              onClick={() => setHostOpen((v) => !v)}
-              className={
-                'text-sm font-semibold ring-1 ring-white/30 rounded-full px-4 py-1.5 ' +
-                (hostOpen ? 'bg-white text-zizi-ink' : 'bg-zizi-gold/90 hover:bg-zizi-gold text-white')
-              }
-              title="打開老師控制（開始/下一回合/設定/投影某組）"
-            >
-              🎛️ 老師控制
-            </button>
-          )}
           <button
             onClick={() => { const v = !soundOn; setSoundOn(v); setSoundEnabled(v); resumeAudio(); }}
             className="text-xl bg-white/10 hover:bg-white/20 ring-1 ring-white/20 rounded-full w-9 h-9 flex items-center justify-center"
@@ -218,6 +206,17 @@ export default function Screen() {
           </div>
         )}
       </main>
+
+      {/* 老師控制浮動鈕：固定在最上層(z-70)，即使新手教學/投影等全螢幕覆蓋也點得到，保證回得來 */}
+      {HOST_MODE && !hostOpen && (
+        <button
+          onClick={() => setHostOpen(true)}
+          className="fixed top-3 right-3 z-[70] text-sm font-semibold bg-zizi-gold hover:bg-zizi-gold/90 text-white ring-1 ring-white/40 rounded-full px-4 py-2 shadow-lg"
+          title="打開老師控制（開始/下一回合/設定/投影/教學）"
+        >
+          🎛️ 老師控制
+        </button>
+      )}
 
       {/* 大螢幕內建老師控制抽屜（建房者 host=1 才有）：右側浮出、左邊仍看得到盤面，不用離開大螢幕 */}
       {HOST_MODE && hostOpen && (
