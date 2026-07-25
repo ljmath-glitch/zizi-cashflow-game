@@ -10,7 +10,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { getLanIp } from './lan.js';
-import { initGame, createRoom, getRoom, roomExists } from './game.js';
+import { initGame, createRoom, getRoom, roomExists, setPersistStore, restoreRooms } from './game.js';
 import { activeMarket } from './data/assets.js';
 import { ACHIEVEMENTS } from './data/achievements.js';
 import { BOARD } from './data/board.js';
@@ -18,7 +18,7 @@ import { ensureSavesDir, saveToFile, loadFromFile, listSaves, timestampName } fr
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export function mountCashflow(app, httpServer, { base = '', serveStatic = true, port = null } = {}) {
+export function mountCashflow(app, httpServer, { base = '', serveStatic = true, port = null, store = null } = {}) {
   // base 標準化：'' 或 '/cashflow'（開頭要斜線、結尾不要）
   const b = base ? '/' + base.replace(/^\/|\/$/g, '') : '';
 
@@ -30,6 +30,15 @@ export function mountCashflow(app, httpServer, { base = '', serveStatic = true, 
 
   initGame(io);
   ensureSavesDir();
+
+  // 房間持久化：課務系統會傳入 DB 版 store，讓進行中的遊戲撐過重新部署（重啟時自動從 DB 還原房間）。
+  if (store) {
+    setPersistStore(store);
+    Promise.resolve(store.ensure ? store.ensure() : null)
+      .then(() => restoreRooms())
+      .then((count) => { if (count) console.log(`♻️ [現金流] 已從資料庫還原 ${count} 個房間`); })
+      .catch((e) => console.error('⚠️ [現金流] 房間還原失敗：', e.message));
+  }
 
   // ── HTTP API ──
   app.get(b + '/api/server-info', (req, res) => res.json({ lanIp, port: port || undefined }));

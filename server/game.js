@@ -18,6 +18,30 @@ export function initGame(ioInstance) {
   io = ioInstance;
 }
 
+// ── 房間持久化（撐過伺服器重啟／重新部署）──
+// 課務系統會傳入 Postgres 版 store（存 DB，重啟不會清）；未設則各房間退回存本機檔（本機開發用）。
+let persistStore = null;
+export function setPersistStore(s) { persistStore = s; }
+
+// 伺服器啟動時，把持久化後端裡的房間全部還原回記憶體（含進行中的遊戲、隊伍、回合、計時）
+export async function restoreRooms() {
+  if (!persistStore || !persistStore.loadAllRooms) return 0;
+  let n = 0;
+  try {
+    const saved = await persistStore.loadAllRooms(); // 期望 [{ code, data }]
+    for (const { code, data } of saved || []) {
+      const c = String(code || '').toUpperCase();
+      if (!c || !data || rooms.has(c)) continue;
+      const room = makeRoom(c);
+      rooms.set(c, room);
+      try { room.loadSnapshot(data); n += 1; } catch (e) { console.error('⚠️ 還原房間失敗', c, e.message); }
+    }
+  } catch (e) {
+    console.error('⚠️ 讀取房間清單失敗：', e.message);
+  }
+  return n;
+}
+
 function genCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 去掉易混淆字
   let c;
@@ -914,7 +938,12 @@ function scheduleAutosave() {
   autosaveTimer = setTimeout(() => {
     autosaveTimer = null;
     try {
-      saveToFile('room_' + code + '.json', getSnapshot());
+      const snap = getSnapshot();
+      if (persistStore && persistStore.saveRoom) {
+        Promise.resolve(persistStore.saveRoom(code, snap)).catch((e) => console.error('⚠️ 房間自動存檔(DB)失敗：', e.message));
+      } else {
+        saveToFile('room_' + code + '.json', snap);
+      }
     } catch (e) {
       console.error('⚠️ 自動存檔失敗：', e.message);
     }
