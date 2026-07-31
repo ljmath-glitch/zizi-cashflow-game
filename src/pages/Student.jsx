@@ -700,6 +700,67 @@ function PendingModal({ team }) {
     );
   }
 
+  if (pa.type === 'sale') {
+    const it = pa.item;
+    const afford = team.cash >= it.cost;
+    const roi = it.cost ? Math.round((it.monthlyIncome * 12 / it.cost) * 100) : 0;
+    return (
+      <Overlay>
+        <div className="text-center">
+          <div className="text-5xl mb-1">🛒</div>
+          <p className="text-xs text-orange-500 font-semibold">限時特賣</p>
+          <h3 className="text-lg font-bold text-zizi-ink">{it.emoji} {it.name}</h3>
+          {it.story && <p className="text-xs text-slate-500 mt-1 mb-2 leading-relaxed">{it.story}</p>}
+          <div className="bg-orange-50 rounded-xl p-3 text-sm grid grid-cols-2 gap-y-1 mb-3 ring-1 ring-orange-200">
+            <span className="text-slate-500">特賣價</span>
+            <span className="text-right font-bold text-orange-600">{formatMoney(it.cost)} <span className="text-[0.6rem] text-slate-400 line-through">{formatMoney(it.origCost)}</span></span>
+            <span className="text-slate-500">每月被動收入</span>
+            <span className="text-right font-semibold text-green-600">+{formatMoney(it.monthlyIncome)}</span>
+            <span className="text-slate-500">投資報酬率（年）</span>
+            <span className="text-right font-bold text-green-600">{roi}%</span>
+          </div>
+          {!afford && <p className="text-xs text-red-500 mb-2">現金不足（差 {formatMoney(it.cost - team.cash)}）</p>}
+          <div className="grid grid-cols-2 gap-3">
+            <button disabled={busy} onClick={() => decide('student:saleDecision', { accept: false })} className="rounded-xl border border-slate-300 text-slate-600 font-semibold py-3 disabled:opacity-50">不買</button>
+            <button
+              disabled={!afford || busy}
+              onClick={() => decide('student:saleDecision', { accept: true }, { emoji: it.emoji, title: `撿到便宜！買下 ${it.name}`, text: `每月被動收入 +${formatMoney(it.monthlyIncome)} 🎉`, tone: 'good' })}
+              className="rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold py-3 disabled:opacity-40 shadow-glow"
+            >
+              買下來
+            </button>
+          </div>
+        </div>
+      </Overlay>
+    );
+  }
+
+  if (pa.type === 'quiz') {
+    const q = pa.quiz;
+    return (
+      <Overlay>
+        <div className="text-center">
+          <div className="text-5xl mb-1">💡</div>
+          <p className="text-xs text-indigo-500 font-semibold">理財快問答 · 答對得 {formatMoney(q.reward)}</p>
+          <h3 className="text-base font-bold text-zizi-ink mt-1 mb-3 leading-snug">{q.q}</h3>
+          <div className="space-y-2">
+            {q.options.map((opt, i) => (
+              <button
+                key={i}
+                disabled={busy}
+                onClick={() => decide('student:quizAnswer', { choice: i })}
+                className="w-full rounded-xl bg-white ring-1 ring-indigo-200 text-zizi-ink font-semibold py-3 hover:bg-indigo-50 disabled:opacity-50 text-sm"
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+          <p className="text-[0.7rem] text-slate-400 mt-3">選一個答案：答對有獎金，答錯也會告訴你正確觀念</p>
+        </div>
+      </Overlay>
+    );
+  }
+
   return null;
 }
 
@@ -714,6 +775,10 @@ const SQUARE_HINT = {
   charity: '慈善機會，請選擇捐或不捐',
   baby: '生了一個小孩，每月支出增加',
   downsized: '失業，下個發薪日領不到薪水',
+  surprise: '驚喜！免費資產或現金 🎁',
+  flash: '本週快訊，現金有增有減 📰',
+  sale: '特賣！小資產折扣，決定買不買',
+  quiz: '理財快問答，答對得獎金 💡',
 };
 
 // 擲骰列：依序輪流，只有「輪到你」才能擲骰

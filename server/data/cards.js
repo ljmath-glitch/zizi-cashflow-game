@@ -178,7 +178,47 @@ export const BONUS_CARDS = [
   { id: 'bn_prize', name: '活動抽獎中獎', emoji: '🎁', amount: 4500, story: '參加活動抽獎，居然被抽中！' },
 ];
 
-const DECKS = { small: SMALL_DEALS, big: BIG_DEALS, super: SUPER_DEALS, market: MARKET_CARDS, doodad: DOODAD_CARDS, bonus: BONUS_CARDS };
+// ── 🎁 驚喜卡（初階「驚喜格」）：免費小資產（教「資產＝被動收入」）或現金驚喜 ──
+export const SURPRISE_CARDS = [
+  { id: 'sp_vending', kind: 'asset', emoji: '🥤', name: '朋友送你販賣機小股', story: '朋友的販賣機找你掛名小股東，每月分你一點。', asset: { name: '販賣機小股', emoji: '🥤', category: 'business', value: 30000, monthlyIncome: 800 } },
+  { id: 'sp_laundry', kind: 'asset', emoji: '🧺', name: '接手一台自助洗衣機', story: '親戚不做了，把一台自助洗衣機送你經營。', asset: { name: '自助洗衣機', emoji: '🧺', category: 'business', value: 28000, monthlyIncome: 750 } },
+  { id: 'sp_claw', kind: 'asset', emoji: '🎮', name: '繼承一台夾娃娃機', story: '長輩把一台夾娃娃機台交給你顧，收入歸你。', asset: { name: '夾娃娃機', emoji: '🎮', category: 'business', value: 25000, monthlyIncome: 700 } },
+  { id: 'sp_grandprize', kind: 'cash', emoji: '🎁', name: '抽中年度大獎', amountRange: [6000, 12000], story: '參加抽獎居然中了年度大獎！' },
+  { id: 'sp_antique', kind: 'cash', emoji: '💎', name: '舊物變古董', amountRange: [5000, 15000], story: '家裡的舊東西被鑑定是值錢古董，賣了一筆！' },
+  { id: 'sp_scratch', kind: 'cash', emoji: '🍀', name: '刮刮樂連中', amountRange: [3000, 9000], story: '手氣正旺，刮刮樂連中好幾張！' },
+];
+
+// ── 📰 快訊卡（初階「本週快訊格」）：個人小新聞，現金 + 或 −（金額每次隨機） ──
+export const FLASH_CARDS = [
+  { id: 'fl_gig', emoji: '📰', name: '限時外快接案', amountRange: [2000, 6000], story: '看到一則接案快訊，順手接了賺一筆。' },
+  { id: 'fl_giveaway', emoji: '🎉', name: '社群抽獎中獎', amountRange: [1500, 5000], story: '追蹤的帳號抽獎，居然抽到你！' },
+  { id: 'fl_refund', emoji: '🧾', name: '找到沒領的退費', amountRange: [1000, 4000], story: '翻到一張忘了領的退費單，去領回來。' },
+  { id: 'fl_overtime', emoji: '🚕', name: '臨時加班車馬費', amountRange: [-3000, -1000], story: '臨時被叫去加班，來回車錢自己吸收。' },
+  { id: 'fl_repair', emoji: '🔧', name: '家電突然壞掉', amountRange: [-4000, -1500], story: '冰箱半夜罷工，只好花錢修。' },
+  { id: 'fl_gift', emoji: '🎂', name: '朋友生日湊禮金', amountRange: [-2500, -800], story: '一週三個朋友生日，禮金包到手軟。' },
+];
+
+// ── 🛒 特賣卡（初階「特賣格」）：小資產限時折扣，玩家決定買不買（買到＝撿便宜的被動收入） ──
+export const SALE_ITEMS = [
+  { id: 'sl_coffee', emoji: '☕', name: '限時頂讓·咖啡吧台', category: 'business', origCost: 60000, cost: 42000, value: 60000, monthlyIncome: 1600, story: '有人急著頂讓小咖啡吧台，限時特價出清！' },
+  { id: 'sl_oden', emoji: '🍢', name: '夜市關東煮攤特賣', category: 'business', origCost: 45000, cost: 30000, value: 45000, monthlyIncome: 1200, story: '攤主要移民，攤子跳樓大拍賣。' },
+  { id: 'sl_bubble', emoji: '🧋', name: '手搖飲小股·出清價', category: 'business', origCost: 50000, cost: 35000, value: 50000, monthlyIncome: 1350, story: '股東急需現金，小股出清特賣。' },
+  { id: 'sl_claw', emoji: '🎰', name: '夾娃娃機·清倉價', category: 'business', origCost: 40000, cost: 26000, value: 40000, monthlyIncome: 1100, story: '店面收攤，機台清倉特價賣你。' },
+];
+
+// ── 💡 理財快問答卡（初階「快問答格」）：答對得獎金，答錯看解說學起來（寓教於樂） ──
+export const QUIZ_BANK = [
+  { id: 'qz_passive', q: '「被動收入」指的是？', options: ['要工作才有的錢', '不工作也會進來的錢', '中樂透的錢'], answer: 1, reward: 3000, explain: '被動收入是不用一直工作也會進帳的錢，像股利、房租；養大它就能財富自由！' },
+  { id: 'qz_free', q: '想「財富自由」，要讓被動收入 ___ 每月支出？', options: ['小於', '等於或大於', '沒關係'], answer: 1, reward: 3000, explain: '當被動收入 ≥ 每月支出，不工作也養得起自己，就跳出老鼠圈了。' },
+  { id: 'qz_asset', q: '下列哪個是「資產」（會幫你賺錢）？', options: ['名牌包', '出租套房', '手遊課金'], answer: 1, reward: 3000, explain: '資產會幫你賺錢或增值；出租套房每月收租，是資產。' },
+  { id: 'qz_deposit', q: '把錢放銀行「定存」的特色是？', options: ['高風險高報酬', '低風險但成長慢', '保證翻倍'], answer: 1, reward: 3000, explain: '定存幾乎零風險，但利率低、成長很慢。' },
+  { id: 'qz_diversify', q: '「雞蛋不要放同一個籃子」是在講？', options: ['分散風險', '多買雞蛋', '換大籃子'], answer: 0, reward: 3000, explain: '把投資分散到不同標的，一個出事才不會全賠——這叫分散風險。' },
+  { id: 'qz_payself', q: '「先付錢給自己」的意思最接近？', options: ['先花光再說', '每月先存/投資一部分', '先還清所有債'], answer: 1, reward: 3000, explain: '拿到收入先撥一部分去存或投資，剩下才花，累積資產最有效。' },
+  { id: 'qz_money', q: '哪種做法比較可能讓錢變多？', options: ['把錢都藏床底', '讓錢去投資生錢', '一領薪就換新手機'], answer: 1, reward: 3000, explain: '有錢人讓錢為他工作——把錢拿去投資能生更多錢。' },
+  { id: 'qz_scam', q: '看到「保證穩賺不賠、月報酬 30%」應該？', options: ['馬上全部投進去', '高度懷疑是詐騙', '借錢也要投'], answer: 1, reward: 3000, explain: '天下沒有穩賺不賠，越是保證高報酬越可能是詐騙，要小心！' },
+];
+
+const DECKS = { small: SMALL_DEALS, big: BIG_DEALS, super: SUPER_DEALS, market: MARKET_CARDS, doodad: DOODAD_CARDS, bonus: BONUS_CARDS, surprise: SURPRISE_CARDS, flash: FLASH_CARDS, sale: SALE_ITEMS, quiz: QUIZ_BANK };
 
 // 從指定牌庫隨機抽一張（抽完放回，等同無限牌庫，適合課堂）
 export function drawCard(deck, filterFn) {

@@ -895,6 +895,8 @@ function CardOverlay({ payload, teamFull, onClose }) {
     doodad: { label: '額外支出', color: 'bg-rose-500', mood: 'sad', badge: '💸', title: '額外支出' },
     bonus: { label: '🍀 好運', color: 'bg-lime-500', mood: 'happy', badge: '🍀', title: '好運' },
     acquire: { label: '房產收購要約', color: 'bg-teal-600', mood: 'excited', badge: '🤝', title: '收購' },
+    surprise: { label: '🎁 驚喜', color: 'bg-fuchsia-500', mood: 'happy', badge: '🎁', title: '驚喜' },
+    flash: { label: '📰 本週快訊', color: 'bg-sky-500', mood: 'surprised', badge: '📰', title: '快訊' },
   };
   const m = META[deck] || { label: '事件', color: 'bg-slate-500', mood: 'surprised', badge: '🎲', title: '事件' };
   return (
@@ -906,7 +908,7 @@ function CardOverlay({ payload, teamFull, onClose }) {
         <div className="p-6 text-center">
           <div className="text-7xl mb-3">{card.emoji}</div>
           <h3 className="text-2xl font-black text-zizi-ink">{card.name}</h3>
-          {card.desc && <p className="text-slate-500 mt-2">{card.desc}</p>}
+          {(card.desc || card.story) && <p className="text-slate-500 mt-2">{card.desc || card.story}</p>}
           {card.amount != null && deck === 'doodad' && (
             <p className="mt-3 text-rose-500 font-bold text-xl">-{formatMoney(card.amount)}{card.recurring ? ' / 月' : ''}</p>
           )}

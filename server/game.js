@@ -1234,6 +1234,22 @@ function resolveSquare(team, type) {
     case 'bonus':
       applyBonus(team, drawCard('bonus'));
       break;
+    case 'surprise':
+      applySurprise(team, drawCard('surprise'));
+      break;
+    case 'flash':
+      applyFlash(team, drawCard('flash'));
+      break;
+    case 'sale': {
+      const item = drawCard('sale');
+      if (item) team.pendingAction = { type: 'sale', item };
+      break;
+    }
+    case 'quiz': {
+      const quiz = drawCard('quiz');
+      if (quiz) team.pendingAction = { type: 'quiz', quiz };
+      break;
+    }
     case 'baby':
       haveBaby(team);
       break;
@@ -1463,6 +1479,48 @@ function applyBonus(team, card) {
   broadcastTeams();
 }
 
+// 依區間隨機取金額（取整到 500）
+function randInRange([lo, hi]) {
+  return Math.round((lo + Math.random() * (hi - lo)) / 500) * 500;
+}
+
+// 🎁 驚喜格：免費得到一個小資產（教「資產＝被動收入」）或一筆現金驚喜
+function applySurprise(team, card) {
+  if (!card) return;
+  announceCard('surprise', card, team);
+  if (card.kind === 'asset') {
+    const a = card.asset;
+    team.assets.push({ uid: nextUid(), marketId: null, name: a.name, emoji: a.emoji, category: a.category, tags: [], instrumentId: null, units: null, location: null, value: a.value, monthlyIncome: a.monthlyIncome });
+    addHistory(team, { round: state.round, type: 'income', text: `驚喜：獲得 ${a.name}`, delta: 0 });
+    addFeed(`🎁 ${team.name}：驚喜！免費獲得 ${a.emoji} ${a.name}（月收 +${a.monthlyIncome}）`);
+    emitEvent(team, { emoji: '🎁', title: '🎁 驚喜！免費資產', text: `${card.story || card.name}\n免費得到「${a.name}」，每月被動收入 +${formatNT(a.monthlyIncome)}！` });
+    checkFreedom(team);
+  } else {
+    const amt = randInRange(card.amountRange);
+    team.cash += amt;
+    addHistory(team, { round: state.round, type: 'income', text: card.name, delta: amt });
+    addFeed(`🎁 ${team.name}：驚喜！${card.name}（+${amt}）`);
+    emitEvent(team, { emoji: card.emoji, title: '🎁 驚喜！', text: `${card.story || card.name}，進帳 ${formatNT(amt)}` });
+  }
+  emitTeam(team);
+  broadcastTeams();
+}
+
+// 📰 快訊格：個人小新聞，現金 + 或 −（金額每次隨機）
+function applyFlash(team, card) {
+  if (!card) return;
+  announceCard('flash', card, team);
+  const amt = randInRange(card.amountRange);
+  team.cash += amt;
+  addHistory(team, { round: state.round, type: amt >= 0 ? 'income' : 'expense', text: card.name, delta: amt });
+  const sign = amt >= 0 ? '+' : '−';
+  addFeed(`📰 ${team.name}：本週快訊「${card.name}」（${sign}${Math.abs(amt)}）`);
+  emitEvent(team, { emoji: card.emoji, title: '📰 本週快訊', text: `${card.story || card.name}（${sign}${formatNT(Math.abs(amt))}）` });
+  if (amt < 0) checkBankruptOrCover(team);
+  emitTeam(team);
+  broadcastTeams();
+}
+
 // 投保 / 退保（高階專屬）：切換某險種的投保狀態
 function toggleInsurance(teamId, cover) {
   if (state.phase !== 'running') return { ok: false, reason: '目前不是操作時間' };
@@ -1656,6 +1714,57 @@ function charityDecision(teamId, donate) {
   emitTeam(team);
   if (currentTurnId() === team.id) advanceTurn();
   return { ok: true, donated: false };
+}
+
+// 🛒 特賣格：玩家決定是否用折扣價買下這個小資產（撿便宜的被動收入）
+function saleDecision(teamId, accept) {
+  const team = getTeam(teamId);
+  if (!team || team.pendingAction?.type !== 'sale') return { ok: false, reason: '目前沒有特賣可決定' };
+  const item = team.pendingAction.item;
+  team.pendingAction = null;
+
+  if (accept) {
+    if (team.cash < item.cost) {
+      team.pendingAction = { type: 'sale', item };
+      emitTeam(team);
+      return { ok: false, reason: '存款不足，買不起這個特賣' };
+    }
+    team.cash -= item.cost;
+    team.assets.push({ uid: nextUid(), marketId: null, name: item.name, emoji: item.emoji, category: item.category, tags: [], instrumentId: null, units: null, location: null, value: item.value, monthlyIncome: item.monthlyIncome });
+    addHistory(team, { round: state.round, type: 'buy', text: `特賣入手 ${item.name}`, delta: -item.cost });
+    addFeed(`🛒 ${team.name}：特賣入手 ${item.emoji} ${item.name}（月收 +${item.monthlyIncome}）`);
+    checkFreedom(team);
+    emitTeam(team);
+    broadcastTeams();
+    if (currentTurnId() === team.id) advanceTurn();
+    return { ok: true, bought: true };
+  }
+  emitTeam(team);
+  if (currentTurnId() === team.id) advanceTurn();
+  return { ok: true, bought: false };
+}
+
+// 💡 快問答格：答對得獎金；答錯不罰、看解說學起來（寓教於樂）
+function quizAnswer(teamId, choice) {
+  const team = getTeam(teamId);
+  if (!team || team.pendingAction?.type !== 'quiz') return { ok: false, reason: '目前沒有題目可作答' };
+  const quiz = team.pendingAction.quiz;
+  team.pendingAction = null;
+  const correct = Number(choice) === quiz.answer;
+
+  if (correct) {
+    team.cash += quiz.reward;
+    addHistory(team, { round: state.round, type: 'income', text: '理財快問答答對', delta: quiz.reward });
+    addFeed(`💡 ${team.name}：理財快問答答對！+${quiz.reward}`);
+    emitEvent(team, { emoji: '🎉', title: '答對了！', text: `${quiz.explain}\n獎勵 +${formatNT(quiz.reward)}` });
+  } else {
+    addFeed(`💡 ${team.name}：理財快問答答錯，下次加油`);
+    emitEvent(team, { emoji: '📖', title: '答錯了，學起來！', text: quiz.explain });
+  }
+  emitTeam(team);
+  broadcastTeams();
+  if (currentTurnId() === team.id) advanceTurn();
+  return { ok: true, correct };
 }
 
 // ── 買賣資產 ──
@@ -1988,5 +2097,5 @@ function grantFreedom(teamId) {
 
 
   const endGameNow = () => { if (state.phase === 'running' || state.phase === 'paused') endGame('🏁 老師結束了遊戲！'); };
-  return { getPublicState, startGame, pauseGame, endGame: endGameNow, skipTurn, nextRound, resetGame, clearGame, toggleTutorial, setSpotlight, navSpotlight, professionPair, createTeam, getTeam, getTeamPayload, listPublicTeams, broadcastTeams, setConfig, getSnapshot, loadSnapshot, getFeed, rollDice, acquireDecision, chooseDeck, dealDecision, charityDecision, buyAsset, loanMoney, repayLoan, repayDebt, sellAsset, chooseGoal, buyAchievement, toggleInsurance, grantFreedom, netWorth, publicTeam };
+  return { getPublicState, startGame, pauseGame, endGame: endGameNow, skipTurn, nextRound, resetGame, clearGame, toggleTutorial, setSpotlight, navSpotlight, professionPair, createTeam, getTeam, getTeamPayload, listPublicTeams, broadcastTeams, setConfig, getSnapshot, loadSnapshot, getFeed, rollDice, acquireDecision, chooseDeck, dealDecision, charityDecision, saleDecision, quizAnswer, buyAsset, loanMoney, repayLoan, repayDebt, sellAsset, chooseGoal, buyAchievement, toggleInsurance, grantFreedom, netWorth, publicTeam };
 }

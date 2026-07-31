@@ -10,6 +10,10 @@ export const SQUARE_TYPES = {
   baby: { label: '生小孩', emoji: '👶' },
   downsized: { label: '失業', emoji: '💼' },
   bonus: { label: '好運', emoji: '🍀' },
+  surprise: { label: '驚喜', emoji: '🎁' }, // 初階：免費小資產或現金驚喜
+  flash: { label: '快訊', emoji: '📰' },    // 初階：個人小新聞，現金±
+  sale: { label: '特賣', emoji: '🛒' },      // 初階：小資產折扣，決定買不買
+  quiz: { label: '快問答', emoji: '💡' },    // 初階：理財小問答，答對得獎金
 };
 
 // 24 格排列：發薪日均勻分布 3 格（骰子經過/停在才領當月現金流＝過了一個月）
@@ -26,12 +30,15 @@ const LAYOUT = [
 
 // 初階盤面（給國中生第一次玩）：只有 發薪/機會/額外支出/好運，
 // 沒有市場漲跌、慈善、生小孩、失業。機會多（買資產養被動收入）、發薪與好運多、額外支出少。
+// 初階盤面（給國中生第一次玩）：核心是「機會（買資產）＋發薪」，再穿插新格子增加變化：
+// 🎁驚喜、📰快訊、🛒特賣、💡快問答，讓初階也熱鬧、寓教於樂。
+// 配置：機會 10、發薪 4、驚喜 2、快訊 2、特賣 1、快問答 1、好運 2、額外支出 2
 const LAYOUT_BASIC = [
-  'opportunity', 'payday', 'bonus', 'opportunity',
-  'doodad', 'opportunity', 'payday', 'bonus',
-  'opportunity', 'doodad', 'opportunity', 'payday',
-  'bonus', 'opportunity', 'doodad', 'opportunity',
-  'payday', 'bonus', 'opportunity', 'doodad',
+  'opportunity', 'payday', 'surprise', 'opportunity',
+  'doodad', 'opportunity', 'flash', 'payday',
+  'opportunity', 'sale', 'opportunity', 'bonus',
+  'quiz', 'opportunity', 'payday', 'opportunity',
+  'surprise', 'opportunity', 'doodad', 'flash',
   'opportunity', 'payday', 'bonus', 'opportunity',
 ];
 
