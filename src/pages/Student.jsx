@@ -546,11 +546,32 @@ function PendingModal({ team }) {
           {mi < 0 && (
             <p className="text-xs text-amber-600 mb-2">⚠️ 這筆每月會小虧，但售價範圍高、有增值翻盤機會</p>
           )}
-          {!afford && (
-            <p className="text-xs text-red-500 mb-2">
-              現金不足（差 {formatMoney(c.cost - team.cash)}），可改用「貸款購買」
-            </p>
-          )}
+          {!afford && (() => {
+            // 貸款購買預覽：借差額(湊整到萬)×月息10% 的利息，對比資產月收，算出「貸款後每月現金流是增是減」
+            const loanAmt = Math.max(0, Math.ceil((c.cost - team.cash) / 10000) * 10000);
+            const loanInterest = Math.round(loanAmt * 0.1);
+            const net = mi - loanInterest;
+            return (
+              <div className={'rounded-xl p-3 mb-3 ring-1 ' + (net >= 0 ? 'bg-emerald-50 ring-emerald-200' : 'bg-rose-50 ring-rose-200')}>
+                <p className="text-[0.72rem] font-semibold text-slate-600 mb-1">💳 若「貸款購買」，每月現金流變化：</p>
+                <div className="grid grid-cols-2 gap-y-0.5 text-xs">
+                  <span className="text-slate-500">資產月收</span>
+                  <span className={'text-right font-semibold ' + (mi >= 0 ? 'text-green-600' : 'text-red-500')}>{mi >= 0 ? '+' : '−'}{formatMoney(Math.abs(mi))}</span>
+                  <span className="text-slate-500">貸款月息（借 {formatMoney(loanAmt)}×10%）</span>
+                  <span className="text-right font-semibold text-red-500">−{formatMoney(loanInterest)}</span>
+                  <span className="text-slate-700 font-bold border-t border-slate-200 pt-0.5 mt-0.5">淨月現金流</span>
+                  <span className={'text-right font-black border-t border-slate-200 pt-0.5 mt-0.5 ' + (net >= 0 ? 'text-emerald-600' : 'text-rose-600')}>
+                    {net >= 0 ? '+' : '−'}{formatMoney(Math.abs(net))}/月
+                  </span>
+                </div>
+                <p className={'text-[0.7rem] mt-1 leading-snug ' + (net >= 0 ? 'text-emerald-700' : 'text-rose-700')}>
+                  {net >= 0
+                    ? '✅ 資產月收 > 貸款利息，貸款買仍讓每月現金流「增加」，划算！'
+                    : '⚠️ 貸款利息比資產月收還高，貸款買會讓每月現金流「倒貼」，要三思！'}
+                </p>
+              </div>
+            );
+          })()}
           <div className="grid grid-cols-2 gap-3">
             <button
               disabled={busy}

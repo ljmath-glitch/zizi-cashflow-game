@@ -181,8 +181,12 @@ export const BONUS_CARDS = [
 const DECKS = { small: SMALL_DEALS, big: BIG_DEALS, super: SUPER_DEALS, market: MARKET_CARDS, doodad: DOODAD_CARDS, bonus: BONUS_CARDS };
 
 // 從指定牌庫隨機抽一張（抽完放回，等同無限牌庫，適合課堂）
-export function drawCard(deck) {
-  const pool = DECKS[deck];
+export function drawCard(deck, filterFn) {
+  let pool = DECKS[deck];
   if (!pool || pool.length === 0) return null;
+  if (filterFn) {
+    const filtered = pool.filter(filterFn);
+    if (filtered.length) pool = filtered; // 過濾後若全空，退回原池（保底不至於抽不到卡）
+  }
   return pool[Math.floor(Math.random() * pool.length)];
 }

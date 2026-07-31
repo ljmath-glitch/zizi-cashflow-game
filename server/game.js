@@ -79,8 +79,8 @@ const START_CASH = 150000;
 //   events 市場事件/月初報告、loan 貸款、acquire 收購/都更、achievements 人生成就、superDeal 超級生意
 export const STAGES = {
   basic: { label: '初階', emoji: '🟢', startCash: 2, dealIncome: 2.0, doodad: 0.7,
-    board: 'basic', market: 'basic', events: false, loan: false, acquire: false, achievements: false, superDeal: false,
-    desc: '核心觀念：買資產養被動收入→財富自由。極簡報表、只有定存+ETF、無市場波動/貸款/失業/成就（最寬鬆）' },
+    board: 'basic', market: 'basic', events: true, loan: false, acquire: false, achievements: false, superDeal: false,
+    desc: '核心觀念：買資產養被動收入→財富自由。極簡報表、只有定存+ETF、輕量事件（趣味＋ETF小漲跌，無貸款/失業/成就）（最寬鬆）' },
   mid: { label: '中階', emoji: '🟡', startCash: 1.5, dealIncome: 1.5, doodad: 1,
     board: 'full', market: 'mid', events: true, loan: true, acquire: true, achievements: true, superDeal: false,
     desc: '加入市場漲跌、貸款、失業、慈善、房產收購、人生成就；市場含股票/黃金（無加密貨幣）' },
@@ -317,7 +317,7 @@ function applyMonthlyEvent() {
   // 保底：連續 BIG_EVENT_PITY 回合沒出大事件，本回合強制來一個大事件（不讓整場靜悄悄）
   const BIG_EVENT_PITY = 4;
   const forceBig = (state.roundsSinceBig || 0) >= BIG_EVENT_PITY;
-  const evt = pickEvent(state.lastCatId, forceBig);
+  const evt = pickEvent(state.lastCatId, forceBig, state.stage);
   state.lastCatId = evt.catastrophe ? evt.id : null; // 記錄災難，避免連續
   state.roundsSinceBig = evt.scale === 'big' ? 0 : (state.roundsSinceBig || 0) + 1;
   const prevEvent = state.monthlyEvent;
@@ -441,9 +441,9 @@ function applyMonthlyEvent() {
     addFeed(`${cashAmt > 0 ? '💰' : '💸'} ${evt.title}：${cashScope} ${cashAmt > 0 ? '+' : '−'}${Math.abs(cashAmt).toLocaleString()}${cashProfs ? `（影響 ${affected} 組）` : ''}`);
   }
 
-  // 釋出新情報（約 25% 機率），暗示下回合可能行情
+  // 釋出新情報（約 25% 機率），暗示下回合可能行情（初階不放情報，保持單純）
   let rumor = null;
-  if (Math.random() < 0.25) {
+  if (state.stage !== 'basic' && Math.random() < 0.25) {
     rumor = randomRumor();
     state.pendingRumor = rumor;
     addFeed(`🔍 股市情報：${rumor.text}`);
@@ -1044,34 +1044,45 @@ function liquidateAsset(team, idx) {
   return { asset, proceeds: saleValue, illiquid, grossValue: asset.value };
 }
 
-// 現金 ≤ 0（破產危機）時的處理——依規則「先清倉所有資產自救，全賣光仍補不回來才淘汰」：
-//  1. 手上還有資產 → 直接清倉（全部變賣：房產/企業折價、清掉抵押貸款），現金入帳。
-//  2. 清倉後現金 > 0 → 保住、不淘汰（但資產與被動收入歸零，得重新靠薪水翻身）。
-//  3. 沒有資產可賣、或全部賣光仍為負（資不抵債）→ 真正淘汰。
+// 現金 ≤ 0（破產危機）時的處理——分段變現，不再一次清光：
+//  1. 先賣「流動資產」（股票/ETF/黃金/加密/定存/債券），一項一項賣，現金補到 > 0 就停手，
+//     盡量保留能生被動收入的「小生意/大買賣」（房地產/企業）。
+//  2. 流動資產全賣光仍不夠 → 才開始賣房地產/企業（同樣一項一項，補到 > 0 就停）。
+//  3. 全部資產賣光仍為負（資不抵債）→ 才真正淘汰。
 function checkBankruptOrCover(team) {
   if (team.bankrupt || team.cash > 0) return;
   const shortfall = -team.cash;
   let totalProceeds = 0;
-  if ((team.assets || []).length > 0) {
-    // 由後往前賣，避免 splice 影響索引；清倉全部資產
-    for (let i = team.assets.length - 1; i >= 0; i--) {
-      const { proceeds } = liquidateAsset(team, i);
-      totalProceeds += proceeds;
-    }
-    addHistory(team, { round: state.round, type: 'liquidate', text: '破產危機：清倉所有資產自救', delta: totalProceeds });
-    addFeed(`🆘 ${team.name} 現金見底（缺 ${formatNT(shortfall)}），清倉所有資產變現 ${formatNT(totalProceeds)} 自救`);
+  let soldCount = 0;
+
+  // 一項一項賣，補到現金轉正就停；優先賣流動資產，流動的賣完了才動房產/企業
+  while (team.cash <= 0 && (team.assets || []).length > 0) {
+    let idx = team.assets.findIndex((a) => !ILLIQUID_CATS.includes(a.category)); // 先找流動資產
+    if (idx < 0) idx = team.assets.length - 1; // 流動的沒了 → 賣不動產/企業（從最後一項）
+    const { proceeds } = liquidateAsset(team, idx);
+    totalProceeds += proceeds;
+    soldCount += 1;
   }
+
+  if (soldCount > 0) {
+    addHistory(team, { round: state.round, type: 'liquidate', text: '周轉：變賣部分資產救急', delta: totalProceeds });
+    addFeed(`🆘 ${team.name} 現金見底（缺 ${formatNT(shortfall)}），變賣 ${soldCount} 項資產 ${formatNT(totalProceeds)} 周轉`);
+  }
+
   if (team.cash > 0) {
-    // 清倉後現金轉正 → 撐住、不淘汰
+    // 周轉成功、不淘汰
+    const left = (team.assets || []).length;
     emitEvent(team, {
       emoji: '🆘',
-      title: '清倉自救成功！資產全部變賣',
-      text: `現金見底，系統已把你所有資產變賣（共 ${formatNT(totalProceeds)}）換回現金保住沒淘汰。但資產歸零、被動收入沒了——快重新靠薪水投資翻身！`,
+      title: '變賣資產、成功周轉！',
+      text: left > 0
+        ? `現金見底，系統優先幫你賣掉股票等流動資產（共 ${formatNT(totalProceeds)}）補回現金，還保留了 ${left} 項資產（含能生被動收入的房產/事業）。快穩住財務！`
+        : `現金見底，把資產全部變賣（共 ${formatNT(totalProceeds)}）才補回現金保住沒淘汰。被動收入歸零——快重新靠薪水投資翻身！`,
     });
     emitTeam(team);
     return;
   }
-  // 沒有資產可賣、或全部賣光仍補不回來 → 資不抵債，淘汰
+  // 全部資產賣光仍補不回來 → 資不抵債，淘汰
   bankruptTeam(team);
 }
 
@@ -1215,7 +1226,7 @@ function resolveSquare(team, type) {
       break;
     }
     case 'market':
-      applyMarketCard(team, drawCard('market'));
+      applyMarketCard(team, drawCard('market', marketCardRelevant));
       break;
     case 'doodad':
       applyDoodad(team, drawCard('doodad'));
@@ -1232,6 +1243,17 @@ function resolveSquare(team, type) {
     default:
       break;
   }
+}
+
+// 市場風雲卡是否對「當前這場的市場」有感：房地產指數/現金卡一律可；漲跌卡要有對應的在架商品才抽
+// （避免中階抽到「加密貨幣崩盤」但盤上根本沒加密幣＝演了沒反應）
+function marketCardRelevant(card) {
+  if (!card || card.kind !== 'price') return true;
+  if (card.targetCategory === 'realestate') return true;
+  return Object.values(state.market.instruments).some((inst) =>
+    (card.targetCategory && inst.category === card.targetCategory) ||
+    (card.targetTag && (inst.tags || []).includes(card.targetTag))
+  );
 }
 
 // 市場風雲卡：影響全班

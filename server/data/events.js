@@ -136,18 +136,39 @@ function weightedPick(pool) {
   return pool[pool.length - 1];
 }
 
-// 挑一個本回合事件：~82% 小事件、~18% 大事件；
-// forceBig=true 時保證抽大事件（防止整場都沒大事件的保底機制）
-// 大事件依權重抽（黑天鵝災難稀有）；lastCatId 用來避免連續出現災難型大事件
-export function pickEvent(lastCatId, forceBig = false) {
-  // 大多是小事件（像每週新聞，常常不動市場）；大事件只偶爾出現（約 18%），除非本回合保底強制大事件
-  if (!forceBig && Math.random() < 0.82) {
-    const e = SMALL_EVENTS[Math.floor(Math.random() * SMALL_EVENTS.length)];
+// 各分級「市場上實際存在的類別」——事件若只打在該階沒有的類別上，就不抽（避免「演了卻沒反應」）。
+//   basic 初階：只有 2 支 ETF（＝stock）；mid 中階：股票/黃金/房市（無加密）；full 高階：全部。
+function stageCats(stage) {
+  if (stage === 'basic') return new Set(['stock']);
+  if (stage === 'mid') return new Set(['stock', 'commodity', 'realestate']);
+  return new Set(['stock', 'crypto', 'commodity', 'realestate']);
+}
+// 事件是否在該階「有感」：共同賺賠(cash)或純風味(effects空)一律可出；否則至少要有一個 effects 類別存在於該階。
+function eventApplies(e, cats) {
+  if (e.cashRange || e.cash != null) return true;
+  const keys = Object.keys(e.effects || {});
+  if (keys.length === 0) return true;
+  return keys.some((k) => cats.has(k));
+}
+
+// 挑一個本回合事件：~82% 小事件、~18% 大事件；forceBig=true 時保證抽大事件（保底）。
+// stage 決定事件池：初階只給「溫和小事件」（趣味＋共同賺賠＋動 ETF 的小漲跌，無大事件/黑天鵝）；
+//   中/高階小＋大事件，並過濾掉打在該階不存在類別的事件（如中階不出加密事件）。
+export function pickEvent(lastCatId, forceBig = false, stage = 'full') {
+  const cats = stageCats(stage);
+  const smallPool = SMALL_EVENTS.filter((e) => eventApplies(e, cats));
+  // 初階：只抽溫和小事件，不出大事件/黑天鵝，保持單純又有臨場感
+  if (stage === 'basic') {
+    const e = smallPool[Math.floor(Math.random() * smallPool.length)];
     return { ...e, scale: 'small' };
   }
-  let pool = BIG_EVENTS;
+  if (!forceBig && Math.random() < 0.82) {
+    const e = smallPool[Math.floor(Math.random() * smallPool.length)];
+    return { ...e, scale: 'small' };
+  }
+  let pool = BIG_EVENTS.filter((e) => eventApplies(e, cats));
   // 若上一個大事件是災難，本次大事件排除所有災難型，避免連環災難
-  if (lastCatId) pool = BIG_EVENTS.filter((e) => !e.catastrophe);
+  if (lastCatId) pool = pool.filter((e) => !e.catastrophe);
   const e = weightedPick(pool);
   return { ...e, scale: 'big' };
 }
