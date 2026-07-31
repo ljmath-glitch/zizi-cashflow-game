@@ -296,11 +296,12 @@ export function activeMarket() {
 const BASIC_MARKET_IDS = ['deposit', 'etf_market', 'etf_highdiv'];
 
 // 依分級取「市場可買清單」：
-//   basic 初階＝定存+2 ETF；mid 中階＝股票/ETF/原物料/定存（無加密）；full 高階＝全部
+//   basic 初階＝定存+2 ETF；mid 中階＝精簡股票/ETF/原物料/定存（無加密、無進階股）；
+//   full 高階＝全部（含進階股票：生技/食品/傳產/電信/AI主題ETF/AI軟體＋白銀/石油/債券ETF＋加密）
 export function marketFor(stage) {
   if (stage === 'basic') return MARKET.filter((m) => BASIC_MARKET_IDS.includes(m.id));
   if (stage === 'mid') return activeMarket().filter((m) => m.category !== 'crypto');
-  return activeMarket();
+  return MARKET;
 }
 
 // 依 id 找商品（查完整清單，確保舊存檔中已持有的進階資產仍能正確顯示名稱/估值）

@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { getLanIp } from './lan.js';
 import { initGame, createRoom, getRoom, roomExists, setPersistStore, restoreRooms } from './game.js';
-import { activeMarket } from './data/assets.js';
+import { MARKET } from './data/assets.js';
 import { ACHIEVEMENTS } from './data/achievements.js';
 import { BOARD } from './data/board.js';
 import { ensureSavesDir, saveToFile, loadFromFile, listSaves, timestampName } from './storage.js';
@@ -43,7 +43,7 @@ export function mountCashflow(app, httpServer, { base = '', serveStatic = true, 
 
   // ── HTTP API ──
   app.get(b + '/api/server-info', (req, res) => res.json({ lanIp, port: port || undefined, bootAt: BOOT_AT }));
-  app.get(b + '/api/market', (req, res) => res.json(activeMarket()));
+  app.get(b + '/api/market', (req, res) => res.json(MARKET));
   app.get(b + '/api/achievements', (req, res) => res.json(ACHIEVEMENTS));
   app.get(b + '/api/board', (req, res) => res.json(BOARD));
   app.post(b + '/api/rooms', (req, res) => {
