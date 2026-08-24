@@ -7,6 +7,31 @@ import Teacher from './pages/Teacher.jsx';
 import AvatarGallery from './pages/AvatarGallery.jsx';
 import RoomGuard from './components/RoomGuard.jsx';
 
+// 品牌閃電圖標（向量，可縮放上色）
+function Bolt({ className, fill = 'currentColor' }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill={fill} aria-hidden="true">
+      <path d="M13 2 L4 13.5 h6.2 L8.6 22 L20 9 h-6.4 z" />
+    </svg>
+  );
+}
+
+// 進入遊戲轉場：深色幕「光圈擴散」蓋滿 + 白金閃光 + 中央閃電（首頁淺 → 大螢幕深，銜接不突兀）
+function EnterTransition() {
+  return (
+    <div className="fixed inset-0 z-[200] pointer-events-none">
+      <div className="enter-iris absolute inset-0 screen-bg" />
+      <div className="enter-flash absolute inset-0 bg-white" />
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="enter-bolt inline-flex w-24 h-24 items-center justify-center rounded-3xl bg-gradient-to-br from-zizi-amber to-zizi-gold shadow-[0_10px_40px_rgba(245,158,11,0.6)]">
+          <Bolt className="w-12 h-12" fill="#3A2A1D" />
+        </span>
+        <p className="enter-word mt-6 text-zizi-champagne tracking-[0.3em] font-semibold">進入遊戲…</p>
+      </div>
+    </div>
+  );
+}
+
 // 首頁：老師建立房間 → 拿到房號與三個連結；或輸入房號加入別人的房間
 function Home() {
   const [busy, setBusy] = useState(false);
@@ -15,6 +40,7 @@ function Home() {
   const [showHost, setShowHost] = useState(false); // 建房前先出現主辦帳密輸入
   const [hostUser, setHostUser] = useState('');
   const [hostPass, setHostPass] = useState('');
+  const [entering, setEntering] = useState(false); // 建房成功後播放「淺→深」轉場動畫再進大螢幕
 
   async function createRoom() {
     if (busy) return;
@@ -31,8 +57,12 @@ function Home() {
       if (res.status === 403) { setErr('遊戲目前未開放（僅活動期間可開房）'); setBusy(false); return; }
       if (!res.ok) { setErr('建立房間失敗，請稍後再試'); setBusy(false); return; }
       const data = await res.json();
-      // 建房後直接進大螢幕：host=1 讓大螢幕右上角出現老師控制抽屜；學生掃大螢幕上的 QR 加入
-      window.location.href = page(`screen?room=${data.code}&host=1`);
+      // 建房成功 → 播放「淺→深」轉場動畫(約 1 秒)，再進大螢幕(host=1)。先把根背景染深，避免換頁瞬間白閃
+      document.documentElement.style.backgroundColor = '#2f2015';
+      setEntering(true);
+      setTimeout(() => {
+        window.location.href = page(`screen?room=${data.code}&host=1`);
+      }, 1000);
     } catch {
       setErr('建立房間失敗，請稍後再試');
       setBusy(false);
@@ -57,33 +87,63 @@ function Home() {
   }
 
   return (
-    <div className="min-h-full screen-bg text-white flex flex-col items-center justify-center p-6">
-      <h1 className="text-3xl font-bold mb-1">茲茲財富自由挑戰賽</h1>
-      <p className="text-zizi-gold mb-8">成為一道閃電，點燃孩子的學習熱誠 ⚡</p>
+    <div className="relative min-h-screen app-bg text-zizi-ink overflow-hidden">
+      <div className="relative min-h-screen max-w-6xl mx-auto flex flex-col md:flex-row md:items-stretch">
 
-      <div className="w-full max-w-md space-y-6">
-          {/* 主辦建立房間（老師/家長）：輸入主辦帳密 → 直接進大螢幕(自帶控制) */}
-          <div className="bg-white/10 rounded-2xl p-5 text-center">
-            <p className="text-lg font-semibold mb-1">我是主辦（老師 / 家長）</p>
+        {/* 左：品牌與標題（精品雜誌風：大襯線標題＋香檳金細線＋留白） */}
+        <div className="md:flex-1 flex flex-col justify-between px-8 pt-14 pb-6 md:px-14 md:py-16 text-center md:text-left">
+          <div className="flex items-center justify-center md:justify-start gap-3">
+            <span className="inline-flex w-10 h-10 items-center justify-center rounded-xl bg-zizi-ink">
+              <Bolt className="w-5 h-5" fill="#FBBF24" />
+            </span>
+            <span className="text-zizi-caramel font-bold tracking-[0.25em] text-sm">茲茲 · 財商教育</span>
+          </div>
+
+          <div className="mt-10 md:mt-0">
+            <div className="mx-auto md:mx-0 w-16 h-[3px] bg-gradient-to-r from-zizi-champagne to-transparent mb-6" />
+            <h1 className="font-serif font-black text-zizi-ink leading-[1.14] tracking-wide text-5xl md:text-7xl">
+              茲茲<br />財富自由<br />挑戰賽
+            </h1>
+            <p className="mt-6 md:mt-7 text-zizi-caramel text-base md:text-lg leading-loose max-w-md mx-auto md:mx-0">
+              成為一道閃電，點燃孩子的學習熱誠。<br />
+              <span className="text-zizi-plum">在遊戲中學會投資、被動收入與跳出老鼠圈。</span>
+            </p>
+          </div>
+
+          <footer className="hidden md:block text-xs text-zizi-champagne leading-relaxed mt-10">
+            <span className="block font-bold tracking-[0.2em] text-zizi-caramel">茲茲 出品</span>
+            © 2026 李云・版權所有　未經授權不得重製或散布
+          </footer>
+        </div>
+
+        {/* 右：入口動作 */}
+        <div className="md:flex-1 flex flex-col justify-center gap-5 px-8 pb-12 md:px-14 md:py-16">
+
+          {/* 主辦建立房間（老師/家長）：輸入主辦帳密 → 播轉場 → 進大螢幕(自帶控制) */}
+          <div className="bg-white/90 border border-[#EBDFCB] rounded-3xl p-7 shadow-soft">
+            <div className="flex items-center gap-2.5 mb-2">
+              <span className="text-2xl">🎬</span>
+              <span className="text-lg font-bold text-zizi-ink">我是主辦（老師 / 家長）</span>
+            </div>
             {!showHost ? (
               <>
-                <p className="text-sm text-white/60 mb-4">建立房間後直接進入大螢幕（右上角有老師控制）；學生掃大螢幕上的 QR 加入</p>
+                <p className="text-sm text-zizi-plum leading-relaxed mb-5">建立房間後直接進入大螢幕（右上角有老師控制）；學生掃大螢幕上的 QR 加入。</p>
                 <button
                   onClick={() => { setErr(null); setShowHost(true); }}
-                  className="w-full rounded-xl bg-zizi-gold text-white font-bold py-3"
+                  className="w-full rounded-2xl py-4 font-extrabold text-white text-lg bg-gradient-to-br from-zizi-gold to-[#D97706] shadow-[0_8px_20px_rgba(217,119,6,0.28)]"
                 >
-                  ➕ 建立新房間（進大螢幕）
+                  ➕　建立新房間
                 </button>
               </>
             ) : (
               <>
-                <p className="text-sm text-white/60 mb-3">輸入主辦帳號密碼即可開房（週報上有）</p>
+                <p className="text-sm text-zizi-plum mb-3">輸入主辦帳號密碼即可開房（週報上有）</p>
                 <input
                   value={hostUser}
                   onChange={(e) => setHostUser(e.target.value)}
                   placeholder="主辦帳號"
                   autoComplete="username"
-                  className="w-full rounded-xl px-3 py-2 text-center text-zizi-ink font-semibold mb-2"
+                  className="w-full rounded-xl px-3 py-2.5 text-center text-zizi-ink font-semibold bg-zizi-cream border border-[#EBDFCB] mb-2"
                 />
                 <input
                   type="password"
@@ -92,18 +152,18 @@ function Home() {
                   onKeyDown={(e) => { if (e.key === 'Enter') createRoom(); }}
                   placeholder="密碼"
                   autoComplete="current-password"
-                  className="w-full rounded-xl px-3 py-2 text-center text-zizi-ink font-semibold mb-3"
+                  className="w-full rounded-xl px-3 py-2.5 text-center text-zizi-ink font-semibold bg-zizi-cream border border-[#EBDFCB] mb-3"
                 />
                 <button
                   onClick={createRoom}
                   disabled={busy}
-                  className="w-full rounded-xl bg-zizi-gold text-white font-bold py-3 disabled:opacity-50"
+                  className="w-full rounded-2xl py-4 font-extrabold text-white text-lg bg-gradient-to-br from-zizi-gold to-[#D97706] disabled:opacity-50"
                 >
                   {busy ? '建立中…' : '✅ 確認開房'}
                 </button>
                 <button
                   onClick={() => { setShowHost(false); setErr(null); }}
-                  className="mt-2 text-sm text-white/50 hover:text-white/80"
+                  className="mt-2 w-full text-sm text-zizi-plum hover:text-zizi-caramel"
                 >
                   取消
                 </button>
@@ -112,31 +172,37 @@ function Home() {
           </div>
 
           {/* 用房號加入：老師 / 大螢幕 / 學生 */}
-          <div className="bg-white/10 rounded-2xl p-5">
-            <p className="text-lg font-semibold mb-1 text-center">用房號加入</p>
-            <p className="text-sm text-white/60 mb-3 text-center">輸入房號，選擇你的身分加入</p>
+          <div className="bg-white/90 border border-[#EBDFCB] rounded-3xl p-7 shadow-soft">
+            <div className="flex items-center gap-2.5 mb-4">
+              <span className="text-2xl">🔑</span>
+              <span className="text-lg font-bold text-zizi-ink">用房號加入</span>
+            </div>
             <input
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
               placeholder="例如 ABC12"
               maxLength={5}
-              className="w-full rounded-xl px-3 py-2 text-center text-zizi-ink font-bold tracking-widest mb-3"
+              className="w-full rounded-xl px-3 py-2.5 text-center text-zizi-ink font-bold tracking-[0.4em] bg-zizi-cream border border-[#EBDFCB] mb-4"
             />
-            <button onClick={() => joinAs('teacher')} className="w-full rounded-xl bg-zizi-gold hover:brightness-105 text-white py-2.5 font-bold mb-2">🎛️ 老師控制台</button>
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => joinAs('student')} className="rounded-xl bg-white/20 hover:bg-white/30 py-2 font-medium">📱 學生加入</button>
-              <button onClick={() => joinAs('screen')} className="rounded-xl bg-white/20 hover:bg-white/30 py-2 font-medium">📺 大螢幕</button>
+            <button onClick={() => joinAs('teacher')} className="w-full rounded-xl py-3 font-extrabold text-zizi-ink bg-gradient-to-br from-zizi-amber to-zizi-gold mb-2.5">🎛️　老師控制台</button>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button onClick={() => joinAs('student')} className="rounded-xl py-2.5 font-medium text-zizi-caramel bg-[#FBF7F1] border border-[#E5D8C3]">📱 學生加入</button>
+              <button onClick={() => joinAs('screen')} className="rounded-xl py-2.5 font-medium text-zizi-caramel bg-[#FBF7F1] border border-[#E5D8C3]">📺 大螢幕</button>
             </div>
           </div>
-          {err && <p className="text-center text-red-300 text-sm">{err}</p>}
-        </div>
 
-      {/* 版權宣示：茲茲品牌＋著作人（別名）。授權使用，非轉讓；未經同意不得重製 */}
-      <footer className="mt-10 text-center text-white/40 text-xs leading-relaxed">
-        <p className="text-white/60 font-semibold tracking-wide">茲茲 出品</p>
-        <p>© 2026 李云・版權所有 All Rights Reserved</p>
-        <p>本遊戲之玩法設計、程式、美術與教材受著作權保護，未經授權不得重製或散布</p>
-      </footer>
+          {err && <p className="text-center text-red-500 text-sm font-medium">{err}</p>}
+
+          {/* 手機版版權（桌機版在左欄底部） */}
+          <footer className="md:hidden text-center text-xs text-zizi-champagne leading-relaxed mt-1">
+            <span className="block font-bold tracking-[0.2em] text-zizi-caramel">茲茲 出品</span>
+            © 2026 李云・版權所有
+          </footer>
+        </div>
+      </div>
+
+      {/* 建房成功後的「淺→深」進場轉場 */}
+      {entering && <EnterTransition />}
     </div>
   );
 }

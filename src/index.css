@@ -102,6 +102,40 @@ button:active:not(:disabled) {
   animation-iteration-count: infinite;
 }
 
+/* ── 進入遊戲轉場：首頁(淺) →「光圈擴散＋閃電一閃」→ 大螢幕(深) ── */
+/* 深色幕從中心圓形擴散蓋滿（iris wipe） */
+@keyframes enter-iris {
+  0% { clip-path: circle(0% at 50% 50%); }
+  100% { clip-path: circle(150% at 50% 50%); }
+}
+.enter-iris {
+  animation: enter-iris 0.72s cubic-bezier(0.7, 0, 0.28, 1) forwards;
+}
+/* 中央閃電：彈入放大 */
+@keyframes enter-bolt {
+  0% { transform: scale(0.3) rotate(-14deg); opacity: 0; }
+  55% { transform: scale(1.14) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.enter-bolt { animation: enter-bolt 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.35) 0.34s both; }
+/* 白金閃光一閃 */
+@keyframes enter-flash {
+  0%, 100% { opacity: 0; }
+  45% { opacity: 0.9; }
+}
+.enter-flash { animation: enter-flash 0.5s ease-out 0.42s both; }
+/* 標題字淡入上浮 */
+@keyframes enter-word {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.enter-word { animation: enter-word 0.5s ease-out 0.6s both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .enter-iris { animation-duration: 0.3s; }
+  .enter-bolt, .enter-flash, .enter-word { animation: none !important; }
+}
+
 /* App 背景：奶油白 + 淡淡的金與咖啡光暈（學生端/老師端） */
 .app-bg {
   background:
