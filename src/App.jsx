@@ -6,14 +6,11 @@ import Screen from './pages/Screen.jsx';
 import Teacher from './pages/Teacher.jsx';
 import AvatarGallery from './pages/AvatarGallery.jsx';
 import RoomGuard from './components/RoomGuard.jsx';
+import logoUrl from './assets/tzutzu-logo.png';
 
-// 品牌閃電圖標（向量，可縮放上色）
-function Bolt({ className, fill = 'currentColor' }) {
-  return (
-    <svg viewBox="0 0 24 24" className={className} fill={fill} aria-hidden="true">
-      <path d="M13 2 L4 13.5 h6.2 L8.6 22 L20 9 h-6.4 z" />
-    </svg>
-  );
+// 茲茲品牌 logo（香檳金閃電＋酒紅火焰，正式標誌）
+function Logo({ className }) {
+  return <img src={logoUrl} alt="茲茲" className={className} />;
 }
 
 // 進入遊戲轉場：深色幕「光圈擴散」蓋滿 + 白金閃光 + 中央閃電（首頁淺 → 大螢幕深，銜接不突兀）
@@ -23,9 +20,7 @@ function EnterTransition() {
       <div className="enter-iris absolute inset-0 screen-bg" />
       <div className="enter-flash absolute inset-0 bg-white" />
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="enter-bolt inline-flex w-24 h-24 items-center justify-center rounded-3xl bg-gradient-to-br from-zizi-amber to-zizi-gold shadow-[0_10px_40px_rgba(245,158,11,0.6)]">
-          <Bolt className="w-12 h-12" fill="#3A2A1D" />
-        </span>
+        <img src={logoUrl} alt="茲茲" className="enter-bolt w-28 h-28 object-contain drop-shadow-[0_10px_40px_rgba(245,158,11,0.45)]" />
         <p className="enter-word mt-6 text-zizi-champagne tracking-[0.3em] font-semibold">進入遊戲…</p>
       </div>
     </div>
@@ -93,9 +88,7 @@ function Home() {
         {/* 左：品牌與標題（精品雜誌風：大襯線標題＋香檳金細線＋留白） */}
         <div className="md:flex-1 flex flex-col justify-between px-8 pt-14 pb-6 md:px-14 md:py-16 text-center md:text-left">
           <div className="flex items-center justify-center md:justify-start gap-3">
-            <span className="inline-flex w-10 h-10 items-center justify-center rounded-xl bg-zizi-ink">
-              <Bolt className="w-5 h-5" fill="#FBBF24" />
-            </span>
+            <Logo className="w-11 h-11 object-contain" />
             <span className="text-zizi-caramel font-bold tracking-[0.25em] text-sm">茲茲 · 財商教育</span>
           </div>
 

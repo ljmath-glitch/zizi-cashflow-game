@@ -13,6 +13,7 @@ import Avatar from '../components/Avatar.jsx';
 import { SFX, playEventSound, setSoundEnabled, resumeAudio } from '../util/sound.js';
 import { api, page } from '../base.js';
 import Teacher from './Teacher.jsx';
+import logoUrl from '../assets/tzutzu-logo.png';
 
 // 難度標示（與 server/game.js 的 DIFFICULTY 對應）
 const STAGE_META = {
@@ -154,7 +155,8 @@ export default function Screen() {
     <div className="h-screen screen-bg text-white flex flex-col overflow-hidden">
       <header className="relative flex items-center justify-between px-8 py-3 border-b border-white/10 shrink-0 backdrop-blur-sm">
         <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-zizi-champagne to-transparent" />
-        <h1 className="text-2xl font-bold">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <img src={logoUrl} alt="茲茲" className="w-7 h-7 object-contain" />
           茲茲財富自由挑戰賽
           {ROOM && <span className="ml-2 text-white/50 text-base">房號 {ROOM}</span>}
           <span className="ml-3 text-zizi-gold text-lg">

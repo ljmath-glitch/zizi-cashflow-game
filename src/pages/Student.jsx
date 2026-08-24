@@ -18,6 +18,7 @@ import { api } from '../base.js';
 import ConnectionBadge from '../components/ConnectionBadge.jsx';
 import Sparkline from '../components/Sparkline.jsx';
 import Toaster from '../components/Toaster.jsx';
+import logoUrl from '../assets/tzutzu-logo.png';
 import Avatar, { AVATAR_TYPES, HAIR_COLORS, AVATAR_ACCESSORIES } from '../components/Avatar.jsx';
 
 // 學生端（手機）— v2(M6)：完整損益表 + 資產負債表 + 市場（現代化資產）
@@ -40,7 +41,7 @@ export default function Student() {
         {/* 標題列頂端一道金色細光 */}
         <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-zizi-amber to-transparent" />
         <h1 className="font-bold flex items-center gap-1.5 drop-shadow-md">
-          <span className="drop-shadow">⚡</span>
+          <img src={logoUrl} alt="茲茲" className="w-6 h-6 object-contain drop-shadow" />
           茲茲財富自由挑戰賽
           <span className="ml-1 text-white text-xs font-medium bg-black/15 ring-1 ring-white/25 rounded-full px-2 py-0.5">
             {roundLabel}
@@ -110,8 +111,11 @@ function JoinForm({ connected, join, resume, offerProfessions }) {
   if (options) {
     return (
       <main className="flex-1 flex flex-col items-center gap-4 p-6">
-        <h2 className="text-xl font-bold text-zizi-ink mt-2">選一個職業</h2>
-        <p className="text-sm text-slate-500">{teamName || '你們這組'}，挑一張職業卡開始挑戰！</p>
+        <div className="flex flex-col items-center mt-2">
+          <div className="w-14 h-[3px] bg-gradient-to-r from-transparent via-zizi-champagne to-transparent mb-3" />
+          <h2 className="font-serif text-2xl font-black text-zizi-ink">選一個職業</h2>
+        </div>
+        <p className="text-sm text-slate-500 -mt-1">{teamName || '你們這組'}，挑一張職業卡開始挑戰！</p>
         <div className="w-full max-w-md space-y-3">
           {options.map((p) => (
             <ProfessionChoice key={p.id} prof={p} disabled={busy} onPick={() => pick(p.id)} />
@@ -127,7 +131,7 @@ function JoinForm({ connected, join, resume, offerProfessions }) {
     <main className="flex-1 flex flex-col items-center justify-center gap-5 p-6">
       <div className="glass ring-1 ring-white/50 shadow-soft rounded-[2rem] px-7 py-8 w-full max-w-xs flex flex-col items-center gap-5">
         <div className="text-5xl animate-float drop-shadow-sm">📱</div>
-        <h2 className="text-xl font-bold text-zizi-ink -mt-1">加入遊戲</h2>
+        <h2 className="font-serif text-2xl font-black text-zizi-ink -mt-1">加入遊戲</h2>
         <p className="text-center text-xs text-slate-500 -mt-3">
           🎯 目標：讓<b className="text-zizi-ink">被動收入超過總支出</b>，跳出老鼠賽跑圈、達成財富自由！
         </p>
