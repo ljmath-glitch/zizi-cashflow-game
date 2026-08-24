@@ -130,6 +130,13 @@ function Home() {
           </div>
           {err && <p className="text-center text-red-300 text-sm">{err}</p>}
         </div>
+
+      {/* 版權宣示：茲茲品牌＋著作人（別名）。授權使用，非轉讓；未經同意不得重製 */}
+      <footer className="mt-10 text-center text-white/40 text-xs leading-relaxed">
+        <p className="text-white/60 font-semibold tracking-wide">茲茲 出品</p>
+        <p>© 2026 李云・版權所有 All Rights Reserved</p>
+        <p>本遊戲之玩法設計、程式、美術與教材受著作權保護，未經授權不得重製或散布</p>
+      </footer>
     </div>
   );
 }

@@ -60,6 +60,11 @@ export default function Student() {
       ) : (
         <JoinForm connected={connected} join={join} resume={resume} offerProfessions={offerProfessions} />
       )}
+
+      {/* 版權署名：茲茲品牌＋著作人(別名)。授權使用、非轉讓 */}
+      <footer className="mt-auto py-3 text-center text-slate-400/70 text-[11px]">
+        茲茲 出品 · © 2026 李云 版權所有
+      </footer>
     </div>
   );
 }

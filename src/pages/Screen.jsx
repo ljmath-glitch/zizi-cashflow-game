@@ -207,6 +207,11 @@ export default function Screen() {
         )}
       </main>
 
+      {/* 版權浮水印：左下角常駐、淡色、不擋操作(pointer-events-none)。就算被截圖/側錄也帶著署名 */}
+      <div className="pointer-events-none select-none fixed bottom-2 left-3 z-30 text-white/25 text-[11px] font-medium tracking-wide">
+        茲茲 出品 · © 2026 李云 版權所有
+      </div>
+
       {/* 老師控制浮動鈕：固定在最上層(z-70)，即使新手教學/投影等全螢幕覆蓋也點得到，保證回得來 */}
       {HOST_MODE && !hostOpen && (
         <button
