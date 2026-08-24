@@ -43,7 +43,7 @@ function Home() {
     setBusy(true);
     setErr(null);
     try {
-      // 建房需主辦帳密（共用一組，寫在週報給家長）；帳密走自訂 header。加入/遊玩不受影響
+      // 建房需主辦帳密（共用一組）；帳密走自訂 header。加入/遊玩不受影響
       const res = await fetch(api('api/rooms'), {
         method: 'POST',
         headers: { 'x-cashflow-user': hostUser.trim(), 'x-cashflow-pass': hostPass },
@@ -130,7 +130,7 @@ function Home() {
               </>
             ) : (
               <>
-                <p className="text-sm text-zizi-plum mb-3">輸入主辦帳號密碼即可開房（週報上有）</p>
+                <p className="text-sm text-zizi-plum mb-3">輸入主辦帳號與密碼即可開房</p>
                 <input
                   value={hostUser}
                   onChange={(e) => setHostUser(e.target.value)}
